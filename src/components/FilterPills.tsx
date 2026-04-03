@@ -16,7 +16,7 @@ export function FilterPills({ selected, onSelect }: FilterPillsProps) {
   ]
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 overflow-x-auto pb-2">
       {pills.map((pill) => (
         <Badge
           key={pill.value}

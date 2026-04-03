@@ -6,9 +6,9 @@ interface ArtistCardProps {
 
 export function ArtistCard({ artist }: ArtistCardProps) {
   return (
-    <div className="flex-shrink-0 w-40 text-center">
+    <div className="flex-shrink-0 w-32 md:w-40 text-center">
       {/* Circular Artist Icon */}
-      <div className="w-40 h-40 mx-auto mb-3">
+      <div className="w-32 md:w-40 h-32 md:h-40 mx-auto mb-3">
         {artist.iconUrl ? (
           <img
             src={artist.iconUrl}

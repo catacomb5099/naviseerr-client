@@ -7,9 +7,9 @@ interface AlbumCardProps {
 
 export function AlbumCard({ album, artistNames }: AlbumCardProps) {
   return (
-    <div className="flex-shrink-0 w-48">
+    <div className="flex-shrink-0 w-40 md:w-48">
       {/* Square Album Icon */}
-      <div className="w-48 h-48 mb-3">
+      <div className="w-40 md:w-48 h-40 md:h-48 mb-3">
         {album.iconURL ? (
           <img
             src={album.iconURL}
