@@ -1,9 +1,10 @@
 import { apiClient } from './client'
-import { SearchResponse, Song, Album, Artist } from './types'
+import { SearchResponse, Track, Album, Artist } from './types'
 import { getMockSearchResults } from './mockData'
 
 // Toggle between mock and real API
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
+
 
 /**
  * Search all (songs, albums, artists)
@@ -19,15 +20,15 @@ export async function search(query: string): Promise<SearchResponse> {
 
 /**
  * Search songs only
- * GET /search/{query}/songs
+ * GET /search/{query}/tracks
  */
-export async function searchSongs(query: string): Promise<Song[]> {
+export async function searchSongs(query: string): Promise<Track[]> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] searchSongs called with query: ${query}`)
     const results = getMockSearchResults(query)
-    return Promise.resolve(results.songs)
+    return Promise.resolve(results.tracks)
   }
-  return apiClient<Song[]>(`/search/${encodeURIComponent(query)}/songs`)
+  return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/tracks`)).tracks
 }
 
 /**
@@ -40,7 +41,7 @@ export async function searchAlbums(query: string): Promise<Album[]> {
     const results = getMockSearchResults(query)
     return Promise.resolve(results.albums)
   }
-  return apiClient<Album[]>(`/search/${encodeURIComponent(query)}/albums`)
+  return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/albums`)).albums
 }
 
 /**
@@ -53,7 +54,7 @@ export async function searchArtists(query: string): Promise<Artist[]> {
     const results = getMockSearchResults(query)
     return Promise.resolve(results.artists)
   }
-  return apiClient<Artist[]>(`/search/${encodeURIComponent(query)}/artists`)
+  return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/artists`)).artists
 }
 
 /**

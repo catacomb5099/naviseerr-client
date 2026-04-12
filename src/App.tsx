@@ -16,26 +16,30 @@ function App() {
   const [selectedPill, setSelectedPill] = useState<FilterType>('all')
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
 
-  const handleSearch = async (searchQuery: string) => {
+  const handleSearch = async (searchQuery: string, filter?: FilterType) => {
     setQuery(searchQuery)
+    setResults(null) // Clear old results before new search
     setLoading(true)
     setError(null)
+
+    // Use provided filter or fall back to current selectedPill
+    const activeFilter = filter ?? selectedPill
 
     try {
       let data: SearchResponse
 
-      if (selectedPill === 'all') {
+      if (activeFilter === 'all') {
         data = await search(searchQuery)
-      } else if (selectedPill === 'songs') {
-        const songs = await searchSongs(searchQuery)
-        data = { songs, albums: [], artists: [] }
-      } else if (selectedPill === 'albums') {
+      } else if (activeFilter === 'songs') {
+        const tracks = await searchSongs(searchQuery)
+        data = { tracks, albums: [], artists: [] }
+      } else if (activeFilter === 'albums') {
         const albums = await searchAlbums(searchQuery)
-        data = { songs: [], albums, artists: [] }
+        data = { tracks: [], albums, artists: [] }
       } else {
         // artists
         const artists = await searchArtists(searchQuery)
-        data = { songs: [], albums: [], artists }
+        data = { tracks: [], albums: [], artists }
       }
 
       setResults(data)
@@ -66,7 +70,7 @@ function App() {
     setSelectedPill(filter)
     // Re-run search with new filter if we have a query
     if (query) {
-      handleSearch(query)
+      handleSearch(query, filter) // Pass the new filter directly
     }
   }
 
@@ -74,7 +78,7 @@ function App() {
   const showArtists = selectedPill === 'all' || selectedPill === 'artists'
   const showAlbums = selectedPill === 'all' || selectedPill === 'albums'
 
-  const hasSongs = results?.songs && results.songs.length > 0
+  const hasSongs = results?.tracks && results.tracks.length > 0
   const hasArtists = results?.artists && results.artists.length > 0
   const hasAlbums = results?.albums && results.albums.length > 0
 
@@ -129,13 +133,12 @@ function App() {
               <section>
                 <h2 className="text-3xl font-bold text-white mb-6">Songs</h2>
                 <div className="space-y-2">
-                  {results.songs.map((song) => (
+                  {results.tracks.map((track, index) => (
                     <SongCard
-                      key={song.id}
-                      song={song}
-                      artistNames={getArtistNames(song.artists, results.artists)}
+                      key={track.id || `song-${index}`}
+                      track={track}
                       onDownload={handleDownload}
-                      isDownloading={downloadingIds.has(song.id)}
+                      isDownloading={downloadingIds.has(track.id)}
                     />
                   ))}
                 </div>

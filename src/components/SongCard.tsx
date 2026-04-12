@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react'
 import { Card } from './ui/card'
 import { Button } from './ui/button'
-import { Song } from '../api/types'
+import { Track } from '../api/types'
 import { Download } from 'lucide-react'
 
 interface SongCardProps {
-  song: Song
-  artistNames: string[]
-  onDownload: (songId: string) => void
+  track: Track
+  onDownload: (trackId: string) => void
   isDownloading: boolean
 }
 
-export function SongCard({ song, artistNames, onDownload, isDownloading }: SongCardProps) {
+export function SongCard({ track, onDownload, isDownloading }: SongCardProps) {
   const [cooldown, setCooldown] = useState(false)
 
   useEffect(() => {
@@ -27,7 +26,7 @@ export function SongCard({ song, artistNames, onDownload, isDownloading }: SongC
 
   const handleDownload = () => {
     if (!cooldown) {
-      onDownload(song.id)
+      onDownload(track.name + " - " + track.artists[0])
     }
   }
 
@@ -36,10 +35,10 @@ export function SongCard({ song, artistNames, onDownload, isDownloading }: SongC
       <div className="p-4 flex items-center gap-4">
         {/* Album Icon */}
         <div className="w-16 h-16 flex-shrink-0">
-          {song.iconURL ? (
+          {track.iconURL ? (
             <img
-              src={song.iconURL}
-              alt={song.name}
+              src={track.iconURL}
+              alt={track.name}
               className="w-full h-full object-cover rounded"
               onError={(e) => {
                 e.currentTarget.src = ''
@@ -53,9 +52,9 @@ export function SongCard({ song, artistNames, onDownload, isDownloading }: SongC
 
         {/* Song Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-medium truncate">{song.name}</h3>
+          <h3 className="text-white font-medium truncate">{track.name}</h3>
           <p className="text-sm text-zinc-400 truncate">
-            {artistNames.length > 0 ? artistNames.join(', ') : 'Unknown Artist'}
+            {track.artists.length > 0 ? track.artists.join(', ') : 'Unknown Artist'}
           </p>
         </div>
 

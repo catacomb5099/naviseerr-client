@@ -1,4 +1,4 @@
-export interface Song {
+export interface Track {
   id: string
   iconURL: string
   streamURL: string
@@ -23,7 +23,10 @@ export interface Artist {
 }
 
 export interface SearchResponse {
-  songs: Song[]
+  tracks: Track[]
   albums: Album[]
   artists: Artist[]
 }
+
+// Keep Song as alias for backwards compatibility
+export type Song = Track

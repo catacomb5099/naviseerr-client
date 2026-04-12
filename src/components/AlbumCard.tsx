@@ -2,10 +2,9 @@ import { Album } from '../api/types'
 
 interface AlbumCardProps {
   album: Album
-  artistNames: string[]
 }
 
-export function AlbumCard({ album, artistNames }: AlbumCardProps) {
+export function AlbumCard({ album}: AlbumCardProps) {
   return (
     <div className="flex-shrink-0 w-40 md:w-48">
       {/* Square Album Icon */}
@@ -28,7 +27,7 @@ export function AlbumCard({ album, artistNames }: AlbumCardProps) {
       {/* Album Info */}
       <h3 className="text-white font-medium truncate mb-1">{album.name}</h3>
       <p className="text-sm text-zinc-400 truncate">
-        {artistNames.length > 0 ? artistNames.join(', ') : 'Unknown Artist'}
+        {album.artists.length > 0 ? album.artists.join(', ') : 'Unknown Artist'}
       </p>
       <p className="text-sm text-zinc-500">{album.year}</p>
     </div>

@@ -181,7 +181,7 @@ export function getMockSearchResults(query: string): SearchResponse {
   )
 
   return {
-    songs: filteredSongs,
+    tracks: filteredSongs,
     albums: filteredAlbums,
     artists: filteredArtists
   }
