@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import { SearchResponse, Track, Album, Artist } from './types'
+import { SearchResponse, Track, Artist } from './types'
 import { getMockSearchResults } from './mockData'
 
 // Toggle between mock and real API
@@ -31,17 +31,23 @@ export async function searchSongs(query: string): Promise<Track[]> {
   return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/tracks`)).tracks
 }
 
+/** Albums plus the artists needed to resolve their artist IDs to names. */
+export type AlbumResults = Pick<SearchResponse, 'albums' | 'artists'>
+
 /**
  * Search albums only
  * GET /search/{query}/albums
  */
-export async function searchAlbums(query: string): Promise<Album[]> {
+export async function searchAlbums(query: string): Promise<AlbumResults> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] searchAlbums called with query: ${query}`)
     const results = getMockSearchResults(query)
-    return Promise.resolve(results.albums)
+    return Promise.resolve({ albums: results.albums, artists: results.artists })
   }
-  return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/albums`)).albums
+  const data = await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/albums`)
+  // Keep the artists from the same response: album.artists holds IDs, and the
+  // cards need this list to resolve them to names.
+  return { albums: data.albums, artists: data.artists ?? [] }
 }
 
 /**
