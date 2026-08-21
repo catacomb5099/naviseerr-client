@@ -59,8 +59,10 @@ export async function searchArtists(query: string): Promise<Artist[]> {
 
 /**
  * Download song by ID
- * GET /download/{songId}
+ * POST /download/{songId}
  */
 export async function download(songId: string): Promise<void> {
-  return apiClient<void>(`/download/${encodeURIComponent(songId)}`)
+  return apiClient<void>(`/download/${encodeURIComponent(songId)}`, {
+    method: 'POST',
+  })
 }
