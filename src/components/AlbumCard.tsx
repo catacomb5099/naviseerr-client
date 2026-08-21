@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Album } from '../api/types'
 import { CardLayout } from './cardLayout'
 
@@ -8,6 +9,7 @@ interface AlbumCardProps {
 }
 
 export function AlbumCard({ album, artistNames, layout = 'carousel' }: AlbumCardProps) {
+  const [iconFailed, setIconFailed] = useState(false)
   const isGrid = layout === 'grid'
 
   // Prefer resolved names; album.artists holds IDs, which are meaningless on screen
@@ -17,15 +19,15 @@ export function AlbumCard({ album, artistNames, layout = 'carousel' }: AlbumCard
     <div className={isGrid ? 'w-full' : 'flex-shrink-0 w-40 md:w-48'}>
       {/* Square Album Icon */}
       <div className={isGrid ? 'w-full aspect-square mb-3' : 'w-40 md:w-48 h-40 md:h-48 mb-3'}>
-        {album.iconURL ? (
+        {album.iconURL && !iconFailed ? (
           <img
             src={album.iconURL}
             alt={album.name}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
             className="w-full h-full object-cover rounded"
-            onError={(e) => {
-              e.currentTarget.src = ''
-              e.currentTarget.style.display = 'none'
-            }}
+            onError={() => setIconFailed(true)}
           />
         ) : (
           <div className="w-full h-full bg-zinc-800 rounded"></div>
