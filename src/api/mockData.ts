@@ -1,4 +1,4 @@
-import { Song, Album, Artist, SearchResponse } from './types'
+import { Track, Album, Artist, SearchResponse } from './types'
 
 /**
  * Mock data based on Last.fm API response for "jay sean"
@@ -54,7 +54,7 @@ export const mockAlbums: Album[] = [
   }
 ]
 
-export const mockSongs: Song[] = [
+export const mockTracks: Track[] = [
   {
     id: 'song-1',
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
@@ -147,8 +147,9 @@ export const mockSongs: Song[] = [
   }
 ]
 
+
 export const mockSearchResponse: SearchResponse = {
-  songs: mockSongs,
+  tracks: mockTracks,
   albums: mockAlbums,
   artists: mockArtists
 }
@@ -160,10 +161,10 @@ export function getMockSearchResults(query: string): SearchResponse {
   const lowerQuery = query.toLowerCase()
 
   // Filter results based on query
-  const filteredSongs = mockSongs.filter(song =>
-    song.name.toLowerCase().includes(lowerQuery) ||
+  const filteredTracks = mockTracks.filter(track =>
+    track.name.toLowerCase().includes(lowerQuery) ||
     mockArtists.some(artist =>
-      song.artists.includes(artist.id) &&
+      track.artists.includes(artist.id) &&
       artist.name.toLowerCase().includes(lowerQuery)
     )
   )
@@ -181,7 +182,7 @@ export function getMockSearchResults(query: string): SearchResponse {
   )
 
   return {
-    tracks: filteredSongs,
+    tracks: filteredTracks,
     albums: filteredAlbums,
     artists: filteredArtists
   }

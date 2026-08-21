@@ -4,6 +4,7 @@ import { FilterPills, FilterType } from './components/FilterPills'
 import { SongCard } from './components/SongCard'
 import { ArtistCard } from './components/ArtistCard'
 import { AlbumCard } from './components/AlbumCard'
+import { CAROUSEL_CONTAINER, GRID_CONTAINER } from './components/cardLayout'
 import { search, searchSongs, searchAlbums, searchArtists, download } from './api/endpoints'
 import { SearchResponse } from './api/types'
 import { getArtistNames } from './lib/utils'
@@ -34,8 +35,8 @@ function App() {
         const tracks = await searchSongs(searchQuery)
         data = { tracks, albums: [], artists: [] }
       } else if (activeFilter === 'albums') {
-        const albums = await searchAlbums(searchQuery)
-        data = { tracks: [], albums, artists: [] }
+        const { albums, artists } = await searchAlbums(searchQuery)
+        data = { tracks: [], albums, artists }
       } else {
         // artists
         const artists = await searchArtists(searchQuery)
@@ -77,6 +78,12 @@ function App() {
   const showSongs = selectedPill === 'all' || selectedPill === 'songs'
   const showArtists = selectedPill === 'all' || selectedPill === 'artists'
   const showAlbums = selectedPill === 'all' || selectedPill === 'albums'
+
+  // Standalone Albums / Artists views wrap into a grid of double-size cards;
+  // the mixed "All" view keeps the horizontally scrolling row of smaller cards.
+  const isStandalone = selectedPill === 'albums' || selectedPill === 'artists'
+  const cardLayout = isStandalone ? 'grid' : 'carousel'
+  const containerClass = isStandalone ? GRID_CONTAINER : CAROUSEL_CONTAINER
 
   const hasSongs = results?.tracks && results.tracks.length > 0
   const hasArtists = results?.artists && results.artists.length > 0
@@ -149,9 +156,9 @@ function App() {
             {showArtists && hasArtists && (
               <section>
                 <h2 className="text-3xl font-bold text-white mb-6">Artists</h2>
-                <div className="flex gap-4 overflow-x-auto pb-4">
+                <div className={containerClass}>
                   {results.artists.map((artist) => (
-                    <ArtistCard key={artist.id} artist={artist} />
+                    <ArtistCard key={artist.id} artist={artist} layout={cardLayout} />
                   ))}
                 </div>
               </section>
@@ -161,12 +168,13 @@ function App() {
             {showAlbums && hasAlbums && (
               <section>
                 <h2 className="text-3xl font-bold text-white mb-6">Albums</h2>
-                <div className="flex gap-4 overflow-x-auto pb-4">
+                <div className={containerClass}>
                   {results.albums.map((album) => (
                     <AlbumCard
                       key={album.id}
                       album={album}
                       artistNames={getArtistNames(album.artists, results.artists)}
+                      layout={cardLayout}
                     />
                   ))}
                 </div>
