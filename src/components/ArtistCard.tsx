@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Artist } from '../api/types'
 
 interface ArtistCardProps {
@@ -5,19 +6,21 @@ interface ArtistCardProps {
 }
 
 export function ArtistCard({ artist }: ArtistCardProps) {
+  const [iconFailed, setIconFailed] = useState(false)
+
   return (
     <div className="flex-shrink-0 w-32 md:w-40 text-center">
       {/* Circular Artist Icon */}
       <div className="w-32 md:w-40 h-32 md:h-40 mx-auto mb-3">
-        {artist.iconUrl ? (
+        {artist.iconUrl && !iconFailed ? (
           <img
             src={artist.iconUrl}
             alt={artist.name}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
             className="w-full h-full object-cover rounded-full"
-            onError={(e) => {
-              e.currentTarget.src = ''
-              e.currentTarget.style.display = 'none'
-            }}
+            onError={() => setIconFailed(true)}
           />
         ) : (
           <div className="w-full h-full bg-zinc-800 rounded-full"></div>

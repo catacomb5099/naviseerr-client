@@ -12,6 +12,7 @@ interface SongCardProps {
 
 export function SongCard({ track, onDownload, isDownloading }: SongCardProps) {
   const [cooldown, setCooldown] = useState(false)
+  const [iconFailed, setIconFailed] = useState(false)
 
   useEffect(() => {
     if (isDownloading) {
@@ -35,15 +36,15 @@ export function SongCard({ track, onDownload, isDownloading }: SongCardProps) {
       <div className="p-4 flex items-center gap-4">
         {/* Album Icon */}
         <div className="w-16 h-16 flex-shrink-0">
-          {track.iconURL ? (
+          {track.iconURL && !iconFailed ? (
             <img
               src={track.iconURL}
               alt={track.name}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover rounded"
-              onError={(e) => {
-                e.currentTarget.src = ''
-                e.currentTarget.style.display = 'none'
-              }}
+              onError={() => setIconFailed(true)}
             />
           ) : (
             <div className="w-full h-full bg-zinc-800 rounded"></div>
