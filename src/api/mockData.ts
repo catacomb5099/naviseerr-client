@@ -187,3 +187,95 @@ export function getMockSearchResults(query: string): SearchResponse {
     artists: filteredArtists
   }
 }
+
+// --- Mock active-downloads simulator -----------------------------------
+// The real backend has no artificial latency either, but its progress is
+// driven by real transfer time. Here we fake that by deriving state purely
+// from elapsed time since the mock download was requested, so repeated
+// polls (getMockActiveDownloads) see a believable progression instead of
+// jumping straight from 0 to 100.
+
+interface MockDownloadEntry {
+  downloadId: string
+  songName: string
+  createdAt: number
+  outcome: 'SUCCEEDED' | 'FAILED'
+}
+
+const mockDownloads = new Map<string, MockDownloadEntry>()
+
+const MOCK_SEARCH_MS = 2500
+const MOCK_TRANSFER_MS = 9000
+const MOCK_RESET_AT_MS = MOCK_SEARCH_MS + 4000 // one simulated retry mid-transfer
+const MOCK_RETENTION_MS = 20000 // how long a terminal row keeps appearing
+
+function randomId(): string {
+  return 'mock-dl-' + Math.random().toString(36).slice(2, 10)
+}
+
+export function getMockDownload(songId: string): import('./types').Download {
+  const downloadId = randomId()
+  mockDownloads.set(downloadId, {
+    downloadId,
+    songName: songId,
+    createdAt: Date.now(),
+    // ~80% succeed, so failures are visible but not the common case
+    outcome: Math.random() < 0.8 ? 'SUCCEEDED' : 'FAILED',
+  })
+  return {
+    downloadId,
+    songName: songId,
+    status: 'PENDING',
+    createdAt: new Date().toISOString(),
+  }
+}
+
+export function getMockActiveDownloads(): import('./types').ActiveDownloadsResponse {
+  const now = Date.now()
+  const downloads: import('./types').ActiveDownloadView[] = []
+
+  for (const [downloadId, entry] of mockDownloads) {
+    const elapsed = now - entry.createdAt
+    const phaseEnteredAt = new Date(entry.createdAt).toISOString()
+
+    if (elapsed < MOCK_SEARCH_MS) {
+      downloads.push({
+        downloadId,
+        songName: entry.songName,
+        status: 'PENDING',
+        progressPercent: null,
+        phaseEnteredAt,
+      })
+      continue
+    }
+
+    const transferElapsed = elapsed - MOCK_SEARCH_MS
+    if (transferElapsed < MOCK_TRANSFER_MS) {
+      const sinceReset = elapsed > MOCK_RESET_AT_MS ? elapsed - MOCK_RESET_AT_MS : transferElapsed
+      const pct = Math.min(99, (sinceReset / MOCK_TRANSFER_MS) * 100)
+      downloads.push({
+        downloadId,
+        songName: entry.songName,
+        status: 'IN_PROGRESS',
+        progressPercent: Math.round(pct * 100) / 100,
+        phaseEnteredAt: new Date(entry.createdAt + MOCK_SEARCH_MS).toISOString(),
+      })
+      continue
+    }
+
+    const terminalElapsed = transferElapsed - MOCK_TRANSFER_MS
+    if (terminalElapsed < MOCK_RETENTION_MS) {
+      downloads.push({
+        downloadId,
+        songName: entry.songName,
+        status: entry.outcome,
+        progressPercent: entry.outcome === 'SUCCEEDED' ? 100 : 87,
+        phaseEnteredAt: new Date(entry.createdAt + MOCK_SEARCH_MS + MOCK_TRANSFER_MS).toISOString(),
+      })
+    } else {
+      mockDownloads.delete(downloadId)
+    }
+  }
+
+  return { pollIntervalMs: 5000, downloads }
+}
