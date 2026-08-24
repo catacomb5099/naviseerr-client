@@ -4,10 +4,13 @@ import { FilterPills, FilterType } from './components/FilterPills'
 import { SongCard } from './components/SongCard'
 import { ArtistCard } from './components/ArtistCard'
 import { AlbumCard } from './components/AlbumCard'
+import { DownloadPanel } from './components/DownloadPanel'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from './components/cardLayout'
-import { search, searchSongs, searchAlbums, searchArtists, download } from './api/endpoints'
+import { search, searchSongs, searchAlbums, searchArtists } from './api/endpoints'
 import { SearchResponse } from './api/types'
 import { getArtistNames } from './lib/utils'
+import { useActiveDownloads } from './hooks/useActiveDownloads'
+import { useDismissSound } from './hooks/useDismissSound'
 
 function App() {
   const [query, setQuery] = useState('')
@@ -15,7 +18,17 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedPill, setSelectedPill] = useState<FilterType>('all')
-  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+
+  const { muted, toggleMuted, playSwoosh } = useDismissSound()
+  const {
+    cards: downloadCards,
+    exiting: exitingDownloadIds,
+    pollIntervalMs,
+    minimized: downloadsMinimized,
+    setMinimized: setDownloadsMinimized,
+    dismiss: dismissDownload,
+    requestDownload,
+  } = useActiveDownloads(playSwoosh)
 
   const handleSearch = async (searchQuery: string, filter?: FilterType) => {
     setQuery(searchQuery)
@@ -49,21 +62,6 @@ function App() {
       setResults(null)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleDownload = async (songId: string) => {
-    setDownloadingIds(prev => new Set(prev).add(songId))
-    try {
-      await download(songId)
-    } catch (err) {
-      console.error('Download failed:', err)
-      alert('Download failed. Please try again.')
-      setDownloadingIds(prev => {
-        const next = new Set(prev)
-        next.delete(songId)
-        return next
-      })
     }
   }
 
@@ -144,8 +142,8 @@ function App() {
                     <SongCard
                       key={track.id || `song-${index}`}
                       track={track}
-                      onDownload={handleDownload}
-                      isDownloading={downloadingIds.has(track.id)}
+                      artistNames={getArtistNames(track.artists, results.artists)}
+                      onDownload={requestDownload}
                     />
                   ))}
                 </div>
@@ -183,6 +181,17 @@ function App() {
           </main>
         )}
       </div>
+
+      <DownloadPanel
+        cards={downloadCards}
+        exiting={exitingDownloadIds}
+        pollIntervalMs={pollIntervalMs}
+        minimized={downloadsMinimized}
+        onToggleMinimized={() => setDownloadsMinimized(m => !m)}
+        onDismiss={dismissDownload}
+        muted={muted}
+        onToggleMuted={toggleMuted}
+      />
     </div>
   )
 }
