@@ -1,9 +1,9 @@
 import { apiClient } from './client'
-import { SearchResponse, Track, Artist } from './types'
-import { getMockSearchResults } from './mockData'
+import { SearchResponse, Track, Artist, Download, ActiveDownloadsResponse } from './types'
+import { getMockSearchResults, getMockDownload, getMockActiveDownloads } from './mockData'
 
 // Toggle between mock and real API
-const USE_MOCK_DATA = false
+export const USE_MOCK_DATA = false
 
 
 /**
@@ -67,8 +67,25 @@ export async function searchArtists(query: string): Promise<Artist[]> {
  * Download song by ID
  * POST /download/{songId}
  */
-export async function download(songId: string): Promise<void> {
-  return apiClient<void>(`/download/${encodeURIComponent(songId)}`, {
+export async function download(songId: string): Promise<Download> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] download called with songId: ${songId}`)
+    return Promise.resolve(getMockDownload(songId))
+  }
+  return apiClient<Download>(`/download/${encodeURIComponent(songId)}`, {
     method: 'POST',
   })
+}
+
+/**
+ * Active (non-terminal, plus recently-finished) downloads
+ * GET /downloads/active
+ */
+export async function getActiveDownloads(signal?: AbortSignal): Promise<ActiveDownloadsResponse> {
+  if (USE_MOCK_DATA) {
+    return Promise.resolve(getMockActiveDownloads())
+  }
+  const data = await apiClient<ActiveDownloadsResponse>('/downloads/active', { signal })
+  // apiClient returns `undefined` for a non-JSON (e.g. empty) response body.
+  return data ?? { pollIntervalMs: 5000, downloads: [] }
 }
