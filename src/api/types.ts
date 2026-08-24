@@ -30,3 +30,25 @@ export interface SearchResponse {
 
 // Keep Song as alias for backwards compatibility
 export type Song = Track
+
+export type DownloadStatus = 'PENDING' | 'IN_PROGRESS' | 'FAILED' | 'SUCCEEDED'
+
+export interface Download {
+  downloadId: string
+  songName: string
+  status: DownloadStatus
+  createdAt: string
+}
+
+export interface ActiveDownloadView {
+  downloadId: string
+  songName: string
+  status: DownloadStatus
+  progressPercent: number | null
+  phaseEnteredAt: string
+}
+
+export interface ActiveDownloadsResponse {
+  pollIntervalMs: number
+  downloads: ActiveDownloadView[]
+}
