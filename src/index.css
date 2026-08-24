@@ -20,6 +20,7 @@
     --input: 240 4% 16%;
     --ring: 142 76% 36%;
     --radius: 0.5rem;
+    --z-download-panel: 50;
   }
 }
 
@@ -49,4 +50,48 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #505050;
+}
+/* Active downloads panel: enter/exit + indeterminate-progress motion */
+@keyframes download-card-enter {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes download-card-exit {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(115%);
+    opacity: 0;
+  }
+}
+
+@keyframes download-indeterminate-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(360%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .download-progress-fill {
+    transition: none !important;
+  }
+  .download-card-enter,
+  .download-card-exit {
+    animation: none !important;
+  }
+  .download-indeterminate-fill::after {
+    animation: none !important;
+  }
 }

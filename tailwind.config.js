@@ -46,6 +46,25 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        'download-card-enter': {
+          from: { transform: 'translateX(24px)', opacity: '0' },
+          to: { transform: 'translateX(0)', opacity: '1' },
+        },
+        'download-card-exit': {
+          from: { transform: 'translateX(0)', opacity: '1' },
+          to: { transform: 'translateX(115%)', opacity: '0' },
+        },
+        'download-indeterminate-sweep': {
+          from: { transform: 'translateX(-100%)' },
+          to: { transform: 'translateX(360%)' },
+        },
+      },
+      animation: {
+        'download-card-enter': 'download-card-enter 260ms cubic-bezier(0, 0, 0.2, 1)',
+        'download-card-exit': 'download-card-exit 200ms cubic-bezier(0.4, 0, 1, 1)',
+        'download-indeterminate-sweep': 'download-indeterminate-sweep 1.25s ease-in-out infinite',
+      },
     },
   },
   plugins: [],
