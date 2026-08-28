@@ -1,29 +1,44 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getActiveDownloads, download } from '../api/endpoints'
-import { ActiveDownloadView } from '../api/types'
-import { DownloadCardState, dismissTtlMs, isTerminal, sortCards } from '../lib/downloadPanel'
+import { getActiveDownloads, resolveDownloads, download } from '../api/endpoints'
+import { ActiveDownloadsResponse, ActiveDownloadView } from '../api/types'
+import {
+  DownloadCardState, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, sortCards,
+} from '../lib/downloadPanel'
 
-const STORAGE_KEY = 'naviseerr.downloads.v1'
-const STORAGE_VERSION = 1
-const MAX_SNAPSHOT_AGE_MS = 30 * 60 * 1000
+// v2: the card shape changed from status+phase to a single stage, and dismissed ids gained a
+// timestamp. A v1 snapshot is discarded rather than migrated - it is at most a few minutes of
+// download cards, and reconciliation would rebuild anything still live anyway.
+const STORAGE_KEY = 'naviseerr.downloads.v2'
+const STORAGE_VERSION = 2
 const EXIT_ANIMATION_MS = 360
 const DEFAULT_POLL_MS = 5000
+const DEFAULT_RETENTION_MS = 600000
+
+interface DismissedEntry {
+  id: string
+  at: number
+}
 
 interface Snapshot {
   v: number
   savedAt: number
   minimized: boolean
   cards: DownloadCardState[]
-  dismissedIds: string[]
+  dismissed: DismissedEntry[]
 }
 
+/**
+ * Deliberately unbounded in age. The old 30-minute cap dropped the whole snapshot, which meant
+ * "persists across a reload" but not "across a restart" - close the app over lunch and every card
+ * was gone whether or not the download had finished. Keeping it is safe now because a stale card
+ * can no longer linger on a guess: reconciliation asks the server about each one on startup.
+ */
 function loadSnapshot(): Snapshot | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as Snapshot
     if (parsed.v !== STORAGE_VERSION) return null
-    if (Date.now() - parsed.savedAt > MAX_SNAPSHOT_AGE_MS) return null
     return parsed
   } catch {
     return null
@@ -38,8 +53,16 @@ function saveSnapshot(snapshot: Snapshot) {
   }
 }
 
-/** Polls GET /downloads/active, tracks per-card state, persists across
- *  refresh, and auto-dismisses terminal cards on a count-scaled TTL. */
+/**
+ * Owns the download feed: polls GET /downloads/active, reconciles cards restored from a previous
+ * session against GET /downloads?ids=, and auto-dismisses terminal cards on a count-scaled TTL.
+ *
+ * The invariant the whole hook is built around: **a card is only ever removed deliberately.** The
+ * user's X, the terminal TTL, or the server explicitly saying it has no such row. Never a timeout on
+ * a card that is merely absent from a response, because absence is the normal state of a download
+ * the runner has not picked up yet, and dismissing those is how a card vanished mid-flight while
+ * still reading "in progress".
+ */
 export function useActiveDownloads(playSwoosh: () => void) {
   const initial = useRef(loadSnapshot()).current
 
@@ -50,13 +73,19 @@ export function useActiveDownloads(playSwoosh: () => void) {
   })
   const [exiting, setExiting] = useState<Set<string>>(new Set())
   const [minimized, setMinimized] = useState<boolean>(initial?.minimized ?? false)
-  const dismissedIdsRef = useRef<Set<string>>(new Set(initial?.dismissedIds ?? []))
+  const dismissedRef = useRef<Map<string, number>>(
+    new Map((initial?.dismissed ?? []).map(d => [d.id, d.at])))
   const pollIntervalRef = useRef<number>(DEFAULT_POLL_MS)
+  const retentionRef = useRef<number>(DEFAULT_RETENTION_MS)
   const [pollIntervalMs, setPollIntervalMs] = useState<number>(DEFAULT_POLL_MS)
+  const [terminalRetentionMs, setTerminalRetentionMs] = useState<number>(DEFAULT_RETENTION_MS)
 
   const timeoutRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const startedRef = useRef(false)
+  // Seeded at mount, not 0, so the first grace window is measured from startup - boot has already
+  // reconciled the restored cards and does not need doing again on the very first poll.
+  const staleReconciledAtRef = useRef<number>(Date.now())
   const cardsRef = useRef<Record<string, DownloadCardState>>(cards)
   const exitingRef = useRef<Set<string>>(exiting)
 
@@ -70,7 +99,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
         savedAt: Date.now(),
         minimized,
         cards: Object.values(cards),
-        dismissedIds: Array.from(dismissedIdsRef.current),
+        dismissed: Array.from(dismissedRef.current, ([id, at]) => ({ id, at })),
       })
     }, 300)
     return () => window.clearTimeout(handle)
@@ -92,77 +121,80 @@ export function useActiveDownloads(playSwoosh: () => void) {
   }, [])
 
   const dismiss = useCallback((id: string, opts?: { silent?: boolean }) => {
-    dismissedIdsRef.current.add(id)
-    // Bound growth over a long session - old ids are only needed long
-    // enough to outlive the server's own retention window.
-    if (dismissedIdsRef.current.size > 200) {
-      const excess = dismissedIdsRef.current.size - 200
-      const it = dismissedIdsRef.current.values()
-      for (let i = 0; i < excess; i++) {
-        const next = it.next()
-        if (!next.done) dismissedIdsRef.current.delete(next.value)
-      }
+    // Pruned by AGE, not by count. A count cap evicts the oldest ids regardless of whether the
+    // server has stopped reporting them, and an id evicted too early makes a dismissed card
+    // reappear on the next poll.
+    const cutoff = Date.now() - dismissedRetentionMs(retentionRef.current)
+    for (const [known, at] of dismissedRef.current) {
+      if (at < cutoff) dismissedRef.current.delete(known)
     }
+    dismissedRef.current.set(id, Date.now())
+
     if (!opts?.silent) playSwoosh()
     setExiting(prev => new Set(prev).add(id))
     window.setTimeout(() => removeCard(id), EXIT_ANIMATION_MS)
   }, [playSwoosh, removeCard])
 
-  const mergeResponse = useCallback((downloads: ActiveDownloadView[]) => {
-    const prevSnapshot = cardsRef.current
-    const seen = new Set<string>()
-    for (const row of downloads) seen.add(row.downloadId)
-
-    // A card the server no longer reports has left its retention window
-    // (or, for a non-terminal row, was lost/never admitted). Either way the
-    // disappearance must go through the same animated dismiss as an X
-    // click - the server's retention window can be shorter than our own
-    // auto-dismiss TTL, and a card silently vanishing with no swipe or
-    // sound breaks the "always telegraph a dismissal" requirement.
-    const staleAfterMs = Math.max(15000, pollIntervalRef.current * 3)
-    for (const [id, card] of Object.entries(prevSnapshot)) {
-      if (seen.has(id) || exitingRef.current.has(id) || dismissedIdsRef.current.has(id)) continue
-      const isGone = isTerminal(card.status) || Date.now() - card.lastSeenAt >= staleAfterMs
-      if (isGone) dismiss(id)
-    }
-
+  const applyRows = useCallback((rows: ActiveDownloadView[]) => {
     setCards(prev => {
-      const next: Record<string, DownloadCardState> = {}
-
-      for (const row of downloads) {
-        if (dismissedIdsRef.current.has(row.downloadId)) continue
-
-        const existing = prev[row.downloadId]
-        // Never overwrite a real value with a null sample - an absent
-        // progress reading must never make a healthy bar jump backwards.
-        const progressPercent = row.progressPercent ?? existing?.progressPercent ?? null
-        const changed = !existing
-          || existing.status !== row.status
-          || existing.progressPercent !== row.progressPercent
-
-        next[row.downloadId] = {
-          downloadId: row.downloadId,
-          songName: row.songName,
-          status: row.status,
-          progressPercent,
-          phaseEnteredAt: row.phaseEnteredAt,
-          lastChangedAt: changed ? Date.now() : (existing?.lastChangedAt ?? Date.now()),
-          lastSeenAt: Date.now(),
-          shownPercent: existing?.shownPercent ?? 0,
-        }
+      const next = { ...prev }
+      for (const row of rows) {
+        if (dismissedRef.current.has(row.downloadId)) continue
+        next[row.downloadId] = mergeCard(prev[row.downloadId], row)
       }
-
-      // A non-terminal card missing from this response is kept until the
-      // server catches up or the staleness check above dismisses it.
-      for (const [id, card] of Object.entries(prev)) {
-        if (!(id in next) && !seen.has(id)) {
-          next[id] = card
-        }
-      }
-
+      // Anything not in `rows` is left exactly as it was. A download the runner has not admitted
+      // yet is legitimately absent from the feed, and so is one the server is slow to report.
       return next
     })
-  }, [dismiss])
+  }, [])
+
+  /**
+   * Asks the server directly about cards restored from a previous session. This is the ONLY place an
+   * absent id removes a card: /downloads?ids= ignores both the terminal filter and the retention
+   * window, so a row missing from its response does not exist at all. A card that finished while the
+   * app was closed gets its real outcome here instead of being guessed at or silently dropped.
+   */
+  const reconcile = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return
+    try {
+      const rows = await resolveDownloads(ids)
+      applyRows(rows)
+      const found = new Set(rows.map(r => r.downloadId))
+      ids.filter(id => !found.has(id)).forEach(id => dismiss(id, { silent: true }))
+    } catch (err) {
+      // Leave the cards alone. A failed lookup is not evidence about any of them, and the next
+      // poll may well report them anyway.
+      console.error('Failed to reconcile restored downloads:', err)
+    }
+  }, [applyRows, dismiss])
+
+  /**
+   * Non-terminal cards the feed has stopped mentioning for long enough that silence is no longer
+   * explainable by the runner being slow.
+   *
+   * These are NOT dismissed on that basis - absence still never mutates a card. They are handed to
+   * reconcile, which asks the server directly and gets a real answer either way. Without this, a card
+   * could be pinned forever: if the tab is backgrounded past the retention window, its download
+   * finishes and ages out of the feed while nothing is polling, and on return the row is simply gone.
+   * Startup reconciliation covers a restart; this covers a session that was merely idle.
+   */
+  const staleIds = useCallback((response: ActiveDownloadsResponse): string[] => {
+    // One grace period, generous enough that a queued download is never mistaken for a lost one.
+    const graceMs = Math.max(15000, response.pollIntervalMs * 3)
+    if (Date.now() - staleReconciledAtRef.current < graceMs) return []
+
+    const reported = new Set(response.downloads.map(row => row.downloadId))
+    const cutoff = Date.now() - graceMs
+    return Object.values(cardsRef.current)
+      .filter(card => !reported.has(card.downloadId)
+        && !isTerminal(card.stage)
+        // dismissedRef is written synchronously by dismiss(); exitingRef only catches up on the
+        // next render, so a card dismissed moments ago would otherwise be re-looked-up here.
+        && !dismissedRef.current.has(card.downloadId)
+        && !exitingRef.current.has(card.downloadId)
+        && card.lastSeenAt < cutoff)
+      .map(card => card.downloadId)
+  }, [])
 
   const poll = useCallback(async () => {
     abortRef.current?.abort()
@@ -171,13 +203,22 @@ export function useActiveDownloads(playSwoosh: () => void) {
     try {
       const response = await getActiveDownloads(controller.signal)
       pollIntervalRef.current = response.pollIntervalMs
+      retentionRef.current = response.terminalRetentionMs
       setPollIntervalMs(response.pollIntervalMs)
-      mergeResponse(response.downloads)
+      setTerminalRetentionMs(response.terminalRetentionMs)
+
+      // Computed BEFORE applying, so it reads the state the response is about to overwrite.
+      const stale = staleIds(response)
+      applyRows(response.downloads)
+      if (stale.length > 0) {
+        staleReconciledAtRef.current = Date.now()
+        void reconcile(stale)
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
       console.error('Failed to poll active downloads:', err)
     }
-  }, [mergeResponse])
+  }, [applyRows, staleIds, reconcile])
 
   const scheduleNext = useCallback((delayMs: number) => {
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
@@ -195,17 +236,23 @@ export function useActiveDownloads(playSwoosh: () => void) {
     if (startedRef.current) return
     startedRef.current = true
 
-    Object.values(cards).forEach(card => {
-      if (isTerminal(card.status)) {
-        const ttl = dismissTtlMs(Object.keys(cards).length)
-        const age = Date.now() - card.lastChangedAt
-        if (age >= ttl) {
-          dismiss(card.downloadId, { silent: true })
-        }
+    const restored = Object.values(cardsRef.current)
+    // A terminal card whose TTL already elapsed while the app was closed should not flash up.
+    const ttl = dismissTtlMs(restored.length, retentionRef.current)
+    restored.forEach(card => {
+      if (isTerminal(card.stage) && Date.now() - card.lastChangedAt >= ttl) {
+        dismiss(card.downloadId, { silent: true })
       }
     })
 
-    poll().then(() => scheduleNext(pollIntervalRef.current))
+    const boot = async () => {
+      await reconcile(restored
+        .filter(card => !isTerminal(card.stage))
+        .map(card => card.downloadId))
+      await poll()
+      scheduleNext(pollIntervalRef.current)
+    }
+    void boot()
 
     const onVisibilityChange = () => {
       if (!document.hidden) poll()
@@ -217,17 +264,17 @@ export function useActiveDownloads(playSwoosh: () => void) {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
       abortRef.current?.abort()
     }
-    // Intentionally runs once: this owns a singleton poll loop, guarded by
-    // startedRef against React StrictMode's double-invoked effect.
+    // Intentionally runs once: this owns a singleton poll loop, guarded by startedRef against
+    // React StrictMode's double-invoked effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     const handle = window.setInterval(() => {
       const list = Object.values(cards)
-      const ttl = dismissTtlMs(list.length)
+      const ttl = dismissTtlMs(list.length, retentionRef.current)
       list.forEach(card => {
-        if (isTerminal(card.status) && !exiting.has(card.downloadId)) {
+        if (isTerminal(card.stage) && !exitingRef.current.has(card.downloadId)) {
           if (Date.now() - card.lastChangedAt >= ttl) {
             dismiss(card.downloadId)
           }
@@ -235,22 +282,26 @@ export function useActiveDownloads(playSwoosh: () => void) {
       })
     }, 1000)
     return () => window.clearInterval(handle)
-  }, [cards, exiting, dismiss])
+  }, [cards, dismiss])
 
   const requestDownload = useCallback(async (songName: string) => {
     try {
       const result = await download(songName)
+      // Optimistic, and under the download's REAL id - the 202 body carries it, so there is no
+      // temporary identity for the first feed response to reconcile against. The card is honest
+      // about what the server has actually promised: accepted, not yet started.
       setCards(prev => ({
         ...prev,
         [result.downloadId]: {
           downloadId: result.downloadId,
           songName: result.songName,
-          status: result.status,
+          stage: 'QUEUED',
           progressPercent: null,
-          phaseEnteredAt: result.createdAt,
+          failureCode: null,
+          stageEnteredAt: result.createdAt,
+          updatedAt: result.createdAt,
           lastChangedAt: Date.now(),
           lastSeenAt: Date.now(),
-          shownPercent: 0,
         },
       }))
       poll()
@@ -263,6 +314,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
     cards: sortCards(Object.values(cards)),
     exiting,
     pollIntervalMs,
+    terminalRetentionMs,
     minimized,
     setMinimized,
     dismiss,
