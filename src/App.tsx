@@ -7,7 +7,6 @@ import { AlbumCard } from './components/AlbumCard'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from './components/cardLayout'
 import { search, searchSongs, searchAlbums, searchArtists, download } from './api/endpoints'
 import { SearchResponse } from './api/types'
-import { getArtistNames } from './lib/utils'
 
 function App() {
   const [query, setQuery] = useState('')
@@ -173,7 +172,7 @@ function App() {
                     <AlbumCard
                       key={album.id}
                       album={album}
-                      artistNames={getArtistNames(album.artists, results.artists)}
+                      artistNames={album.artists}
                       layout={cardLayout}
                     />
                   ))}

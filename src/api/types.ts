@@ -3,7 +3,7 @@ export interface Track {
   iconURL: string
   streamURL: string
   name: string
-  artists: string[]  // List of artist IDs
+  artists: string[]  // Artist display names
   albumId: string
   year: number
 }
@@ -12,7 +12,7 @@ export interface Album {
   id: string
   iconURL: string
   name: string
-  artists: string[]  // List of artist IDs
+  artists: string[]  // Artist display names
   year: number
 }
 
