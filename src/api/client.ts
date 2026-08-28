@@ -45,6 +45,11 @@ export async function apiClient<T>(
     if (error instanceof ApiError) {
       throw error
     }
+    // An aborted request is not a network failure, and rewrapping it here is why callers that
+    // check `err.name === 'AbortError'` never matched - every superseded poll logged an error.
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error
+    }
     throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
