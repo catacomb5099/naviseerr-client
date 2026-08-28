@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download as DownloadIcon, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react'
 import { DownloadCard } from './DownloadCard'
-import { DownloadCardState } from '../lib/downloadPanel'
+import { DownloadCardState, failureCopy } from '../lib/downloadPanel'
 
 interface DownloadPanelProps {
   cards: DownloadCardState[]
@@ -29,12 +29,15 @@ export function DownloadPanel({
 
   useEffect(() => {
     cards.forEach(card => {
-      if (card.status === 'SUCCEEDED' && !announcedRef.current.has(card.downloadId)) {
+      if (announcedRef.current.has(card.downloadId)) return
+      if (card.stage === 'SUCCEEDED') {
         announcedRef.current.add(card.downloadId)
         setAnnouncement(`${card.songName} finished downloading.`)
-      } else if (card.status === 'FAILED' && !announcedRef.current.has(card.downloadId)) {
+      } else if (card.stage === 'FAILED') {
         announcedRef.current.add(card.downloadId)
-        setAnnouncement(`${card.songName} failed to download.`)
+        // The reason belongs in the announcement too - a screen reader user gets no glance at the
+        // sub-label, so "failed to download" alone withholds the only actionable part.
+        setAnnouncement(`${card.songName} failed to download. ${failureCopy(card.failureCode)}.`)
       }
     })
   }, [cards])
