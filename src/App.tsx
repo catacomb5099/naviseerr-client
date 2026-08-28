@@ -142,7 +142,7 @@ function App() {
                     <SongCard
                       key={track.id || `song-${index}`}
                       track={track}
-                      artistNames={getArtistNames(track.artists, results.artists)}
+                      artistNames={track.artists}
                       onDownload={requestDownload}
                     />
                   ))}
