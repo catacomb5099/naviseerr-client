@@ -30,6 +30,15 @@ function App() {
     if (result) library.record(result.downloadId, meta)
   }
 
+  // The page's X only ever appears on a still-live row, so forgetting the library entry alone
+  // would not remove it: joinItems re-synthesises a row for any live card with no entry. Dismissing
+  // it in useActiveDownloads too is what actually makes it disappear, and keeps a later feed
+  // response from resurrecting it.
+  const handleRemoveDownload = (downloadId: string) => {
+    library.remove(downloadId)
+    dismissDownload(downloadId)
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Both pages stay mounted and the inactive one is hidden, so a search survives a trip to
@@ -45,7 +54,7 @@ function App() {
           items={library.items}
           pollIntervalMs={pollIntervalMs}
           onNavigateHome={() => setPage('home')}
-          onRemove={library.remove}
+          onRemove={handleRemoveDownload}
         />
       </div>
 

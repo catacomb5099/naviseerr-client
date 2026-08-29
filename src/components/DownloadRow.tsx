@@ -33,13 +33,14 @@ function secondaryLine(item: DownloadItem): string {
 function DownloadRowAction({ item, onRemove }: { item: DownloadItem; onRemove: () => void }) {
   let control: ReactNode = null
 
-  // Only a finished download can be forgotten. Removing a row mid-flight would hide a download the
-  // server is still working on and the panel is still reporting.
-  if (isTerminal(item.stage)) {
+  // The mirror image of the floating panel's rule, and deliberately so: the panel's X dismisses a
+  // finished notification, this one stops showing a download that is still running. A finished row
+  // is a record of what was downloaded and offers no control at all.
+  if (!isTerminal(item.stage)) {
     control = (
       <button
         className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
-        aria-label={`Remove ${item.trackName} from downloads`}
+        aria-label={`Stop showing ${item.trackName}`}
         onClick={onRemove}
       >
         <X className="w-4 h-4" aria-hidden="true" />
