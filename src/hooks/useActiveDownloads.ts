@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getActiveDownloads, resolveDownloads, download } from '../api/endpoints'
-import { ActiveDownloadsResponse, ActiveDownloadView } from '../api/types'
+import { ActiveDownloadsResponse, ActiveDownloadView, Download } from '../api/types'
 import {
   DownloadCardState, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, sortCards,
 } from '../lib/downloadPanel'
@@ -284,7 +284,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
     return () => window.clearInterval(handle)
   }, [cards, dismiss])
 
-  const requestDownload = useCallback(async (songName: string) => {
+  const requestDownload = useCallback(async (songName: string): Promise<Download | null> => {
     try {
       const result = await download(songName)
       // Optimistic, and under the download's REAL id - the 202 body carries it, so there is no
@@ -305,8 +305,10 @@ export function useActiveDownloads(playSwoosh: () => void) {
         },
       }))
       poll()
+      return result
     } catch (err) {
       console.error('Download request failed:', err)
+      return null
     }
   }, [poll])
 

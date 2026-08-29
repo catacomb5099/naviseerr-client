@@ -7,7 +7,9 @@ import { Download } from 'lucide-react'
 interface SongCardProps {
   track: Track
   artistNames: string[]
-  onDownload: (songName: string) => void
+  /** `songName` is the string the server is asked for; the track and names come back with it so
+   *  the caller can record what was requested without rebuilding the display name. */
+  onDownload: (songName: string, track: Track, artistNames: string[]) => void
 }
 
 export function SongCard({ track, artistNames, onDownload }: SongCardProps) {
@@ -17,7 +19,7 @@ export function SongCard({ track, artistNames, onDownload }: SongCardProps) {
     const displayName = artistNames.length > 0
       ? `${track.name} - ${artistNames[0]}`
       : track.name
-    onDownload(displayName)
+    onDownload(displayName, track, artistNames)
   }
 
   return (
