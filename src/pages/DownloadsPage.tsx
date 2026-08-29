@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { DownloadRow } from '../components/DownloadRow'
-import { DownloadItem } from '../lib/downloadLibrary'
+import { DownloadSearchBar } from '../components/DownloadSearchBar'
+import { DownloadItem, filterItems } from '../lib/downloadLibrary'
 
 interface DownloadsPageProps {
   items: DownloadItem[]
@@ -13,7 +15,8 @@ interface DownloadsPageProps {
 }
 
 export function DownloadsPage({ items, pollIntervalMs, onNavigateHome, onRemove }: DownloadsPageProps) {
-  const visibleItems = items
+  const [query, setQuery] = useState('')
+  const visibleItems = filterItems(items, query)
 
   const emptyCopy = items.length > 0
     ? 'No downloads match that'
@@ -30,6 +33,7 @@ export function DownloadsPage({ items, pollIntervalMs, onNavigateHome, onRemove 
           <h2 className="text-3xl font-bold text-white mb-6">Downloads</h2>
 
           {/* CONTROLS SLOT - bullets 3 and 4 insert the search bar and pills here. */}
+          <DownloadSearchBar query={query} onQueryChange={setQuery} matchCount={visibleItems.length} />
 
           {visibleItems.length === 0 ? (
             <div className="text-center py-20">

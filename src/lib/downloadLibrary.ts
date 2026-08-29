@@ -171,3 +171,27 @@ export function itemStageLabel(item: DownloadItem): string {
   if (item.stage === 'FAILED') return failureCopy(item.failureCode)
   return ITEM_STAGE_COPY[item.stage]
 }
+
+/** Case- and accent-insensitive comparison key. NFD splits an accented character into its base
+ *  letter plus a combining mark, and dropping that combining-mark range (U+0300–U+036F) lets "beyonce" find "Beyoncé" - which
+ *  matters here because the artist and album names come from a music catalogue, not from the user. */
+function fold(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+/** Substring match against the three things a user would type to find a row again: the song, the
+ *  artist and the collection it came from. A hit on any one of them keeps the row - nobody
+ *  remembers which field a remembered word lived in. */
+export function matchesQuery(item: DownloadItem, query: string): boolean {
+  const needle = fold(query.trim())
+  if (!needle) return true
+  const haystacks = [item.trackName, item.albumName ?? '', ...item.artistNames]
+  return haystacks.some(value => fold(value).includes(needle))
+}
+
+/** Returns the same array when the query is blank, so an unfiltered page hands React the identical
+ *  item objects it had before and the rows do not remount. */
+export function filterItems(items: DownloadItem[], query: string): DownloadItem[] {
+  if (!query.trim()) return items
+  return items.filter(item => matchesQuery(item, query))
+}
