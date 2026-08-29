@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Card } from './ui/card'
 import { X } from 'lucide-react'
 import { DownloadItem, itemStageLabel } from '../lib/downloadLibrary'
+import { isTerminal } from '../lib/downloadPanel'
 
 interface DownloadRowProps {
   item: DownloadItem
@@ -82,13 +83,15 @@ export function DownloadRow({ item, pollIntervalMs, onRemove }: DownloadRowProps
 
         <span className={`text-sm flex-none ${stageColor(item)}`}>{itemStageLabel(item)}</span>
 
-        <button
-          className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
-          aria-label={`Remove ${item.trackName} from downloads`}
-          onClick={onRemove}
-        >
-          <X className="w-4 h-4" aria-hidden="true" />
-        </button>
+        {!isTerminal(item.stage) && (
+          <button
+            className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+            aria-label={`Stop showing ${item.trackName}`}
+            onClick={onRemove}
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </Card>
   )
