@@ -171,3 +171,52 @@ export function itemStageLabel(item: DownloadItem): string {
   if (item.stage === 'FAILED') return failureCopy(item.failureCode)
   return ITEM_STAGE_COPY[item.stage]
 }
+
+/** A run of rows under one heading. `heading` is null for the ungrouped view: same rows, no
+ *  headings, which is what the All and Songs filters show. */
+export interface DownloadGroup {
+  heading: string | null
+  items: DownloadItem[]
+}
+
+/** Which captured field the rows are bucketed by; null keeps the flat list. */
+export type DownloadGrouping = 'album' | 'artist' | null
+
+export const UNKNOWN_ALBUM_HEADING = 'Unknown Album'
+export const UNKNOWN_ARTIST_HEADING = 'Unknown Artist'
+
+/** The heading a row falls under. An item credited to several artists is filed under its first,
+ *  which is the one the row's own secondary line leads with; repeating the row under every
+ *  collaborator would make the page claim more downloads than happened. */
+function headingFor(item: DownloadItem, grouping: 'album' | 'artist'): string {
+  if (grouping === 'album') return item.albumName?.trim() || UNKNOWN_ALBUM_HEADING
+  return item.artistNames[0]?.trim() || UNKNOWN_ARTIST_HEADING
+}
+
+/**
+ * Buckets rows under headings for the Albums and Artists filters. Headings sort alphabetically with
+ * the unknown bucket forced last - it is the least useful heading to read first, and the only one
+ * that groups unrelated rows together. Order inside a bucket is the order given, so `sortItems`'
+ * newest-activity-first ordering survives grouping.
+ */
+export function groupItems(items: DownloadItem[], grouping: DownloadGrouping): DownloadGroup[] {
+  if (grouping === null) return [{ heading: null, items }]
+
+  const unknown = grouping === 'album' ? UNKNOWN_ALBUM_HEADING : UNKNOWN_ARTIST_HEADING
+  const buckets = new Map<string, DownloadItem[]>()
+  for (const item of items) {
+    const heading = headingFor(item, grouping)
+    const bucket = buckets.get(heading)
+    if (bucket) bucket.push(item)
+    else buckets.set(heading, [item])
+  }
+
+  const groups: { heading: string; items: DownloadItem[] }[] =
+    [...buckets].map(([heading, bucketItems]) => ({ heading, items: bucketItems }))
+  groups.sort((a, b) => {
+    if (a.heading === unknown) return 1
+    if (b.heading === unknown) return -1
+    return a.heading.localeCompare(b.heading)
+  })
+  return groups
+}
