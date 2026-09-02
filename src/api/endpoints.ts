@@ -1,10 +1,11 @@
 import { apiClient } from './client'
 import {
   SearchResponse, Track, Artist, Download, ActiveDownloadsResponse, ActiveDownloadView,
-  DownloadsByIdResponse,
+  DownloadsByIdResponse, AllDownloadsResponse,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
+  getMockAllDownloads,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -123,4 +124,30 @@ export async function resolveDownloads(
     apiClient<DownloadsByIdResponse>(
       `/downloads?ids=${chunk.map(encodeURIComponent).join(',')}`, { signal })))
   return responses.flatMap(r => r?.downloads ?? [])
+}
+
+/** Server-side default page size for GET /downloads/all. */
+export const DEFAULT_DOWNLOADS_PAGE_SIZE = 20
+/** Server-side default page for GET /downloads/all. 1-based: page 1 is the first page, not page 0. */
+export const FIRST_DOWNLOADS_PAGE = 1
+
+/**
+ * Every download the server knows about, newest first, ignoring both the terminal filter and the
+ * retention window - the Downloads page's seed, as opposed to /downloads/active's live window.
+ * GET /downloads/all?pageSize=&pageNumber=
+ *
+ * Both query params are required server-side, so they are always sent, even when the caller wants
+ * the server's own defaults - `pageNumber` is 1-based.
+ */
+export async function getAllDownloads(
+  page?: { pageSize?: number; pageNumber?: number },
+  signal?: AbortSignal,
+): Promise<AllDownloadsResponse> {
+  const pageSize = page?.pageSize ?? DEFAULT_DOWNLOADS_PAGE_SIZE
+  const pageNumber = page?.pageNumber ?? FIRST_DOWNLOADS_PAGE
+  if (USE_MOCK_DATA) return getMockAllDownloads(pageSize, pageNumber)
+  const data = await apiClient<AllDownloadsResponse>(
+    `/downloads/all?pageSize=${pageSize}&pageNumber=${pageNumber}`, { signal })
+  // apiClient returns `undefined` for a non-JSON (e.g. empty) response body.
+  return data ?? { downloads: [], totalPages: 0 }
 }
