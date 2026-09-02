@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card } from './ui/card'
 import { Button } from './ui/button'
 import { Track } from '../api/types'
@@ -6,29 +6,20 @@ import { Download } from 'lucide-react'
 
 interface SongCardProps {
   track: Track
-  onDownload: (trackId: string) => void
-  isDownloading: boolean
+  artistNames: string[]
+  /** `songName` is the string the server is asked for; the track and names come back with it so
+   *  the caller can record what was requested without rebuilding the display name. */
+  onDownload: (songName: string, track: Track, artistNames: string[]) => void
 }
 
-export function SongCard({ track, onDownload, isDownloading }: SongCardProps) {
-  const [cooldown, setCooldown] = useState(false)
+export function SongCard({ track, artistNames, onDownload }: SongCardProps) {
   const [iconFailed, setIconFailed] = useState(false)
 
-  useEffect(() => {
-    if (isDownloading) {
-      setCooldown(true)
-      const timer = setTimeout(() => {
-        setCooldown(false)
-      }, 30000) // 30 seconds
-
-      return () => clearTimeout(timer)
-    }
-  }, [isDownloading])
-
   const handleDownload = () => {
-    if (!cooldown) {
-      onDownload(track.name + " - " + track.artists[0])
-    }
+    const displayName = artistNames.length > 0
+      ? `${track.name} - ${artistNames[0]}`
+      : track.name
+    onDownload(displayName, track, artistNames)
   }
 
   return (
@@ -55,22 +46,15 @@ export function SongCard({ track, onDownload, isDownloading }: SongCardProps) {
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-medium truncate">{track.name}</h3>
           <p className="text-sm text-zinc-400 truncate">
-            {track.artists.length > 0 ? track.artists.join(', ') : 'Unknown Artist'}
+            {artistNames.length > 0 ? artistNames.join(', ') : 'Unknown Artist'}
           </p>
         </div>
 
         {/* Download Button */}
         <Button
           onClick={handleDownload}
-          disabled={cooldown}
           size="sm"
-          className={`
-            flex-shrink-0
-            ${cooldown
-              ? 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-500 text-white'
-            }
-          `}
+          className="flex-shrink-0 bg-green-600 hover:bg-green-500 text-white"
         >
           <Download className="w-4 h-4" />
         </Button>

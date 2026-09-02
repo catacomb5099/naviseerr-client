@@ -1,9 +1,14 @@
 import { apiClient } from './client'
-import { SearchResponse, Track, Artist } from './types'
-import { getMockSearchResults } from './mockData'
+import {
+  SearchResponse, Track, Artist, Download, ActiveDownloadsResponse, ActiveDownloadView,
+  DownloadsByIdResponse,
+} from './types'
+import {
+  getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
+} from './mockData'
 
 // Toggle between mock and real API
-const USE_MOCK_DATA = false
+export const USE_MOCK_DATA = false
 
 
 /**
@@ -67,8 +72,55 @@ export async function searchArtists(query: string): Promise<Artist[]> {
  * Download song by ID
  * POST /download/{songId}
  */
-export async function download(songId: string): Promise<void> {
-  return apiClient<void>(`/download/${encodeURIComponent(songId)}`, {
+export async function download(songId: string): Promise<Download> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] download called with songId: ${songId}`)
+    return Promise.resolve(getMockDownload(songId))
+  }
+  return apiClient<Download>(`/download/${encodeURIComponent(songId)}`, {
     method: 'POST',
   })
+}
+
+/**
+ * Active (non-terminal, plus recently-finished) downloads
+ * GET /downloads/active
+ */
+export async function getActiveDownloads(signal?: AbortSignal): Promise<ActiveDownloadsResponse> {
+  if (USE_MOCK_DATA) {
+    return Promise.resolve(getMockActiveDownloads())
+  }
+  const data = await apiClient<ActiveDownloadsResponse>('/downloads/active', { signal })
+  // apiClient returns `undefined` for a non-JSON (e.g. empty) response body.
+  return data ?? { pollIntervalMs: 5000, terminalRetentionMs: 600000, downloads: [] }
+}
+
+/** Server-side cap on GET /downloads?ids= */
+const RESOLVE_CHUNK = 100
+
+/**
+ * Resolve specific downloads by id, ignoring both the terminal filter and the retention window.
+ * GET /downloads?ids=a,b,c
+ *
+ * This is how a client that was closed for an hour finds out what happened to the cards it kept:
+ * their outcomes have long since aged out of /downloads/active, and without asking directly the
+ * client can only guess between "finished while I was gone" and "still running". An id that comes
+ * back absent has no row on the server at all, which is the one signal that justifies dropping a
+ * card the user never dismissed.
+ */
+export async function resolveDownloads(
+  ids: string[],
+  signal?: AbortSignal,
+): Promise<ActiveDownloadView[]> {
+  if (ids.length === 0) return []
+  if (USE_MOCK_DATA) return getMockDownloadsByIds(ids)
+
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += RESOLVE_CHUNK) {
+    chunks.push(ids.slice(i, i + RESOLVE_CHUNK))
+  }
+  const responses = await Promise.all(chunks.map(chunk =>
+    apiClient<DownloadsByIdResponse>(
+      `/downloads?ids=${chunk.map(encodeURIComponent).join(',')}`, { signal })))
+  return responses.flatMap(r => r?.downloads ?? [])
 }
