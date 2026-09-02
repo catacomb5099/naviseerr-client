@@ -47,7 +47,7 @@ export function DownloadsPage({ items, pollIntervalMs, onNavigateHome, onRemove 
               <p className="text-zinc-500 text-lg">{emptyCopy}</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="divide-y divide-zinc-800">
               {visibleGroups.map(group => (
                 <Fragment key={group.heading ?? '_flat'}>
                 {group.heading !== null && (
