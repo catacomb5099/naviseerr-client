@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ListMusic } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
@@ -8,67 +7,26 @@ import { SongCard } from '../components/SongCard'
 import { ArtistCard } from '../components/ArtistCard'
 import { AlbumCard } from '../components/AlbumCard'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
-import { search, searchSongs, searchAlbums, searchArtists } from '../api/endpoints'
 import { SearchResponse } from '../api/types'
 import { getArtistNames } from '../lib/utils'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 
 interface HomePageProps {
+  query: string
+  results: SearchResponse | null
+  loading: boolean
+  error: string | null
+  selectedPill: FilterType
+  onSearch: (searchQuery: string, filter?: FilterType) => void
+  onPillChange: (filter: FilterType) => void
   onNavigateToDownloads: () => void
   /** Requests the download and records its metadata; App owns both halves. */
   onDownload: (songName: string, meta: DownloadMetaInput) => void
 }
 
-export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResponse | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedPill, setSelectedPill] = useState<FilterType>('all')
-
-  const handleSearch = async (searchQuery: string, filter?: FilterType) => {
-    setQuery(searchQuery)
-    setResults(null) // Clear old results before new search
-    setLoading(true)
-    setError(null)
-
-    // Use provided filter or fall back to current selectedPill
-    const activeFilter = filter ?? selectedPill
-
-    try {
-      let data: SearchResponse
-
-      if (activeFilter === 'all') {
-        data = await search(searchQuery)
-      } else if (activeFilter === 'songs') {
-        const tracks = await searchSongs(searchQuery)
-        data = { tracks, albums: [], artists: [] }
-      } else if (activeFilter === 'albums') {
-        const { albums, artists } = await searchAlbums(searchQuery)
-        data = { tracks: [], albums, artists }
-      } else {
-        // artists
-        const artists = await searchArtists(searchQuery)
-        data = { tracks: [], albums: [], artists }
-      }
-
-      setResults(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed')
-      setResults(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handlePillChange = (filter: FilterType) => {
-    setSelectedPill(filter)
-    // Re-run search with new filter if we have a query
-    if (query) {
-      handleSearch(query, filter) // Pass the new filter directly
-    }
-  }
-
+export function HomePage({
+  query, results, loading, error, selectedPill, onSearch, onPillChange, onNavigateToDownloads, onDownload,
+}: HomePageProps) {
   const showSongs = selectedPill === 'all' || selectedPill === 'songs'
   const showArtists = selectedPill === 'all' || selectedPill === 'artists'
   const showAlbums = selectedPill === 'all' || selectedPill === 'albums'
@@ -93,11 +51,11 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
         />
       }>
         {/* Search Bar */}
-        <SearchBar onSearch={handleSearch} loading={loading} />
+        <SearchBar onSearch={onSearch} loading={loading} initialQuery={query} />
 
         {/* Filter Pills */}
         <div className="mt-4">
-          <FilterPills selected={selectedPill} onSelect={handlePillChange} />
+          <FilterPills selected={selectedPill} onSelect={onPillChange} />
         </div>
       </AppHeader>
 
