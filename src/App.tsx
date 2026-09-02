@@ -1,16 +1,15 @@
-import { useState } from 'react'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { DownloadsPage } from './pages/DownloadsPage'
 import { DownloadPanel } from './components/DownloadPanel'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
 import { useDismissSound } from './hooks/useDismissSound'
+import { useSearch } from './hooks/useSearch'
 import { DownloadMetaInput } from './lib/downloadLibrary'
 
-type Page = 'home' | 'downloads'
-
 function App() {
-  const [page, setPage] = useState<Page>('home')
+  const navigate = useNavigate()
   const { muted, toggleMuted, playSwoosh } = useDismissSound()
   const {
     cards: downloadCards,
@@ -22,6 +21,7 @@ function App() {
     requestDownload,
   } = useActiveDownloads(playSwoosh)
   const library = useDownloadLibrary(downloadCards)
+  const search = useSearch()
 
   const handleDownload = async (songName: string, meta: DownloadMetaInput) => {
     const result = await requestDownload(songName)
@@ -41,22 +41,32 @@ function App() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Both pages stay mounted and the inactive one is hidden, so a search survives a trip to
-          Downloads and back. Cheap here - neither page owns a poll loop of its own. */}
-      <div hidden={page !== 'home'}>
-        <HomePage
-          onNavigateToDownloads={() => setPage('downloads')}
-          onDownload={(songName, meta) => { void handleDownload(songName, meta) }}
-        />
-      </div>
-      <div hidden={page !== 'downloads'}>
-        <DownloadsPage
-          items={library.items}
-          pollIntervalMs={pollIntervalMs}
-          onNavigateHome={() => setPage('home')}
-          onRemove={handleRemoveDownload}
-        />
-      </div>
+      {/* Routes unmount the inactive page, so the search state lives in useSearch at this level
+          instead of on HomePage - that's what lets it survive a trip to Downloads and back. */}
+      <Routes>
+        <Route path="/" element={
+          <HomePage
+            query={search.query}
+            results={search.results}
+            loading={search.loading}
+            error={search.error}
+            selectedPill={search.selectedPill}
+            onSearch={search.runSearch}
+            onPillChange={search.changePill}
+            onNavigateToDownloads={() => navigate('/downloads')}
+            onDownload={(songName, meta) => { void handleDownload(songName, meta) }}
+          />
+        } />
+        <Route path="/downloads" element={
+          <DownloadsPage
+            items={library.items}
+            pollIntervalMs={pollIntervalMs}
+            onNavigateHome={() => navigate('/')}
+            onRemove={handleRemoveDownload}
+          />
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       <DownloadPanel
         cards={downloadCards}

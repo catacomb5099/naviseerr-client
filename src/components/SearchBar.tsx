@@ -5,10 +5,14 @@ import { Button } from './ui/button'
 interface SearchBarProps {
   onSearch: (query: string) => void
   loading: boolean
+  /** Seeds the draft from the committed query on mount. HomePage remounts on every route change
+   *  (there's no `hidden`-div trick anymore), so without this the box comes back empty above
+   *  results that are still showing. */
+  initialQuery?: string
 }
 
-export function SearchBar({ onSearch, loading }: SearchBarProps) {
-  const [query, setQuery] = useState('')
+export function SearchBar({ onSearch, loading, initialQuery }: SearchBarProps) {
+  const [query, setQuery] = useState(initialQuery ?? '')
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
