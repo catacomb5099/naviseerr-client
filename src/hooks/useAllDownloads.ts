@@ -4,23 +4,30 @@ import { ActiveDownloadView } from '../api/types'
 
 export interface AllDownloads {
   rows: ActiveDownloadView[]
+  totalPages: number
+  /** The page `rows` describes, or null before the first response ever lands. Lets a caller tell
+   *  "no rows yet" apart from "this page really is empty" - `rows.length === 0` is true in both
+   *  cases on the very first render, before any fetch has resolved. */
+  loadedPage: number | null
   loading: boolean
   error: string | null
   refresh: () => void
 }
 
 /**
- * The Downloads page's data source: the server's full answer to GET /downloads/all, fetched on
- * demand rather than polled. This is deliberately a separate hook from useActiveDownloads - its
- * rows must reach the page only, never the panel's card state, or a page visit would pop the
- * panel open with every finished download the server remembers and start terminal TTL timers on
- * all of them.
+ * The Downloads page's data source: the server's full answer to GET /downloads/all for one page,
+ * fetched on demand rather than polled. This is deliberately a separate hook from
+ * useActiveDownloads - its rows must reach the page only, never the panel's card state, or a page
+ * visit would pop the panel open with every finished download the server remembers and start
+ * terminal TTL timers on all of them.
  *
- * Fetches page 1 at the default size on mount. Mounting is what arriving at the route now means,
- * since the route unmounts the page when you leave it.
+ * Fetches on mount and again whenever `pageNumber` or `pageSize` changes, so arriving at the route
+ * and paging within it both trigger a request without the caller having to ask.
  */
-export function useAllDownloads(): AllDownloads {
+export function useAllDownloads(pageNumber: number, pageSize?: number): AllDownloads {
   const [rows, setRows] = useState<ActiveDownloadView[]>([])
+  const [totalPages, setTotalPages] = useState(0)
+  const [loadedPage, setLoadedPage] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -33,10 +40,13 @@ export function useAllDownloads(): AllDownloads {
     setError(null)
     void (async () => {
       try {
-        const result = await getAllDownloads(undefined, controller.signal)
-        // Replaces wholesale, not merged: this endpoint is the server's complete answer, so
-        // folding it into the previous response would keep rows the server has since dropped.
+        const result = await getAllDownloads({ pageSize, pageNumber }, controller.signal)
+        // Replaces wholesale, not merged: this endpoint is the server's complete answer for the
+        // requested page, so folding it into the previous response would keep rows the server has
+        // since dropped.
         setRows(result.downloads)
+        setTotalPages(result.totalPages)
+        setLoadedPage(pageNumber)
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return
         // Same posture as reconcile() in useActiveDownloads: a failed fetch is not evidence about
@@ -47,12 +57,15 @@ export function useAllDownloads(): AllDownloads {
         if (abortRef.current === controller) setLoading(false)
       }
     })()
-  }, [])
+  }, [pageSize, pageNumber])
 
+  // Keyed on `refresh`, which is itself keyed on [pageSize, pageNumber]: mounting (which is what
+  // arriving at the route now means) and changing page both get a fresh fetch this way, with no
+  // separate dependency list to keep in sync with refresh's own.
   useEffect(() => {
     refresh()
     return () => abortRef.current?.abort()
   }, [refresh])
 
-  return { rows, loading, error, refresh }
+  return { rows, totalPages, loadedPage, loading, error, refresh }
 }
