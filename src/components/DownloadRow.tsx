@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { X } from 'lucide-react'
 import { DownloadItem, itemStageLabel } from '../lib/downloadLibrary'
-import { isTerminal } from '../lib/downloadPanel'
 
 interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
-  onRemove: () => void
 }
 
 function stageColor(item: DownloadItem): string {
@@ -15,7 +12,7 @@ function stageColor(item: DownloadItem): string {
   return 'text-zinc-400'
 }
 
-export function DownloadRow({ item, pollIntervalMs, onRemove }: DownloadRowProps) {
+export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
   const [iconFailed, setIconFailed] = useState(false)
   const fillRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef(0)
@@ -84,19 +81,6 @@ export function DownloadRow({ item, pollIntervalMs, onRemove }: DownloadRowProps
             />
           )}
         </div>
-      </div>
-
-      {/* Fixed-width slot, filled or not, so the text column truncates at the same x on every row. */}
-      <div className="flex-none w-9 h-9">
-        {!isTerminal(item.stage) && (
-          <button
-            className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
-            aria-label={`Stop showing ${item.trackName}`}
-            onClick={onRemove}
-          >
-            <X className="w-4 h-4" aria-hidden="true" />
-          </button>
-        )}
       </div>
     </div>
   )

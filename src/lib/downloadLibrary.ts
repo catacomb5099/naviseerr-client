@@ -1,4 +1,4 @@
-import { DownloadStage } from '../api/types'
+import { ActiveDownloadView, DownloadStage } from '../api/types'
 import { DownloadCardState, failureCopy } from './downloadPanel'
 
 /** What the client knew about a download at the moment it was requested. The live feed carries
@@ -18,21 +18,6 @@ export interface DownloadMeta {
  *  hook knows. */
 export type DownloadMetaInput = Omit<DownloadMeta, 'downloadId' | 'requestedAt'>
 
-/** The last stage the client ever observed. Persisted because the page outlives the feed: a
- *  finished download ages out of /downloads/active and its card auto-dismisses, and without this
- *  a row the user watched succeed would come back reading "Waiting". */
-export interface DownloadStageSnapshot {
-  stage: DownloadStage
-  progressPercent: number | null
-  failureCode: string | null
-  updatedAt: string
-}
-
-export interface DownloadLibraryEntry {
-  meta: DownloadMeta
-  snapshot: DownloadStageSnapshot
-}
-
 /** A row on the Downloads page: durable metadata joined with the freshest stage available. */
 export interface DownloadItem extends DownloadMeta {
   stage: DownloadStage
@@ -49,108 +34,65 @@ export interface DownloadItem extends DownloadMeta {
  *  quota, which matters because this key shares that quota with the panel snapshot. */
 export const LIBRARY_CAP = 250
 
-export function snapshotFromCard(card: DownloadCardState): DownloadStageSnapshot {
+/** What metaFromSource needs to invent a row for a download this client has no cached metadata
+ *  for - satisfied by a live card or a /downloads/all row alike. */
+export type MetaSource = Pick<DownloadCardState, 'downloadId' | 'songName' | 'stageEnteredAt'>
+
+/** Metadata for a download this client has no cached record of: one requested before this
+ *  feature existed, from another browser, or one this browser never requested at all. The song
+ *  name is all the source gives us, and it is honest to show that rather than to hide the row. */
+export function metaFromSource(source: MetaSource): DownloadMeta {
   return {
-    stage: card.stage,
-    progressPercent: card.progressPercent,
-    failureCode: card.failureCode,
-    updatedAt: card.updatedAt,
-  }
-}
-
-/** The snapshot a freshly recorded download starts from: accepted by the server, nothing else
- *  promised. Same claim the panel's optimistic card makes. */
-export function initialSnapshot(requestedAt: string): DownloadStageSnapshot {
-  return { stage: 'QUEUED', progressPercent: null, failureCode: null, updatedAt: requestedAt }
-}
-
-export function sameSnapshot(a: DownloadStageSnapshot, b: DownloadStageSnapshot): boolean {
-  return a.stage === b.stage
-    && a.progressPercent === b.progressPercent
-    && a.failureCode === b.failureCode
-    && a.updatedAt === b.updatedAt
-}
-
-/**
- * Folds the live cards into the stored snapshots. Returns the same object when nothing moved so
- * the hook's state setter can bail out rather than re-render on every poll.
- */
-export function applyCardsToEntries(
-  entries: Record<string, DownloadLibraryEntry>,
-  cards: DownloadCardState[],
-): Record<string, DownloadLibraryEntry> {
-  let next: Record<string, DownloadLibraryEntry> | null = null
-  for (const card of cards) {
-    const entry = entries[card.downloadId]
-    // A card with no entry is not invented here - joinItems synthesises a row for it instead, so
-    // the registry only ever holds downloads this client actually requested.
-    if (!entry) continue
-    const snapshot = snapshotFromCard(card)
-    if (sameSnapshot(entry.snapshot, snapshot)) continue
-    next = next ?? { ...entries }
-    next[card.downloadId] = { meta: entry.meta, snapshot }
-  }
-  return next ?? entries
-}
-
-/** Metadata for a download this client has no record of: one requested before this feature
- *  existed, or from another browser. The song name is all the feed gives us, and it is honest to
- *  show that rather than to hide the row. */
-export function metaFromCard(card: DownloadCardState): DownloadMeta {
-  return {
-    downloadId: card.downloadId,
-    songName: card.songName,
-    trackName: card.songName,
+    downloadId: source.downloadId,
+    songName: source.songName,
+    trackName: source.songName,
     artistNames: [],
     albumName: null,
     iconURL: null,
-    requestedAt: card.stageEnteredAt,
+    requestedAt: source.stageEnteredAt,
   }
 }
 
 /**
- * The page's view model: every stored entry, plus any live card with no entry, with the live stage
- * winning over the stored one wherever both exist.
+ * The page's rows: exactly what the server returned, in the order it returned them, with locally
+ * cached metadata folded in where this browser has it, and the live feed's stage winning over the
+ * server's wherever both describe the same download.
  */
-export function joinItems(
-  entries: Record<string, DownloadLibraryEntry>,
+export function pageItems(
+  serverRows: ActiveDownloadView[],
+  metas: Record<string, DownloadMeta>,
   cards: DownloadCardState[],
 ): DownloadItem[] {
   const byId = new Map(cards.map(card => [card.downloadId, card]))
-  const items: DownloadItem[] = Object.values(entries).map(entry => {
-    const card = byId.get(entry.meta.downloadId)
-    const snapshot = card ? snapshotFromCard(card) : entry.snapshot
-    return { ...entry.meta, ...snapshot, live: card !== undefined }
-  })
-  for (const card of cards) {
-    if (entries[card.downloadId]) continue
-    items.push({ ...metaFromCard(card), ...snapshotFromCard(card), live: true })
-  }
-  return sortItems(items)
-}
 
-/** Newest activity first, matching the panel. `requestedAt` breaks ties and covers an entry whose
- *  `updatedAt` is unparseable, and the id makes the order stable for two identical timestamps. */
-export function sortItems(items: DownloadItem[]): DownloadItem[] {
-  const key = (item: DownloadItem) =>
-    Date.parse(item.updatedAt) || Date.parse(item.requestedAt) || 0
-  return [...items].sort((a, b) =>
-    key(b) - key(a) || a.downloadId.localeCompare(b.downloadId))
+  return serverRows.map(row => {
+    const meta = metas[row.downloadId] ?? metaFromSource(row)
+    const card = byId.get(row.downloadId)
+    const source = card ?? row
+    return {
+      ...meta,
+      stage: source.stage,
+      progressPercent: source.progressPercent,
+      failureCode: source.failureCode,
+      updatedAt: source.updatedAt,
+      live: card !== undefined,
+    }
+  })
 }
 
 /** Oldest-first eviction by request time, so a long-lived client cannot grow the key without
  *  bound. Applied on write only - reading never silently drops rows. */
 export function evictToCap(
-  entries: Record<string, DownloadLibraryEntry>,
+  metas: Record<string, DownloadMeta>,
   cap: number = LIBRARY_CAP,
-): Record<string, DownloadLibraryEntry> {
-  const all = Object.values(entries)
-  if (all.length <= cap) return entries
+): Record<string, DownloadMeta> {
+  const all = Object.values(metas)
+  if (all.length <= cap) return metas
   const keep = all
-    .sort((a, b) => Date.parse(b.meta.requestedAt) - Date.parse(a.meta.requestedAt))
+    .sort((a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt))
     .slice(0, cap)
-  const next: Record<string, DownloadLibraryEntry> = {}
-  for (const entry of keep) next[entry.meta.downloadId] = entry
+  const next: Record<string, DownloadMeta> = {}
+  for (const meta of keep) next[meta.downloadId] = meta
   return next
 }
 
