@@ -10,7 +10,6 @@ import { AlbumCard } from '../components/AlbumCard'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
 import { search, searchSongs, searchAlbums, searchArtists } from '../api/endpoints'
 import { DownloadType, SearchResponse } from '../api/types'
-import { getArtistNames } from '../lib/utils'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 
 interface HomePageProps {
@@ -136,25 +135,22 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
             <section>
               <h2 className="text-3xl font-bold text-white mb-6">Songs</h2>
               <div className="space-y-2">
-                {results.tracks.map((track, index) => {
-                  const trackArtistNames = getArtistNames(track.artists, results.artists)
-                  return (
-                    <SongCard
-                      key={track.id || `song-${index}`}
-                      track={track}
-                      artistNames={trackArtistNames}
-                      onDownload={(downloadedTrack, artistNames) => void onDownload(downloadedTrack.id, 'SONG', {
-                        youtubeId: downloadedTrack.id,
-                        downloadType: 'SONG',
-                        title: downloadedTrack.name,
-                        artistNames,
-                        // The albums in the same response are the only place a track's album name exists.
-                        albumName: results?.albums.find(a => a.id === downloadedTrack.albumId)?.name ?? null,
-                        iconURL: downloadedTrack.iconURL || null,
-                      })}
-                    />
-                  )
-                })}
+                {results.tracks.map((track, index) => (
+                  <SongCard
+                    key={track.id || `song-${index}`}
+                    track={track}
+                    artistNames={track.artists}
+                    onDownload={(downloadedTrack, artistNames) => void onDownload(downloadedTrack.id, 'SONG', {
+                      youtubeId: downloadedTrack.id,
+                      downloadType: 'SONG',
+                      title: downloadedTrack.name,
+                      artistNames,
+                      // The albums in the same response are the only place a track's album name exists.
+                      albumName: results?.albums.find(a => a.id === downloadedTrack.albumId)?.name ?? null,
+                      iconURL: downloadedTrack.iconURL || null,
+                    })}
+                  />
+                ))}
               </div>
             </section>
           )}
@@ -180,7 +176,6 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
                   <AlbumCard
                     key={album.id}
                     album={album}
-                    artistNames={getArtistNames(album.artists, results.artists)}
                     layout={cardLayout}
                   />
                 ))}
