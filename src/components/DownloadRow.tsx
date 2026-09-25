@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { DownloadItem, itemStageLabel } from '../lib/downloadLibrary'
+import { TypeBadge } from './TypeBadge'
 
 interface DownloadRowProps {
   item: DownloadItem
@@ -11,6 +12,12 @@ function stageColor(item: DownloadItem): string {
   if (item.stage === 'FAILED') return 'text-red-500'
   if (item.stage === 'PARTIAL_SUCCESS') return 'text-amber-500'
   return 'text-zinc-400'
+}
+
+/** The album name (client-only) for a song. A collection adds nothing here: the TypeBadge says the
+ *  kind and the summary line below owns the song count. */
+function kindLine(item: DownloadItem): string | null {
+  return item.downloadType === 'SONG' ? item.albumName : null
 }
 
 export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
@@ -41,7 +48,7 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
     return () => cancelAnimationFrame(frame)
   }, [animating, item.progressPercent, pollIntervalMs])
 
-  const secondaryLine = [item.artistNames.join(', ') || 'Unknown Artist', item.albumName]
+  const secondaryLine = [item.artistNames.join(', ') || 'Unknown Artist', kindLine(item)]
     .filter(Boolean)
     .join(' · ')
 
@@ -64,7 +71,10 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="text-white font-medium leading-6 truncate">{item.title}</h3>
+        <h3 className="text-white font-medium leading-6 truncate">
+          <TypeBadge type={item.downloadType} className="mr-2 align-middle" />
+          {item.title}
+        </h3>
         <p className="text-sm text-zinc-400 leading-5 truncate">{secondaryLine}</p>
         <p className={`text-xs leading-4 truncate ${stageColor(item)}`}>{itemStageLabel(item)}</p>
         {/* Reserved whether or not it is filled: the row must not change height when a download
