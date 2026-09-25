@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { CircleCheck, AlertCircle, Search, ArrowDown, Clock, X } from 'lucide-react'
 import {
-  DownloadCardState, isIndeterminate, isTerminal, showsElapsed, stageLabel,
+  DownloadCardState, displayTitle, isIndeterminate, isTerminal, showsElapsed, stageLabel,
 } from '../lib/downloadPanel'
 
 interface DownloadCardProps {
@@ -72,6 +72,10 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
       glyph = <AlertCircle className="w-4 h-4 text-red-500" aria-hidden="true" />
       subColor = 'text-red-500'
       break
+    case 'PARTIAL_SUCCESS':
+      glyph = <AlertCircle className="w-4 h-4 text-amber-500" aria-hidden="true" />
+      subColor = 'text-amber-500'
+      break
     case 'QUEUED':
       glyph = <Clock className="w-4 h-4 text-zinc-400" aria-hidden="true" />
       break
@@ -84,6 +88,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
   }
 
   const subLabel = stageLabel(card, elapsedSeconds)
+  const title = displayTitle(card)
 
   return (
     <div className={`overflow-hidden transition-[max-height] duration-150 ${exiting ? 'max-h-0' : 'max-h-16'}`}>
@@ -92,7 +97,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
       >
         <span className="w-5 flex-none flex items-center justify-center">{glyph}</span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-white truncate">{card.songName}</p>
+          <p className="text-xs text-white truncate">{title}</p>
           <p className={`text-[11px] mt-0.5 ${subColor}`}>{subLabel}</p>
           {card.stage === 'DOWNLOADING' && (
             <div className="h-[3px] bg-zinc-700 rounded-full overflow-hidden mt-1.5">
@@ -116,7 +121,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
         {terminal && (
           <button
             className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
-            aria-label={`Dismiss ${card.songName}`}
+            aria-label={`Dismiss ${title}`}
             onClick={onDismiss}
           >
             <X className="w-3.5 h-3.5" aria-hidden="true" />

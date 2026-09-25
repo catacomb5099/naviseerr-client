@@ -1,4 +1,6 @@
-import { Track, Album, Artist, SearchResponse } from './types'
+import {
+  Track, Album, Artist, Playlist, SearchResponse, CollectionDetail, CollectionType,
+} from './types'
 
 /**
  * Mock data based on Last.fm API response for "jay sean"
@@ -28,28 +30,28 @@ export const mockAlbums: Album[] = [
     id: 'album-1',
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     name: 'All or Nothing',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     year: 2009
   },
   {
     id: 'album-2',
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     name: 'My Own Way',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     year: 2008
   },
   {
     id: 'album-3',
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     name: 'Neon',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     year: 2013
   },
   {
     id: 'album-4',
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     name: 'Me Against Myself',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     year: 2004
   }
 ]
@@ -60,7 +62,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Down',
     name: 'Down',
-    artists: ['artist-1', 'artist-2'], // Jay Sean, Lil Wayne
+    artists: ['Jay Sean', 'Lil Wayne'],
     albumId: 'album-1',
     year: 2009
   },
@@ -69,7 +71,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Ride+It',
     name: 'Ride It',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     albumId: 'album-2',
     year: 2008
   },
@@ -78,7 +80,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Do+You+Remember',
     name: 'Do You Remember',
-    artists: ['artist-1', 'artist-3'], // Jay Sean, Sean Paul
+    artists: ['Jay Sean', 'Sean Paul'],
     albumId: 'album-1',
     year: 2009
   },
@@ -87,7 +89,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Maybe',
     name: 'Maybe',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     albumId: 'album-4',
     year: 2004
   },
@@ -96,7 +98,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Stay',
     name: 'Stay',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     albumId: 'album-4',
     year: 2004
   },
@@ -105,7 +107,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Tonight',
     name: 'Tonight',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     albumId: 'album-1',
     year: 2009
   },
@@ -114,7 +116,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Cry',
     name: 'Cry',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     albumId: 'album-1',
     year: 2009
   },
@@ -123,7 +125,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/War',
     name: 'War',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     albumId: 'album-3',
     year: 2013
   },
@@ -132,7 +134,7 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Fire',
     name: 'Fire',
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     albumId: 'album-3',
     year: 2013
   },
@@ -141,17 +143,28 @@ export const mockTracks: Track[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/2012+(It+Ain%27t+the+End)',
     name: "2012 (It Ain't the End)",
-    artists: ['artist-1'], // Jay Sean
+    artists: ['Jay Sean'],
     albumId: 'album-3',
     year: 2013
   }
 ]
 
 
+export const mockPlaylists: Playlist[] = [
+  {
+    id: 'PLmock-jay-sean-essentials',
+    iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
+    name: 'Jay Sean Essentials',
+    artists: ['YouTube Music'],
+    trackCount: 4,
+  },
+]
+
 export const mockSearchResponse: SearchResponse = {
   tracks: mockTracks,
   albums: mockAlbums,
-  artists: mockArtists
+  artists: mockArtists,
+  playlists: mockPlaylists,
 }
 
 /**
@@ -161,30 +174,58 @@ export function getMockSearchResults(query: string): SearchResponse {
   const lowerQuery = query.toLowerCase()
 
   // Filter results based on query
+  // `artists` holds display names, like the real server sends - match on them directly.
   const filteredTracks = mockTracks.filter(track =>
     track.name.toLowerCase().includes(lowerQuery) ||
-    mockArtists.some(artist =>
-      track.artists.includes(artist.id) &&
-      artist.name.toLowerCase().includes(lowerQuery)
-    )
+    track.artists.some(name => name.toLowerCase().includes(lowerQuery))
   )
 
   const filteredAlbums = mockAlbums.filter(album =>
     album.name.toLowerCase().includes(lowerQuery) ||
-    mockArtists.some(artist =>
-      album.artists.includes(artist.id) &&
-      artist.name.toLowerCase().includes(lowerQuery)
-    )
+    album.artists.some(name => name.toLowerCase().includes(lowerQuery))
   )
 
   const filteredArtists = mockArtists.filter(artist =>
     artist.name.toLowerCase().includes(lowerQuery)
   )
 
+  const filteredPlaylists = mockPlaylists.filter(playlist =>
+    playlist.name.toLowerCase().includes(lowerQuery) ||
+    playlist.artists.some(name => name.toLowerCase().includes(lowerQuery))
+  )
+
   return {
     tracks: filteredTracks,
     albums: filteredAlbums,
-    artists: filteredArtists
+    artists: filteredArtists,
+    playlists: filteredPlaylists,
+  }
+}
+
+/** The four "All or Nothing" tracks stand in for every collection's contents. */
+const COLLECTION_TRACKS = mockTracks.filter(t => t.albumId === 'album-1')
+
+/** Mirrors GET /collections/{id}?type=. Any album id resolves to that album; anything else is the
+ *  mock playlist. Both expand to the same four tracks. */
+export function getMockCollection(id: string, type: CollectionType): CollectionDetail {
+  const album = type === 'ALBUM' ? mockAlbums.find(a => a.id === id) : undefined
+  const playlist = mockPlaylists[0]
+  return {
+    id,
+    type,
+    name: album?.name ?? playlist.name,
+    artists: album?.artists ?? playlist.artists,
+    iconURL: album?.iconURL ?? playlist.iconURL,
+    year: album?.year ?? null,
+    trackCount: COLLECTION_TRACKS.length,
+    tracks: COLLECTION_TRACKS.map((t, i) => ({
+      id: t.id,
+      name: t.name,
+      artists: t.artists,
+      iconURL: t.iconURL,
+      durationSeconds: 180 + i * 17,
+      position: i + 1,
+    })),
   }
 }
 
@@ -199,13 +240,18 @@ export function getMockSearchResults(query: string): SearchResponse {
 // out of the feed -- which is the whole behaviour the startup reconciliation depends on.
 
 import type {
-  ActiveDownloadsResponse, ActiveDownloadView, AllDownloadsResponse, Download,
-  DownloadFailureCode, DownloadStage,
+  ActiveDownloadsResponse, ActiveDownloadView, AllDownloadsResponse, Download, DownloadDetailView,
+  DownloadFailureCode, DownloadStage, DownloadType,
 } from './types'
 
 interface MockDownloadEntry {
   downloadId: string
-  songName: string
+  youtubeId: string
+  downloadType: DownloadType
+  title: string
+  artists: string[]
+  imageUrl: string
+  songCount: number
   createdAt: number
   outcome: 'SUCCEEDED' | 'FAILED'
   failureCode: DownloadFailureCode
@@ -215,7 +261,7 @@ interface MockDownloadEntry {
 // behaviours most worth exercising -- cards restored from a snapshot, startup reconciliation, a
 // download that finished while the app was closed -- are all reload-crossing by definition. An
 // in-memory map makes every reload look like a server that lost its database.
-const MOCK_STORAGE_KEY = 'naviseerr.mock.downloads.v1'
+const MOCK_STORAGE_KEY = 'naviseerr.mock.downloads.v2'
 
 function loadMockDownloads(): Map<string, MockDownloadEntry> {
   try {
@@ -271,12 +317,20 @@ function iso(ms: number): string {
   return new Date(ms).toISOString()
 }
 
-export function getMockDownload(songId: string): Download {
+export function getMockDownload(youtubeId: string, downloadType: DownloadType): Download {
   const downloadId = randomId()
+  const track = mockTracks.find(t => t.id === youtubeId)
+  const collection = downloadType === 'SONG' ? null : getMockCollection(youtubeId, downloadType)
+  const createdAt = Date.now()
   mockDownloads.set(downloadId, {
     downloadId,
-    songName: songId,
-    createdAt: Date.now(),
+    youtubeId,
+    downloadType,
+    title: collection?.name ?? track?.name ?? youtubeId,
+    artists: collection?.artists ?? track?.artists ?? [],
+    imageUrl: collection?.iconURL ?? track?.iconURL ?? mockArtists[0].iconUrl,
+    songCount: collection?.trackCount ?? 1,
+    createdAt,
     // ~80% succeed, so failures are visible but not the common case
     outcome: Math.random() < 0.8 ? 'SUCCEEDED' : 'FAILED',
     failureCode: FAILURE_CODES[Math.floor(Math.random() * FAILURE_CODES.length)],
@@ -284,9 +338,13 @@ export function getMockDownload(songId: string): Download {
   persistMockDownloads()
   return {
     downloadId,
-    songName: songId,
+    youtubeId,
+    downloadType,
     status: 'PENDING',
-    createdAt: new Date().toISOString(),
+    failureReason: null,
+    createdAt: iso(createdAt),
+    admittedAt: null,
+    finishedAt: null,
   }
 }
 
@@ -345,17 +403,124 @@ function stageAt(entry: MockDownloadEntry, now: number): {
 
 function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
   const { stage, progressPercent, stageEnteredAt } = stageAt(entry, now)
+  const terminal = stage === 'SUCCEEDED' || stage === 'FAILED'
+  // Like the real server, metadata is unresolved while QUEUED. The client must keep what it knew.
+  const resolved = stage !== 'QUEUED'
   return {
     downloadId: entry.downloadId,
-    songName: entry.songName,
+    youtubeId: entry.youtubeId,
+    downloadType: entry.downloadType,
+    title: resolved ? entry.title : null,
+    artists: resolved ? entry.artists : [],
+    imageUrl: resolved ? entry.imageUrl : null,
     stage,
     progressPercent,
+    songCount: resolved ? entry.songCount : 0,
+    songsSucceeded: stage === 'SUCCEEDED' ? entry.songCount : 0,
+    songsFailed: stage === 'FAILED' ? entry.songCount : 0,
+    requestedAt: iso(entry.createdAt),
     stageEnteredAt: iso(stageEnteredAt),
     // Progress moves every poll even when the stage does not, which is exactly why the real server
     // needs a separate updated_at rather than sorting on the stage timestamp.
     updatedAt: iso(stage === 'DOWNLOADING' ? now : stageEnteredAt),
+    finishedAt: terminal ? iso(stageEnteredAt) : null,
     failureCode: stage === 'FAILED' ? entry.failureCode : null,
   }
+}
+
+// --- Static collection fixtures ----------------------------------------
+// The simulator only walks single-outcome downloads. These two rows show the collection-only
+// shapes the UI has to render - a mid-flight album with a mixed song tally, and a finished one that
+// ended PARTIAL_SUCCESS - and stay put so they can be looked at. Timestamps are relative to module
+// load so they read as recent on every visit.
+
+const FIXTURE_BOOT = Date.now()
+const FIXTURE_ALBUM_ID = 'mock-fixture-album-downloading'
+const FIXTURE_PARTIAL_ID = 'mock-fixture-partial'
+const FIXTURE_IMAGE = mockAlbums[0].iconURL
+
+const fixtureAlbum: ActiveDownloadView = {
+  downloadId: FIXTURE_ALBUM_ID,
+  youtubeId: 'album-1',
+  downloadType: 'ALBUM',
+  title: 'All or Nothing',
+  artists: ['Jay Sean'],
+  imageUrl: FIXTURE_IMAGE,
+  stage: 'DOWNLOADING',
+  progressPercent: 62,
+  songCount: 4,
+  songsSucceeded: 2,
+  songsFailed: 1,
+  requestedAt: iso(FIXTURE_BOOT - 90000),
+  stageEnteredAt: iso(FIXTURE_BOOT - 60000),
+  updatedAt: iso(FIXTURE_BOOT - 1000),
+  finishedAt: null,
+  failureCode: null,
+}
+
+const fixturePartial: ActiveDownloadView = {
+  downloadId: FIXTURE_PARTIAL_ID,
+  youtubeId: 'PLmock-jay-sean-essentials',
+  downloadType: 'PLAYLIST',
+  title: 'Jay Sean Essentials',
+  artists: ['YouTube Music'],
+  imageUrl: FIXTURE_IMAGE,
+  stage: 'PARTIAL_SUCCESS',
+  progressPercent: 100,
+  songCount: 4,
+  songsSucceeded: 3,
+  songsFailed: 1,
+  requestedAt: iso(FIXTURE_BOOT - 300000),
+  stageEnteredAt: iso(FIXTURE_BOOT - 5000),
+  updatedAt: iso(FIXTURE_BOOT - 5000),
+  finishedAt: iso(FIXTURE_BOOT - 5000),
+  failureCode: null,
+}
+
+const FIXTURES: Record<string, ActiveDownloadView> = {
+  [FIXTURE_ALBUM_ID]: fixtureAlbum,
+  [FIXTURE_PARTIAL_ID]: fixturePartial,
+}
+
+const FIXTURE_SONG_STAGES: DownloadStage[] = ['SUCCEEDED', 'SUCCEEDED', 'FAILED', 'DOWNLOADING']
+
+const fixtureAlbumDetail: DownloadDetailView = {
+  download: fixtureAlbum,
+  songs: COLLECTION_TRACKS.map((t, i) => {
+    const stage = FIXTURE_SONG_STAGES[i]
+    const terminal = stage === 'SUCCEEDED' || stage === 'FAILED'
+    return {
+      taskId: `${FIXTURE_ALBUM_ID}-song-${i + 1}`,
+      youtubeId: t.id,
+      position: i + 1,
+      title: t.name,
+      artists: t.artists,
+      imageUrl: t.iconURL,
+      durationSeconds: 180 + i * 17,
+      stage,
+      progressPercent: stage === 'SUCCEEDED' ? 100 : stage === 'DOWNLOADING' ? 48 : null,
+      failureCode: stage === 'FAILED' ? 'NO_CANDIDATES' : null,
+      stageEnteredAt: iso(FIXTURE_BOOT - 50000 + i * 10000),
+      updatedAt: iso(FIXTURE_BOOT - 1000),
+      finishedAt: terminal ? iso(FIXTURE_BOOT - 40000 + i * 10000) : null,
+      candidateCount: 3,
+      candidateIndex: stage === 'FAILED' ? 3 : 1,
+      retryIndex: 0,
+      slskdUsername: terminal ? 'mock-peer' : null,
+      slskdFilename: terminal ? `Jay Sean - ${t.name}.flac` : null,
+      lastError: stage === 'FAILED' ? 'no candidates matched' : null,
+    }
+  }),
+}
+
+/** Mirrors GET /downloads/{id}. Throws for an unknown id, like the server's 404. */
+export function getMockDownloadDetail(downloadId: string): DownloadDetailView {
+  if (downloadId === FIXTURE_ALBUM_ID) return fixtureAlbumDetail
+  const fixture = FIXTURES[downloadId]
+  if (fixture) return { download: fixture, songs: [] }
+  const entry = mockDownloads.get(downloadId)
+  if (!entry) throw new Error(`Mock: no download ${downloadId}`)
+  return { download: toView(entry, Date.now()), songs: [] }
 }
 
 export function getMockActiveDownloads(): ActiveDownloadsResponse {
@@ -369,6 +534,7 @@ export function getMockActiveDownloads(): ActiveDownloadsResponse {
     if (elapsed >= T_FINISHED + MOCK_RETENTION_MS) continue
     downloads.push(toView(entry, now))
   }
+  downloads.push(...Object.values(FIXTURES))
 
   downloads.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
   return {
@@ -382,9 +548,11 @@ export function getMockActiveDownloads(): ActiveDownloadsResponse {
 export function getMockDownloadsByIds(ids: string[]): ActiveDownloadView[] {
   const now = Date.now()
   return ids
-    .map(id => mockDownloads.get(id))
-    .filter((entry): entry is MockDownloadEntry => entry !== undefined)
-    .map(entry => toView(entry, now))
+    .map(id => {
+      const entry = mockDownloads.get(id)
+      return entry ? toView(entry, now) : FIXTURES[id]
+    })
+    .filter((view): view is ActiveDownloadView => view !== undefined)
 }
 
 /** Ignores the retention window too, like the real GET /downloads/all - every download the server
@@ -392,6 +560,7 @@ export function getMockDownloadsByIds(ids: string[]): ActiveDownloadView[] {
 export function getMockAllDownloads(pageSize: number, pageNumber: number): AllDownloadsResponse {
   const now = Date.now()
   const downloads = Array.from(mockDownloads.values()).map(entry => toView(entry, now))
+  downloads.push(...Object.values(FIXTURES))
   downloads.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
   const start = (pageNumber - 1) * pageSize
   const page = downloads.slice(start, start + pageSize)

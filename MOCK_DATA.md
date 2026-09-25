@@ -41,7 +41,7 @@ const USE_MOCK_DATA = false // Use real backend API
   "id": "album-1",
   "iconURL": "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png",
   "name": "All or Nothing",
-  "artists": ["artist-1"],
+  "artists": ["Jay Sean"],
   "year": 2009
 }
 ```
@@ -60,7 +60,7 @@ Albums:
   "iconURL": "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png",
   "streamURL": "https://www.last.fm/music/Jay+Sean/_/Down",
   "name": "Down",
-  "artists": ["artist-1", "artist-2"],
+  "artists": ["Jay Sean", "Lil Wayne"],
   "albumId": "album-1",
   "year": 2009
 }
@@ -78,11 +78,25 @@ Songs include:
 9. **Fire** - Neon (2013)
 10. **2012 (It Ain't the End)** - Neon (2013)
 
+### Playlists (1 total)
+
+`PLmock-jay-sean-essentials`: Jay Sean Essentials (4 tracks). `artists` holds the author's name.
+
+### Collections and downloads
+
+- `getMockCollection(id, type)` - any album id expands to that album; anything else is the mock
+  playlist. Both list the four "All or Nothing" tracks.
+- `getMockDownload(id, type)` - starts a time-based simulated download (SONG, ALBUM or PLAYLIST)
+  that walks every stage; metadata is null while QUEUED, like the real server.
+- Two static fixtures are always in `/downloads/active`: an ALBUM at DOWNLOADING (4 songs, 2 done,
+  1 failed) and a PLAYLIST that ended PARTIAL_SUCCESS. `getMockDownloadDetail(id)` returns the
+  album fixture with its 4 per-song rows; other ids return `songs: []`.
+
 ## API Endpoints with Mock Data
 
 ### `/search/{query}` - Search All
 
-Returns all songs, albums, and artists matching the query.
+Returns all songs, albums, artists and playlists matching the query.
 
 **Example:** Search for "jay" returns all Jay Sean content
 **Example:** Search for "down" returns the song "Down"
@@ -90,7 +104,7 @@ Returns all songs, albums, and artists matching the query.
 
 ```typescript
 const results = await search('jay')
-// Returns: { songs: Song[], albums: Album[], artists: Artist[] }
+// Returns: { tracks: Track[], albums: Album[], artists: Artist[], playlists: Playlist[] }
 ```
 
 ### `/search/{query}/songs` - Songs Only
@@ -190,7 +204,7 @@ The mock data was created from a Last.fm API track search response with this str
 | `image[3]["#text"]` | `iconURL` / `iconUrl` | Used "extralarge" (300x300) |
 | `url` | `streamURL` | Last.fm track URL |
 | `name` | `name` | Direct mapping |
-| `artist` (string) | `artists` (array) | Converted to array of artist IDs |
+| `artist` (string) | `artists` (array) | Converted to an array of display names, as the real server sends them |
 | N/A | `albumId` | Generated based on logical album grouping |
 | N/A | `year` | Added based on known release years |
 
@@ -199,10 +213,10 @@ The mock data was created from a Last.fm API track search response with this str
 To add more mock data:
 
 1. **Add Artists** to `mockArtists` array
-2. **Add Albums** to `mockAlbums` array (reference artist IDs)
-3. **Add Songs** to `mockSongs` array (reference artist IDs and album IDs)
+2. **Add Albums** to `mockAlbums` array (`artists` are display names)
+3. **Add Songs** to `mockTracks` array (`artists` are display names; reference album IDs)
 
-Ensure IDs are unique and relationships are maintained through ID references.
+Ensure IDs are unique and album relationships are maintained through `albumId`.
 
 ## Switching to Real Backend
 
@@ -216,9 +230,10 @@ The frontend expects the backend to return data in this exact structure:
 
 ```typescript
 interface SearchResponse {
-  songs: Song[]
+  tracks: Track[]
   albums: Album[]
   artists: Artist[]
+  playlists: Playlist[]
 }
 ```
 

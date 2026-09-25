@@ -6,6 +6,7 @@ import { useActiveDownloads } from './hooks/useActiveDownloads'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
 import { useDismissSound } from './hooks/useDismissSound'
 import { DownloadMetaInput } from './lib/downloadLibrary'
+import { DownloadType } from './api/types'
 
 function App() {
   const navigate = useNavigate()
@@ -21,11 +22,17 @@ function App() {
   } = useActiveDownloads(playSwoosh)
   const library = useDownloadLibrary()
 
-  const handleDownload = async (songName: string, meta: DownloadMetaInput) => {
-    const result = await requestDownload(songName)
-    // Recorded under the server's id, so the registry and the panel agree on identity. A failed
+  /** True once the server accepted the request - what a button that asked for it shows. */
+  const handleDownload = async (
+    id: string,
+    type: DownloadType,
+    meta: DownloadMetaInput,
+  ): Promise<boolean> => {
+    const result = await requestDownload(id, type, meta)
+    // Recorded under the server's id, so the cache and the panel agree on identity. A failed
     // request records nothing: there is no download to remember.
     if (result) library.record(result.downloadId, meta)
+    return result !== null
   }
 
   return (
@@ -35,7 +42,7 @@ function App() {
         <Route path="/" element={
           <HomePage
             onNavigateToDownloads={() => navigate('/downloads')}
-            onDownload={(songName, meta) => { void handleDownload(songName, meta) }}
+            onDownload={handleDownload}
           />
         } />
         <Route path="/downloads" element={
