@@ -1,7 +1,8 @@
 import { apiClient } from './client'
 import {
-  SearchResponse, Track, Artist, Playlist, Download, ActiveDownloadsResponse, ActiveDownloadView,
-  DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, CollectionDetail, CollectionType,
+  SearchResponse, Track, Album, Artist, Playlist, Download, ActiveDownloadsResponse,
+  ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse,
+  CollectionDetail, CollectionType,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -39,23 +40,16 @@ export async function searchSongs(query: string): Promise<Track[]> {
   return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/tracks`)).tracks
 }
 
-/** Albums plus the artists needed to resolve their artist IDs to names. */
-export type AlbumResults = Pick<SearchResponse, 'albums' | 'artists'>
-
 /**
  * Search albums only
  * GET /search/{query}/albums
  */
-export async function searchAlbums(query: string): Promise<AlbumResults> {
+export async function searchAlbums(query: string): Promise<Album[]> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] searchAlbums called with query: ${query}`)
-    const results = getMockSearchResults(query)
-    return Promise.resolve({ albums: results.albums, artists: results.artists })
+    return Promise.resolve(getMockSearchResults(query).albums)
   }
-  const data = await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/albums`)
-  // Keep the artists from the same response: album.artists holds IDs, and the
-  // cards need this list to resolve them to names.
-  return { albums: data.albums, artists: data.artists ?? [] }
+  return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/albums`)).albums
 }
 
 /**

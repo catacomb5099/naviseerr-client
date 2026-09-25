@@ -7,10 +7,10 @@ import { FilterPills, FilterType } from '../components/FilterPills'
 import { SongCard } from '../components/SongCard'
 import { ArtistCard } from '../components/ArtistCard'
 import { AlbumCard } from '../components/AlbumCard'
+import { CollectionDialog, OpenCollection } from '../components/CollectionDialog'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
-import { search, searchSongs, searchAlbums, searchArtists } from '../api/endpoints'
+import { search, searchSongs, searchAlbums, searchArtists, searchPlaylists } from '../api/endpoints'
 import { DownloadType, SearchResponse } from '../api/types'
-import { getArtistNames } from '../lib/utils'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 
 interface HomePageProps {
@@ -27,6 +27,7 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedPill, setSelectedPill] = useState<FilterType>('all')
+  const [openCollection, setOpenCollection] = useState<OpenCollection | null>(null)
 
   const handleSearch = async (searchQuery: string, filter?: FilterType) => {
     setQuery(searchQuery)
@@ -46,12 +47,14 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
         const tracks = await searchSongs(searchQuery)
         data = { tracks, albums: [], artists: [], playlists: [] }
       } else if (activeFilter === 'albums') {
-        const { albums, artists } = await searchAlbums(searchQuery)
-        data = { tracks: [], albums, artists, playlists: [] }
-      } else {
-        // artists
+        const albums = await searchAlbums(searchQuery)
+        data = { tracks: [], albums, artists: [], playlists: [] }
+      } else if (activeFilter === 'artists') {
         const artists = await searchArtists(searchQuery)
         data = { tracks: [], albums: [], artists, playlists: [] }
+      } else {
+        const playlists = await searchPlaylists(searchQuery)
+        data = { tracks: [], albums: [], artists: [], playlists }
       }
 
       setResults(data)
@@ -74,16 +77,18 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
   const showSongs = selectedPill === 'all' || selectedPill === 'songs'
   const showArtists = selectedPill === 'all' || selectedPill === 'artists'
   const showAlbums = selectedPill === 'all' || selectedPill === 'albums'
+  const showPlaylists = selectedPill === 'all' || selectedPill === 'playlists'
 
-  // Standalone Albums / Artists views wrap into a grid of double-size cards;
+  // Standalone Albums / Artists / Playlists views wrap into a grid of double-size cards;
   // the mixed "All" view keeps the horizontally scrolling row of smaller cards.
-  const isStandalone = selectedPill === 'albums' || selectedPill === 'artists'
+  const isStandalone = selectedPill !== 'all' && selectedPill !== 'songs'
   const cardLayout = isStandalone ? 'grid' : 'carousel'
   const containerClass = isStandalone ? GRID_CONTAINER : CAROUSEL_CONTAINER
 
   const hasSongs = results?.tracks && results.tracks.length > 0
   const hasArtists = results?.artists && results.artists.length > 0
   const hasAlbums = results?.albums && results.albums.length > 0
+  const hasPlaylists = results?.playlists && results.playlists.length > 0
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
@@ -114,13 +119,13 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
       {!loading && !results && !error && (
         <div className="text-center py-20">
           <p className="text-zinc-500 text-lg">
-            Search for your favorite songs, albums, and artists
+            Search for your favorite songs, albums, artists, and playlists
           </p>
         </div>
       )}
 
       {/* No Results */}
-      {!loading && results && !hasSongs && !hasArtists && !hasAlbums && (
+      {!loading && results && !hasSongs && !hasArtists && !hasAlbums && !hasPlaylists && (
         <div className="text-center py-20">
           <p className="text-zinc-500 text-lg">
             No results found for "{query}"
@@ -136,25 +141,22 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
             <section>
               <h2 className="text-3xl font-bold text-white mb-6">Songs</h2>
               <div className="space-y-2">
-                {results.tracks.map((track, index) => {
-                  const trackArtistNames = getArtistNames(track.artists, results.artists)
-                  return (
-                    <SongCard
-                      key={track.id || `song-${index}`}
-                      track={track}
-                      artistNames={trackArtistNames}
-                      onDownload={(downloadedTrack, artistNames) => void onDownload(downloadedTrack.id, 'SONG', {
-                        youtubeId: downloadedTrack.id,
-                        downloadType: 'SONG',
-                        title: downloadedTrack.name,
-                        artistNames,
-                        // The albums in the same response are the only place a track's album name exists.
-                        albumName: results?.albums.find(a => a.id === downloadedTrack.albumId)?.name ?? null,
-                        iconURL: downloadedTrack.iconURL || null,
-                      })}
-                    />
-                  )
-                })}
+                {results.tracks.map((track, index) => (
+                  <SongCard
+                    key={track.id || `song-${index}`}
+                    track={track}
+                    artistNames={track.artists}
+                    onDownload={(downloadedTrack, artistNames) => void onDownload(downloadedTrack.id, 'SONG', {
+                      youtubeId: downloadedTrack.id,
+                      downloadType: 'SONG',
+                      title: downloadedTrack.name,
+                      artistNames,
+                      // The albums in the same response are the only place a track's album name exists.
+                      albumName: results?.albums.find(a => a.id === downloadedTrack.albumId)?.name ?? null,
+                      iconURL: downloadedTrack.iconURL || null,
+                    })}
+                  />
+                ))}
               </div>
             </section>
           )}
@@ -179,9 +181,34 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
                 {results.albums.map((album) => (
                   <AlbumCard
                     key={album.id}
-                    album={album}
-                    artistNames={getArtistNames(album.artists, results.artists)}
+                    item={album}
+                    kind="ALBUM"
                     layout={cardLayout}
+                    onOpen={() => setOpenCollection({
+                      id: album.id, type: 'ALBUM', name: album.name, iconURL: album.iconURL,
+                      artists: album.artists, year: album.year,
+                    })}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Playlists Section */}
+          {showPlaylists && hasPlaylists && (
+            <section>
+              <h2 className="text-3xl font-bold text-white mb-6">Playlists</h2>
+              <div className={containerClass}>
+                {results.playlists.map((playlist) => (
+                  <AlbumCard
+                    key={playlist.id}
+                    item={playlist}
+                    kind="PLAYLIST"
+                    layout={cardLayout}
+                    onOpen={() => setOpenCollection({
+                      id: playlist.id, type: 'PLAYLIST', name: playlist.name, iconURL: playlist.iconURL,
+                      artists: playlist.artists,
+                    })}
                   />
                 ))}
               </div>
@@ -189,6 +216,12 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
           )}
         </main>
       )}
+
+      <CollectionDialog
+        collection={openCollection}
+        onClose={() => setOpenCollection(null)}
+        onDownload={onDownload}
+      />
     </div>
   )
 }
