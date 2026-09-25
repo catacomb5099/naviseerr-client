@@ -1,11 +1,11 @@
 import { apiClient } from './client'
 import {
-  SearchResponse, Track, Artist, Download, ActiveDownloadsResponse, ActiveDownloadView,
-  DownloadsByIdResponse, AllDownloadsResponse,
+  SearchResponse, Track, Artist, Playlist, Download, ActiveDownloadsResponse, ActiveDownloadView,
+  DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, CollectionDetail, CollectionType,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
-  getMockAllDownloads,
+  getMockDownloadDetail, getMockAllDownloads, getMockCollection,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -13,7 +13,7 @@ export const USE_MOCK_DATA = false
 
 
 /**
- * Search all (songs, albums, artists)
+ * Search all (songs, albums, artists, playlists)
  * GET /search/{query}
  */
 export async function search(query: string): Promise<SearchResponse> {
@@ -21,7 +21,9 @@ export async function search(query: string): Promise<SearchResponse> {
     console.log(`[Mock] search called with query: ${query}`)
     return Promise.resolve(getMockSearchResults(query))
   }
-  return apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}`)
+  const data = await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}`)
+  // Tolerate a server that predates playlists in the mixed response.
+  return { ...data, playlists: data.playlists ?? [] }
 }
 
 /**
@@ -70,17 +72,67 @@ export async function searchArtists(query: string): Promise<Artist[]> {
 }
 
 /**
- * Download song by ID
- * POST /download/{songId}
+ * Search playlists only
+ * GET /search/{query}/playlists
  */
-export async function download(songId: string): Promise<Download> {
+export async function searchPlaylists(query: string): Promise<Playlist[]> {
   if (USE_MOCK_DATA) {
-    console.log(`[Mock] download called with songId: ${songId}`)
-    return Promise.resolve(getMockDownload(songId))
+    console.log(`[Mock] searchPlaylists called with query: ${query}`)
+    return Promise.resolve(getMockSearchResults(query).playlists)
   }
-  return apiClient<Download>(`/download/${encodeURIComponent(songId)}`, {
-    method: 'POST',
-  })
+  const data = await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/playlists`)
+  return data.playlists ?? []
+}
+
+/**
+ * Expand an album or playlist to its tracks
+ * GET /collections/{id}?type=ALBUM|PLAYLIST
+ *
+ * `id` must be the same id later posted to downloadCollection: the server keys the download by it.
+ */
+export async function getCollection(id: string, type: CollectionType): Promise<CollectionDetail> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] getCollection called with id: ${id}, type: ${type}`)
+    return Promise.resolve(getMockCollection(id, type))
+  }
+  return apiClient<CollectionDetail>(`/collections/${encodeURIComponent(id)}?type=${type}`)
+}
+
+/**
+ * Download one song by YouTube videoId
+ * POST /download/song/{videoId}
+ */
+export async function downloadSong(videoId: string): Promise<Download> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] downloadSong called with videoId: ${videoId}`)
+    return Promise.resolve(getMockDownload(videoId, 'SONG'))
+  }
+  return apiClient<Download>(`/download/song/${encodeURIComponent(videoId)}`, { method: 'POST' })
+}
+
+/**
+ * Download every track of an album or playlist
+ * POST /download/collection/{id}?type=ALBUM|PLAYLIST
+ */
+export async function downloadCollection(id: string, type: CollectionType): Promise<Download> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] downloadCollection called with id: ${id}, type: ${type}`)
+    return Promise.resolve(getMockDownload(id, type))
+  }
+  return apiClient<Download>(
+    `/download/collection/${encodeURIComponent(id)}?type=${type}`, { method: 'POST' })
+}
+
+/**
+ * One download with its per-song breakdown
+ * GET /downloads/{id}  (404 for an unknown id; `songs` is [] before admission)
+ */
+export async function getDownloadDetail(
+  downloadId: string,
+  signal?: AbortSignal,
+): Promise<DownloadDetailView> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockDownloadDetail(downloadId))
+  return apiClient<DownloadDetailView>(`/downloads/${encodeURIComponent(downloadId)}`, { signal })
 }
 
 /**
