@@ -19,22 +19,13 @@ function App() {
     dismiss: dismissDownload,
     requestDownload,
   } = useActiveDownloads(playSwoosh)
-  const library = useDownloadLibrary(downloadCards)
+  const library = useDownloadLibrary()
 
   const handleDownload = async (songName: string, meta: DownloadMetaInput) => {
     const result = await requestDownload(songName)
     // Recorded under the server's id, so the registry and the panel agree on identity. A failed
     // request records nothing: there is no download to remember.
     if (result) library.record(result.downloadId, meta)
-  }
-
-  // The page's X only ever appears on a still-live row, so forgetting the library entry alone
-  // would not remove it: joinItems re-synthesises a row for any live card with no entry. Dismissing
-  // it in useActiveDownloads too is what actually makes it disappear, and keeps a later feed
-  // response from resurrecting it.
-  const handleRemoveDownload = (downloadId: string) => {
-    library.remove(downloadId)
-    dismissDownload(downloadId)
   }
 
   return (
@@ -49,10 +40,10 @@ function App() {
         } />
         <Route path="/downloads" element={
           <DownloadsPage
-            items={library.items}
+            metas={library.metas}
+            cards={downloadCards}
             pollIntervalMs={pollIntervalMs}
             onNavigateHome={() => navigate('/')}
-            onRemove={handleRemoveDownload}
           />
         } />
         <Route path="*" element={<Navigate to="/" replace />} />

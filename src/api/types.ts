@@ -87,3 +87,9 @@ export interface ActiveDownloadsResponse {
 export interface DownloadsByIdResponse {
   downloads: ActiveDownloadView[]
 }
+
+export interface AllDownloadsResponse {
+  downloads: ActiveDownloadView[]
+  /** How many pages exist at the requested page size. Unused until paging controls land. */
+  totalPages: number
+}

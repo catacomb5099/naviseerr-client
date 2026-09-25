@@ -199,7 +199,8 @@ export function getMockSearchResults(query: string): SearchResponse {
 // out of the feed -- which is the whole behaviour the startup reconciliation depends on.
 
 import type {
-  ActiveDownloadsResponse, ActiveDownloadView, Download, DownloadFailureCode, DownloadStage,
+  ActiveDownloadsResponse, ActiveDownloadView, AllDownloadsResponse, Download,
+  DownloadFailureCode, DownloadStage,
 } from './types'
 
 interface MockDownloadEntry {
@@ -384,4 +385,15 @@ export function getMockDownloadsByIds(ids: string[]): ActiveDownloadView[] {
     .map(id => mockDownloads.get(id))
     .filter((entry): entry is MockDownloadEntry => entry !== undefined)
     .map(entry => toView(entry, now))
+}
+
+/** Ignores the retention window too, like the real GET /downloads/all - every download the server
+ *  has ever seen is a candidate row, not just the currently-active ones. */
+export function getMockAllDownloads(pageSize: number, pageNumber: number): AllDownloadsResponse {
+  const now = Date.now()
+  const downloads = Array.from(mockDownloads.values()).map(entry => toView(entry, now))
+  downloads.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+  const start = (pageNumber - 1) * pageSize
+  const page = downloads.slice(start, start + pageSize)
+  return { downloads: page, totalPages: Math.ceil(downloads.length / pageSize) }
 }
