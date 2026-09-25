@@ -3,6 +3,7 @@
  * script: `npm run check` compiles it with the installed tsc and runs it; any failed assertion
  * throws and exits non-zero.
  */
+import './check-collection-progress'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
 import { DownloadMeta, evictToCap, pageItems } from '../src/lib/downloadLibrary'

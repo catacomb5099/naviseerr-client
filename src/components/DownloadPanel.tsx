@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Download as DownloadIcon, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react'
 import { DownloadCard } from './DownloadCard'
 import { DownloadCardState, displayTitle, failureCopy } from '../lib/downloadPanel'
+import { collectionSummary } from '../lib/collectionProgress'
 
 interface DownloadPanelProps {
   cards: DownloadCardState[]
@@ -34,6 +35,10 @@ export function DownloadPanel({
       if (card.stage === 'SUCCEEDED') {
         announcedRef.current.add(card.downloadId)
         setAnnouncement(`${title} finished downloading.`)
+      } else if (card.stage === 'PARTIAL_SUCCESS') {
+        announcedRef.current.add(card.downloadId)
+        // Same counts the card shows: "10 of 12 downloaded, 2 failed".
+        setAnnouncement(`${title}: ${collectionSummary(card).map(t => t.text).join(', ')}.`)
       } else if (card.stage === 'FAILED') {
         announcedRef.current.add(card.downloadId)
         // The reason belongs in the announcement too - a screen reader user gets no glance at the
