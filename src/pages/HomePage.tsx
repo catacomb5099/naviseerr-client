@@ -9,14 +9,16 @@ import { ArtistCard } from '../components/ArtistCard'
 import { AlbumCard } from '../components/AlbumCard'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
 import { search, searchSongs, searchAlbums, searchArtists } from '../api/endpoints'
-import { SearchResponse } from '../api/types'
+import { DownloadType, SearchResponse } from '../api/types'
 import { getArtistNames } from '../lib/utils'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 
 interface HomePageProps {
   onNavigateToDownloads: () => void
-  /** Requests the download and records its metadata; App owns both halves. */
-  onDownload: (songName: string, meta: DownloadMetaInput) => void
+  /** Requests the download and records its metadata; App owns both halves. `id` is the YouTube
+   *  videoId for a song or the collection id for an album/playlist. Resolves true once the server
+   *  accepted the request. */
+  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
 }
 
 export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
@@ -42,14 +44,14 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
         data = await search(searchQuery)
       } else if (activeFilter === 'songs') {
         const tracks = await searchSongs(searchQuery)
-        data = { tracks, albums: [], artists: [] }
+        data = { tracks, albums: [], artists: [], playlists: [] }
       } else if (activeFilter === 'albums') {
         const { albums, artists } = await searchAlbums(searchQuery)
-        data = { tracks: [], albums, artists }
+        data = { tracks: [], albums, artists, playlists: [] }
       } else {
         // artists
         const artists = await searchArtists(searchQuery)
-        data = { tracks: [], albums: [], artists }
+        data = { tracks: [], albums: [], artists, playlists: [] }
       }
 
       setResults(data)
@@ -141,9 +143,10 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
                       key={track.id || `song-${index}`}
                       track={track}
                       artistNames={trackArtistNames}
-                      onDownload={(songName, downloadedTrack, artistNames) => onDownload(songName, {
-                        songName,
-                        trackName: downloadedTrack.name,
+                      onDownload={(downloadedTrack, artistNames) => void onDownload(downloadedTrack.id, 'SONG', {
+                        youtubeId: downloadedTrack.id,
+                        downloadType: 'SONG',
+                        title: downloadedTrack.name,
                         artistNames,
                         // The albums in the same response are the only place a track's album name exists.
                         albumName: results?.albums.find(a => a.id === downloadedTrack.albumId)?.name ?? null,

@@ -6,7 +6,8 @@ React-based music search and download client with Spotify-inspired UI.
 
 - Search for songs, albums, and artists
 - Filter results by category (All, Songs, Albums, Artists)
-- Download songs with 30-second cooldown
+- Download a song by its YouTube id; the server works out what to fetch
+- Downloads panel and history show server-resolved artwork and titles as they arrive
 - Responsive design for mobile and desktop
 - Docker deployment
 
@@ -56,6 +57,8 @@ React-based music search and download client with Spotify-inspired UI.
 npm run build
 ```
 
+`npm run check` runs the download-state self-checks (`scripts/check-download-state.ts`) with the installed tsc and node; there is no test framework.
+
 Output: `dist/`
 
 ### Docker
@@ -94,10 +97,13 @@ src/
 Expected endpoints:
 
 - `GET /search/{query}` - Search all
-- `GET /search/{query}/songs` - Search songs only (future)
-- `GET /search/{query}/albums` - Search albums only (future)
-- `GET /search/{query}/artists` - Search artists only (future)
-- `GET /download/{songId}` - Trigger download
+- `GET /search/{query}/tracks` - Search songs only
+- `GET /search/{query}/albums` - Search albums only
+- `GET /search/{query}/artists` - Search artists only
+- `GET /search/{query}/playlists` - Search playlists only
+- `GET /collections/{id}?type=ALBUM|PLAYLIST` - Expand a collection to its tracks
+- `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
+- `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
 
 ## License
 

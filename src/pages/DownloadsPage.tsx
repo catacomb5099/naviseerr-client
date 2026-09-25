@@ -31,7 +31,11 @@ const PAGE_BUTTON_CLASS =
 export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: DownloadsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageNumber = parsePageNumber(searchParams.get('page'))
-  const { rows, totalPages, loadedPage, error, refresh } = useAllDownloads(pageNumber)
+  // A download requested from the search page reaches `cards` first; refetching when the SET of
+  // live ids changes brings it onto this page without a reload. Sorted, because the cards reorder
+  // on every progress tick and that is not a change worth a request.
+  const liveIds = cards.map(card => card.downloadId).sort().join(',')
+  const { rows, totalPages, loadedPage, error, refresh } = useAllDownloads(pageNumber, { refreshKey: liveIds })
   const items = pageItems(rows, metas, cards)
 
   // Keyed on `loadedPage` rather than a bare "no rows" check: `rows` also reads empty on the very
