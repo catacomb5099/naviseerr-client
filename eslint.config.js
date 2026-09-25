@@ -13,7 +13,7 @@ export default [
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: { ...globals.browser, RequestInit: 'readonly' },
       parser: tsParser,
     },
     plugins: {
@@ -27,7 +27,7 @@ export default [
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true },
+        { allowConstantExport: true, allowExportNames: ['badgeVariants', 'buttonVariants'] },
       ],
     },
   },
