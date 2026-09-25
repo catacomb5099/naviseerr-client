@@ -1,13 +1,15 @@
-import { ActiveDownloadView, DownloadStage } from '../api/types'
-import { DownloadCardState, failureCopy } from './downloadPanel'
+import { ActiveDownloadView, DownloadStage, DownloadType } from '../api/types'
+import { DownloadCardState, displayTitle, failureCopy } from './downloadPanel'
 
-/** What the client knew about a download at the moment it was requested. The live feed carries
- *  only `songName`, so artwork, artist and album have to be captured here or lost forever. */
+/** What the client knew about a download at the moment it was requested. The server reports
+ *  nothing but ids until it has resolved metadata (i.e. while QUEUED), so this is what the row
+ *  shows until then - and the album name has no server counterpart at all. */
 export interface DownloadMeta {
   downloadId: string
-  /** Exactly the string sent to POST /download/{songName} - what the panel and the server echo. */
-  songName: string
-  trackName: string
+  /** The id posted: a videoId for a song, the collection id for an album or playlist. */
+  youtubeId: string
+  downloadType: DownloadType
+  title: string
   artistNames: string[]
   albumName: string | null
   iconURL: string | null
@@ -18,14 +20,26 @@ export interface DownloadMeta {
  *  hook knows. */
 export type DownloadMetaInput = Omit<DownloadMeta, 'downloadId' | 'requestedAt'>
 
-/** A row on the Downloads page: durable metadata joined with the freshest stage available. */
-export interface DownloadItem extends DownloadMeta {
+/** A row on the Downloads page: the server's row joined with the freshest stage available.
+ *  Display fields are RESOLVED - the server's value where it reported one, else the client's. */
+export interface DownloadItem {
+  downloadId: string
+  youtubeId: string
+  downloadType: DownloadType
+  title: string
+  artistNames: string[]
+  albumName: string | null
+  iconURL: string | null
   stage: DownloadStage
   progressPercent: number | null
   failureCode: string | null
+  songCount: number
+  songsSucceeded: number
+  songsFailed: number
   updatedAt: string
+  requestedAt: string
   /** True when the live feed still reports this download, i.e. the stage is being observed right
-   *  now rather than replayed from storage. Only that case animates. */
+   *  now rather than read once from /downloads/all. Only that case animates. */
   live: boolean
 }
 
@@ -34,29 +48,11 @@ export interface DownloadItem extends DownloadMeta {
  *  quota, which matters because this key shares that quota with the panel snapshot. */
 export const LIBRARY_CAP = 250
 
-/** What metaFromSource needs to invent a row for a download this client has no cached metadata
- *  for - satisfied by a live card or a /downloads/all row alike. */
-export type MetaSource = Pick<DownloadCardState, 'downloadId' | 'songName' | 'stageEnteredAt'>
-
-/** Metadata for a download this client has no cached record of: one requested before this
- *  feature existed, from another browser, or one this browser never requested at all. The song
- *  name is all the source gives us, and it is honest to show that rather than to hide the row. */
-export function metaFromSource(source: MetaSource): DownloadMeta {
-  return {
-    downloadId: source.downloadId,
-    songName: source.songName,
-    trackName: source.songName,
-    artistNames: [],
-    albumName: null,
-    iconURL: null,
-    requestedAt: source.stageEnteredAt,
-  }
-}
-
 /**
- * The page's rows: exactly what the server returned, in the order it returned them, with locally
- * cached metadata folded in where this browser has it, and the live feed's stage winning over the
- * server's wherever both describe the same download.
+ * The page's rows: exactly what the server returned, in the order it returned them. Title, artists
+ * and artwork are server-first: the row's once the server has resolved them, else the live card's
+ * (what the client knew when it clicked), else the cached meta's. Stage and tallies come from the
+ * live card wherever there is one - the feed is polled, this page is not - else from the row.
  */
 export function pageItems(
   serverRows: ActiveDownloadView[],
@@ -66,15 +62,27 @@ export function pageItems(
   const byId = new Map(cards.map(card => [card.downloadId, card]))
 
   return serverRows.map(row => {
-    const meta = metas[row.downloadId] ?? metaFromSource(row)
     const card = byId.get(row.downloadId)
+    const meta = metas[row.downloadId]
     const source = card ?? row
     return {
-      ...meta,
+      downloadId: row.downloadId,
+      youtubeId: row.youtubeId,
+      downloadType: row.downloadType,
+      title: displayTitle({ title: row.title ?? card?.title ?? meta?.title ?? null }),
+      artistNames: row.artists.length > 0 ? row.artists
+        : card && card.artists.length > 0 ? card.artists
+        : meta?.artistNames ?? [],
+      albumName: meta?.albumName ?? null,
+      iconURL: row.imageUrl ?? card?.imageUrl ?? meta?.iconURL ?? null,
       stage: source.stage,
       progressPercent: source.progressPercent,
       failureCode: source.failureCode,
+      songCount: source.songCount,
+      songsSucceeded: source.songsSucceeded,
+      songsFailed: source.songsFailed,
       updatedAt: source.updatedAt,
+      requestedAt: row.requestedAt,
       live: card !== undefined,
     }
   })
@@ -104,6 +112,7 @@ const ITEM_STAGE_COPY: Record<Exclude<DownloadStage, 'DOWNLOADING' | 'FAILED'>, 
   SEARCHING: 'Searching',
   READY_TO_DOWNLOAD: 'Ready to download',
   SUCCEEDED: 'Downloaded',
+  PARTIAL_SUCCESS: 'Partly downloaded',
 }
 
 /** The page's version of stageLabel: no elapsed counter, because a page row is read at a glance

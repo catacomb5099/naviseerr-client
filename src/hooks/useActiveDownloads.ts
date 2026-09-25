@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getActiveDownloads, resolveDownloads, download } from '../api/endpoints'
-import { ActiveDownloadsResponse, ActiveDownloadView, Download } from '../api/types'
+import {
+  getActiveDownloads, resolveDownloads, downloadSong, downloadCollection,
+} from '../api/endpoints'
+import { ActiveDownloadsResponse, ActiveDownloadView, Download, DownloadType } from '../api/types'
 import {
   DownloadCardState, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, sortCards,
 } from '../lib/downloadPanel'
+import { DownloadMetaInput } from '../lib/downloadLibrary'
 
-// v2: the card shape changed from status+phase to a single stage, and dismissed ids gained a
-// timestamp. A v1 snapshot is discarded rather than migrated - it is at most a few minutes of
-// download cards, and reconciliation would rebuild anything still live anyway.
-const STORAGE_KEY = 'naviseerr.downloads.v2'
-const STORAGE_VERSION = 2
+// v3: songName became title/artists/imageUrl plus a download type and song tallies. An older
+// snapshot is discarded rather than migrated - it is at most a few minutes of download cards, and
+// reconciliation would rebuild anything still live anyway.
+const STORAGE_KEY = 'naviseerr.downloads.v3'
+const STORAGE_VERSION = 3
 const EXIT_ANIMATION_MS = 360
 const DEFAULT_POLL_MS = 5000
 const DEFAULT_RETENTION_MS = 600000
@@ -284,20 +287,33 @@ export function useActiveDownloads(playSwoosh: () => void) {
     return () => window.clearInterval(handle)
   }, [cards, dismiss])
 
-  const requestDownload = useCallback(async (songName: string): Promise<Download | null> => {
+  const requestDownload = useCallback(async (
+    id: string,
+    type: DownloadType,
+    meta: DownloadMetaInput,
+  ): Promise<Download | null> => {
     try {
-      const result = await download(songName)
+      const result = type === 'SONG' ? await downloadSong(id) : await downloadCollection(id, type)
       // Optimistic, and under the download's REAL id - the 202 body carries it, so there is no
       // temporary identity for the first feed response to reconcile against. The card is honest
-      // about what the server has actually promised: accepted, not yet started.
+      // about what the server has actually promised: accepted, not yet started. The 202 carries no
+      // name, so title/artists/artwork come from what the client knew when it clicked.
       setCards(prev => ({
         ...prev,
         [result.downloadId]: {
           downloadId: result.downloadId,
-          songName: result.songName,
+          youtubeId: result.youtubeId,
+          downloadType: result.downloadType,
+          title: meta.title,
+          artists: meta.artistNames,
+          imageUrl: meta.iconURL,
           stage: 'QUEUED',
           progressPercent: null,
+          songCount: 0,
+          songsSucceeded: 0,
+          songsFailed: 0,
           failureCode: null,
+          requestedAt: result.createdAt,
           stageEnteredAt: result.createdAt,
           updatedAt: result.createdAt,
           lastChangedAt: Date.now(),

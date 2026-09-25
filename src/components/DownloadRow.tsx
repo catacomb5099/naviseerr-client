@@ -9,6 +9,7 @@ interface DownloadRowProps {
 function stageColor(item: DownloadItem): string {
   if (item.stage === 'SUCCEEDED') return 'text-green-500'
   if (item.stage === 'FAILED') return 'text-red-500'
+  if (item.stage === 'PARTIAL_SUCCESS') return 'text-amber-500'
   return 'text-zinc-400'
 }
 
@@ -17,8 +18,8 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
   const fillRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef(0)
 
-  // Only a stage the feed is reporting right now animates. A stage replayed from localStorage has no
-  // newer reading coming, so a transition on it would be a fabricated one.
+  // Only a stage the feed is reporting right now animates. A stage read once from /downloads/all has
+  // no newer reading coming, so a transition on it would be a fabricated one.
   const animating = item.stage === 'DOWNLOADING' && item.live
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
         {item.iconURL && !iconFailed ? (
           <img
             src={item.iconURL}
-            alt={item.trackName}
+            alt={item.title}
             loading="lazy"
             decoding="async"
             referrerPolicy="no-referrer"
@@ -63,7 +64,7 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="text-white font-medium leading-6 truncate">{item.trackName}</h3>
+        <h3 className="text-white font-medium leading-6 truncate">{item.title}</h3>
         <p className="text-sm text-zinc-400 leading-5 truncate">{secondaryLine}</p>
         <p className={`text-xs leading-4 truncate ${stageColor(item)}`}>{itemStageLabel(item)}</p>
         {/* Reserved whether or not it is filled: the row must not change height when a download

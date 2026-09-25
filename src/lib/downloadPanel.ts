@@ -1,11 +1,21 @@
-import { ActiveDownloadView, DownloadStage } from '../api/types'
+import { ActiveDownloadView, DownloadStage, DownloadType } from '../api/types'
 
 export interface DownloadCardState {
   downloadId: string
-  songName: string
+  youtubeId: string
+  downloadType: DownloadType
+  /** Server-resolved, or what the client knew when it clicked. Null only for a download this
+   *  client never requested that the server has not resolved yet. */
+  title: string | null
+  artists: string[]
+  imageUrl: string | null
   stage: DownloadStage
   progressPercent: number | null
+  songCount: number
+  songsSucceeded: number
+  songsFailed: number
   failureCode: string | null
+  requestedAt: string
   stageEnteredAt: string
   updatedAt: string
   /** Sort key. Seeded from the server's `updatedAt` on first sight so a cold load restores the
@@ -15,7 +25,11 @@ export interface DownloadCardState {
 }
 
 export function isTerminal(stage: DownloadStage): boolean {
-  return stage === 'SUCCEEDED' || stage === 'FAILED'
+  return stage === 'SUCCEEDED' || stage === 'FAILED' || stage === 'PARTIAL_SUCCESS'
+}
+
+export function displayTitle(card: Pick<DownloadCardState, 'title'>): string {
+  return card.title ?? 'Untitled download'
 }
 
 /** Most-recently-changed first: a newly requested download appears at the top, and anything that
@@ -55,6 +69,7 @@ const FAILURE_COPY: Record<string, string> = {
   TIMED_OUT: 'Timed out',
   SEARCH_FAILED: 'Search failed',
   TRANSFER_NOT_FOUND: 'Source dropped the transfer',
+  METADATA_UNAVAILABLE: "Couldn't find this on YouTube Music",
 }
 
 export function failureCopy(failureCode: string | null): string {
@@ -68,6 +83,7 @@ const STAGE_COPY: Record<Exclude<DownloadStage, 'DOWNLOADING' | 'FAILED'>, strin
   SEARCHING: 'Searching',
   READY_TO_DOWNLOAD: 'Ready to download',
   SUCCEEDED: 'Downloaded',
+  PARTIAL_SUCCESS: 'Partly downloaded',
 }
 
 /** Stages with no percentage to show: the bar is indeterminate and elapsed time is the honest signal. */
@@ -101,6 +117,9 @@ export function stageLabel(card: DownloadCardState, elapsedSeconds: number): str
  *   READY_TO_DOWNLOAD is a real candidate failover, and progress resetting to 0 is a real retry.
  *   Clamping either monotonically would freeze a failed-over download at a stale percentage
  *   forever, which is a worse lie than the honest reset.
+ * - **Metadata only ever fills in.** The server reports a null title, empty artists and a null
+ *   image while QUEUED; the optimistic card already has all three from the search result, and a
+ *   null must not blank them. Same rule as progressPercent. Counts are taken as given.
  */
 export function mergeCard(
   existing: DownloadCardState | undefined,
@@ -119,13 +138,23 @@ export function mergeCard(
   const changed = !existing
     || existing.stage !== row.stage
     || existing.progressPercent !== progressPercent
+    || existing.songsSucceeded !== row.songsSucceeded
+    || existing.songsFailed !== row.songsFailed
 
   return {
     downloadId: row.downloadId,
-    songName: row.songName,
+    youtubeId: row.youtubeId,
+    downloadType: row.downloadType,
+    title: row.title ?? existing?.title ?? null,
+    artists: row.artists.length > 0 ? row.artists : existing?.artists ?? [],
+    imageUrl: row.imageUrl ?? existing?.imageUrl ?? null,
     stage: row.stage,
     progressPercent,
+    songCount: row.songCount,
+    songsSucceeded: row.songsSucceeded,
+    songsFailed: row.songsFailed,
     failureCode,
+    requestedAt: row.requestedAt,
     stageEnteredAt: row.stageEnteredAt,
     updatedAt: row.updatedAt,
     lastChangedAt: !existing

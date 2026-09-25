@@ -21,10 +21,16 @@ export interface AllDownloads {
  * visit would pop the panel open with every finished download the server remembers and start
  * terminal TTL timers on all of them.
  *
- * Fetches on mount and again whenever `pageNumber` or `pageSize` changes, so arriving at the route
- * and paging within it both trigger a request without the caller having to ask.
+ * Fetches on mount and again whenever `pageNumber`, `pageSize` or `refreshKey` changes, so arriving
+ * at the route and paging within it both trigger a request without the caller having to ask.
+ * `refreshKey` is the caller's "something you don't know about changed" signal - the page passes
+ * the set of live card ids, so a download requested from the search page shows up here without a
+ * manual reload.
  */
-export function useAllDownloads(pageNumber: number, pageSize?: number): AllDownloads {
+export function useAllDownloads(
+  pageNumber: number,
+  { pageSize, refreshKey }: { pageSize?: number; refreshKey?: string } = {},
+): AllDownloads {
   const [rows, setRows] = useState<ActiveDownloadView[]>([])
   const [totalPages, setTotalPages] = useState(0)
   const [loadedPage, setLoadedPage] = useState<number | null>(null)
@@ -59,13 +65,13 @@ export function useAllDownloads(pageNumber: number, pageSize?: number): AllDownl
     })()
   }, [pageSize, pageNumber])
 
-  // Keyed on `refresh`, which is itself keyed on [pageSize, pageNumber]: mounting (which is what
-  // arriving at the route now means) and changing page both get a fresh fetch this way, with no
-  // separate dependency list to keep in sync with refresh's own.
+  // Keyed on `refresh`, which is itself keyed on [pageSize, pageNumber], plus the caller's key:
+  // mounting (which is what arriving at the route now means), changing page and a new live download
+  // all get a fresh fetch this way, with no separate dependency list to keep in sync with refresh's.
   useEffect(() => {
     refresh()
     return () => abortRef.current?.abort()
-  }, [refresh])
+  }, [refresh, refreshKey])
 
   return { rows, totalPages, loadedPage, loading, error, refresh }
 }

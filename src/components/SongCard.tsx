@@ -7,20 +7,13 @@ import { Download } from 'lucide-react'
 interface SongCardProps {
   track: Track
   artistNames: string[]
-  /** `songName` is the string the server is asked for; the track and names come back with it so
-   *  the caller can record what was requested without rebuilding the display name. */
-  onDownload: (songName: string, track: Track, artistNames: string[]) => void
+  /** The server is asked for `track.id` (the YouTube videoId) and words the search itself; the
+   *  resolved names come back with the track so the caller can record what was requested. */
+  onDownload: (track: Track, artistNames: string[]) => void
 }
 
 export function SongCard({ track, artistNames, onDownload }: SongCardProps) {
   const [iconFailed, setIconFailed] = useState(false)
-
-  const handleDownload = () => {
-    const displayName = artistNames.length > 0
-      ? `${track.name} - ${artistNames[0]}`
-      : track.name
-    onDownload(displayName, track, artistNames)
-  }
 
   return (
     <Card className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 transition-colors">
@@ -52,7 +45,7 @@ export function SongCard({ track, artistNames, onDownload }: SongCardProps) {
 
         {/* Download Button */}
         <Button
-          onClick={handleDownload}
+          onClick={() => onDownload(track, artistNames)}
           size="sm"
           className="flex-shrink-0 bg-green-600 hover:bg-green-500 text-white"
         >
