@@ -1,6 +1,6 @@
 import { Badge } from './ui/badge'
 
-export type FilterType = 'all' | 'songs' | 'albums' | 'artists'
+export type FilterType = 'all' | 'songs' | 'albums' | 'artists' | 'playlists'
 
 interface FilterPillsProps {
   selected: FilterType
@@ -13,6 +13,7 @@ export function FilterPills({ selected, onSelect }: FilterPillsProps) {
     { label: 'Songs', value: 'songs' },
     { label: 'Albums', value: 'albums' },
     { label: 'Artists', value: 'artists' },
+    { label: 'Playlists', value: 'playlists' },
   ]
 
   return (
