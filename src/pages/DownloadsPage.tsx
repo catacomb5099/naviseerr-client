@@ -17,11 +17,12 @@ interface DownloadsPageProps {
   onNavigateHome: () => void
 }
 
-/** Anything that isn't an integer >= 1 becomes page 1 - a hand-typed or stale `?page=` should land
- *  somewhere real rather than feed a nonsense value to the fetch. */
+/** Anything that isn't a safe integer >= 1 becomes page 1 - a hand-typed or stale `?page=` should
+ *  land somewhere real rather than feed a nonsense value to the fetch. `isSafeInteger`, not
+ *  `isInteger`: `Number('1e21')` is an integer and would round-trip into the URL as `1e+21`. */
 function parsePageNumber(raw: string | null): number {
   const n = Number(raw)
-  return Number.isInteger(n) && n >= 1 ? n : 1
+  return Number.isSafeInteger(n) && n >= 1 ? n : 1
 }
 
 const PAGE_BUTTON_CLASS =
@@ -30,7 +31,7 @@ const PAGE_BUTTON_CLASS =
 export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: DownloadsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageNumber = parsePageNumber(searchParams.get('page'))
-  const { rows, totalPages, loadedPage, loading, error, refresh } = useAllDownloads(pageNumber)
+  const { rows, totalPages, loadedPage, error, refresh } = useAllDownloads(pageNumber)
   const items = pageItems(rows, metas, cards)
 
   // Keyed on `loadedPage` rather than a bare "no rows" check: `rows` also reads empty on the very
@@ -57,14 +58,18 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: 
         <section>
           <h2 className="text-3xl font-bold text-white mb-6">Downloads</h2>
 
-          {error && rows.length === 0 ? (
+          {/* `rows` belong to `loadedPage`; until that matches the page in the URL, what's on
+              screen is another page's rows (or none yet), so it reads as loading. Error goes first
+              so a failed page fetch can't leave that state spinning forever - the hook keeps the
+              old rows on failure, so a `rows.length === 0` guard would never let the error show. */}
+          {error ? (
             <div className="text-center py-20">
               <p className="text-red-500 text-lg mb-4">{error}</p>
               <Button variant="outline" onClick={refresh} className={PAGE_BUTTON_CLASS}>
                 Retry
               </Button>
             </div>
-          ) : loading && rows.length === 0 ? (
+          ) : loadedPage !== pageNumber ? (
             <div className="text-center py-20">
               <p className="text-zinc-500 text-lg">Loading downloads…</p>
             </div>
