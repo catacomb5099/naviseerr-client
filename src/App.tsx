@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { DownloadsPage } from './pages/DownloadsPage'
 import { DownloadPanel } from './components/DownloadPanel'
@@ -7,10 +7,8 @@ import { useDownloadLibrary } from './hooks/useDownloadLibrary'
 import { useDismissSound } from './hooks/useDismissSound'
 import { DownloadMetaInput } from './lib/downloadLibrary'
 
-type Page = 'home' | 'downloads'
-
 function App() {
-  const [page, setPage] = useState<Page>('home')
+  const navigate = useNavigate()
   const { muted, toggleMuted, playSwoosh } = useDismissSound()
   const {
     cards: downloadCards,
@@ -41,22 +39,24 @@ function App() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Both pages stay mounted and the inactive one is hidden, so a search survives a trip to
-          Downloads and back. Cheap here - neither page owns a poll loop of its own. */}
-      <div hidden={page !== 'home'}>
-        <HomePage
-          onNavigateToDownloads={() => setPage('downloads')}
-          onDownload={(songName, meta) => { void handleDownload(songName, meta) }}
-        />
-      </div>
-      <div hidden={page !== 'downloads'}>
-        <DownloadsPage
-          items={library.items}
-          pollIntervalMs={pollIntervalMs}
-          onNavigateHome={() => setPage('home')}
-          onRemove={handleRemoveDownload}
-        />
-      </div>
+      {/* Routes replace the pair of `hidden` divs that used to switch between the two pages. */}
+      <Routes>
+        <Route path="/" element={
+          <HomePage
+            onNavigateToDownloads={() => navigate('/downloads')}
+            onDownload={(songName, meta) => { void handleDownload(songName, meta) }}
+          />
+        } />
+        <Route path="/downloads" element={
+          <DownloadsPage
+            items={library.items}
+            pollIntervalMs={pollIntervalMs}
+            onNavigateHome={() => navigate('/')}
+            onRemove={handleRemoveDownload}
+          />
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       <DownloadPanel
         cards={downloadCards}

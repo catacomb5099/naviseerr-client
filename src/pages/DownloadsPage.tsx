@@ -13,12 +13,6 @@ interface DownloadsPageProps {
 }
 
 export function DownloadsPage({ items, pollIntervalMs, onNavigateHome, onRemove }: DownloadsPageProps) {
-  const visibleItems = items
-
-  const emptyCopy = items.length > 0
-    ? 'No downloads match that'
-    : 'Nothing downloaded yet — search for a song and hit the download button'
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
       <AppHeader action={
@@ -29,15 +23,13 @@ export function DownloadsPage({ items, pollIntervalMs, onNavigateHome, onRemove 
         <section>
           <h2 className="text-3xl font-bold text-white mb-6">Downloads</h2>
 
-          {/* CONTROLS SLOT - bullets 3 and 4 insert the search bar and pills here. */}
-
-          {visibleItems.length === 0 ? (
+          {items.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-zinc-500 text-lg">{emptyCopy}</p>
+              <p className="text-zinc-500 text-lg">Nothing downloaded yet — search for a song and hit the download button</p>
             </div>
           ) : (
             <div className="divide-y divide-zinc-800">
-              {visibleItems.map(item => (
+              {items.map(item => (
                 <DownloadRow
                   key={item.downloadId}
                   item={item}
