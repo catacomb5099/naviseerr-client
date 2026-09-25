@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { DownloadRow } from '../components/DownloadRow'
+import { DownloadFilter, DownloadFilterPills } from '../components/DownloadFilterPills'
 import { Button } from '../components/ui/button'
 import { useAllDownloads } from '../hooks/useAllDownloads'
 import { DownloadMeta, pageItems } from '../lib/downloadLibrary'
@@ -28,6 +29,14 @@ function parsePageNumber(raw: string | null): number {
 const PAGE_BUTTON_CLASS =
   'border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white'
 
+/** "on this page", because the pills only ever see the page the server sent (see the filter below). */
+const EMPTY_BY_FILTER: Record<DownloadFilter, string> = {
+  all: 'Nothing downloaded yet — search for a song and hit the download button',
+  SONG: 'No songs on this page',
+  ALBUM: 'No albums on this page',
+  PLAYLIST: 'No playlists on this page',
+}
+
 export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: DownloadsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageNumber = parsePageNumber(searchParams.get('page'))
@@ -36,7 +45,11 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: 
   // on every progress tick and that is not a change worth a request.
   const liveIds = cards.map(card => card.downloadId).sort().join(',')
   const { rows, totalPages, loadedPage, error, refresh } = useAllDownloads(pageNumber, { refreshKey: liveIds })
+  const [filter, setFilter] = useState<DownloadFilter>('all')
   const items = pageItems(rows, metas, cards)
+  // Client-side, over the CURRENT PAGE only: server pagination does not know types yet. Follow-up:
+  // a type= query param on /downloads/all, and this becomes a fetch key like `page`.
+  const visibleItems = filter === 'all' ? items : items.filter(item => item.downloadType === filter)
 
   // Keyed on `loadedPage` rather than a bare "no rows" check: `rows` also reads empty on the very
   // first render, before any fetch has resolved, and a bare check would redirect a legitimate deep
@@ -62,6 +75,10 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: 
         <section>
           <h2 className="text-3xl font-bold text-white mb-6">Downloads</h2>
 
+          <div className="mb-4">
+            <DownloadFilterPills selected={filter} onSelect={setFilter} />
+          </div>
+
           {/* `rows` belong to `loadedPage`; until that matches the page in the URL, what's on
               screen is another page's rows (or none yet), so it reads as loading. Error goes first
               so a failed page fetch can't leave that state spinning forever - the hook keeps the
@@ -77,15 +94,13 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: 
             <div className="text-center py-20">
               <p className="text-zinc-500 text-lg">Loading downloads…</p>
             </div>
-          ) : items.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-zinc-500 text-lg">
-                Nothing downloaded yet — search for a song and hit the download button
-              </p>
+              <p className="text-zinc-500 text-lg">{EMPTY_BY_FILTER[filter]}</p>
             </div>
           ) : (
             <div className="divide-y divide-zinc-800">
-              {items.map(item => (
+              {visibleItems.map(item => (
                 <DownloadRow key={item.downloadId} item={item} pollIntervalMs={pollIntervalMs} />
               ))}
             </div>

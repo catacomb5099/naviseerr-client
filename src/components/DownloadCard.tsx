@@ -3,6 +3,8 @@ import { CircleCheck, AlertCircle, Search, ArrowDown, Clock, X } from 'lucide-re
 import {
   DownloadCardState, displayTitle, isIndeterminate, isTerminal, showsElapsed, stageLabel,
 } from '../lib/downloadPanel'
+import { collectionSummary } from '../lib/collectionProgress'
+import { CollectionProgress, CollectionSummary } from './CollectionProgress'
 
 interface DownloadCardProps {
   card: DownloadCardState
@@ -37,12 +39,15 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
   // `!card.progressPercent`, which made a genuine 0% download read as searching and collapsed four
   // distinct stages - queued, starting, searching, waiting for a transfer slot - into one label.
   const terminal = isTerminal(card.stage)
-  const indeterminate = isIndeterminate(card.stage)
-  const now = useNow(showsElapsed(card.stage))
+  const collection = card.downloadType !== 'SONG'
+  // A collection's bar is the split one below; the per-song bars are for a single song only.
+  const indeterminate = !collection && isIndeterminate(card.stage)
+  // The elapsed counter is a song-only label, so a collection card does not tick for nothing.
+  const now = useNow(!collection && showsElapsed(card.stage))
   const elapsedSeconds = Math.max(0, Math.round((now - Date.parse(card.stageEnteredAt)) / 1000))
 
   useEffect(() => {
-    if (card.stage !== 'DOWNLOADING') return
+    if (collection || card.stage !== 'DOWNLOADING') return
     const fill = fillRef.current
     if (!fill) return
 
@@ -58,7 +63,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
     })
     shownRef.current = target
     return () => cancelAnimationFrame(frame)
-  }, [card.progressPercent, card.stage, pollIntervalMs])
+  }, [collection, card.progressPercent, card.stage, pollIntervalMs])
 
   let glyph: ReactNode
   let subColor = 'text-zinc-400'
@@ -86,9 +91,12 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
     default:
       glyph = <ArrowDown className="w-4 h-4 text-zinc-300" aria-hidden="true" />
   }
+  // A collection's songs are each at their own stage, so one stage glyph would be a lie.
+  if (collection && !terminal) glyph = <ArrowDown className="w-4 h-4 text-zinc-300" aria-hidden="true" />
 
   const subLabel = stageLabel(card, elapsedSeconds)
   const title = displayTitle(card)
+  const summaryId = `download-card-summary-${card.downloadId}`
 
   return (
     <div className={`overflow-hidden transition-[max-height] duration-150 ${exiting ? 'max-h-0' : 'max-h-16'}`}>
@@ -98,8 +106,25 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
         <span className="w-5 flex-none flex items-center justify-center">{glyph}</span>
         <div className="flex-1 min-w-0">
           <p className="text-xs text-white truncate">{title}</p>
-          <p className={`text-[11px] mt-0.5 ${subColor}`}>{subLabel}</p>
-          {card.stage === 'DOWNLOADING' && (
+          {collection ? (
+            <>
+              <CollectionSummary id={summaryId} tokens={collectionSummary(card)} className="text-[11px] mt-0.5" />
+              <div className="mt-1.5">
+                <CollectionProgress
+                  songCount={card.songCount}
+                  songsSucceeded={card.songsSucceeded}
+                  songsFailed={card.songsFailed}
+                  stage={card.stage}
+                  size="panel"
+                  summaryId={summaryId}
+                  animate={!terminal}
+                />
+              </div>
+            </>
+          ) : (
+            <p className={`text-[11px] mt-0.5 ${subColor}`}>{subLabel}</p>
+          )}
+          {!collection && card.stage === 'DOWNLOADING' && (
             <div className="h-[3px] bg-zinc-700 rounded-full overflow-hidden mt-1.5">
               <div
                 ref={fillRef}
