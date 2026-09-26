@@ -9,7 +9,7 @@ import { ArtistCard } from '../components/ArtistCard'
 import { AlbumCard } from '../components/AlbumCard'
 import { CollectionDialog, OpenCollection } from '../components/CollectionDialog'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
-import { search, searchSongs, searchAlbums, searchArtists } from '../api/endpoints'
+import { search, searchSongs, searchAlbums, searchArtists, searchPlaylists } from '../api/endpoints'
 import { DownloadType, SearchResponse } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 
@@ -49,10 +49,12 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
       } else if (activeFilter === 'albums') {
         const albums = await searchAlbums(searchQuery)
         data = { tracks: [], albums, artists: [], playlists: [] }
-      } else {
-        // artists
+      } else if (activeFilter === 'artists') {
         const artists = await searchArtists(searchQuery)
         data = { tracks: [], albums: [], artists, playlists: [] }
+      } else {
+        const playlists = await searchPlaylists(searchQuery)
+        data = { tracks: [], albums: [], artists: [], playlists }
       }
 
       setResults(data)
@@ -75,16 +77,18 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
   const showSongs = selectedPill === 'all' || selectedPill === 'songs'
   const showArtists = selectedPill === 'all' || selectedPill === 'artists'
   const showAlbums = selectedPill === 'all' || selectedPill === 'albums'
+  const showPlaylists = selectedPill === 'all' || selectedPill === 'playlists'
 
-  // Standalone Albums / Artists views wrap into a grid of double-size cards;
+  // Standalone Albums / Artists / Playlists views wrap into a grid of double-size cards;
   // the mixed "All" view keeps the horizontally scrolling row of smaller cards.
-  const isStandalone = selectedPill === 'albums' || selectedPill === 'artists'
+  const isStandalone = selectedPill !== 'all' && selectedPill !== 'songs'
   const cardLayout = isStandalone ? 'grid' : 'carousel'
   const containerClass = isStandalone ? GRID_CONTAINER : CAROUSEL_CONTAINER
 
   const hasSongs = results?.tracks && results.tracks.length > 0
   const hasArtists = results?.artists && results.artists.length > 0
   const hasAlbums = results?.albums && results.albums.length > 0
+  const hasPlaylists = results?.playlists && results.playlists.length > 0
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
@@ -115,13 +119,13 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
       {!loading && !results && !error && (
         <div className="text-center py-20">
           <p className="text-zinc-500 text-lg">
-            Search for your favorite songs, albums, and artists
+            Search for your favorite songs, albums, artists, and playlists
           </p>
         </div>
       )}
 
       {/* No Results */}
-      {!loading && results && !hasSongs && !hasArtists && !hasAlbums && (
+      {!loading && results && !hasSongs && !hasArtists && !hasAlbums && !hasPlaylists && (
         <div className="text-center py-20">
           <p className="text-zinc-500 text-lg">
             No results found for "{query}"
@@ -183,6 +187,27 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
                     onOpen={() => setOpenCollection({
                       id: album.id, type: 'ALBUM', name: album.name, iconURL: album.iconURL,
                       artists: album.artists, year: album.year,
+                    })}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Playlists Section */}
+          {showPlaylists && hasPlaylists && (
+            <section>
+              <h2 className="text-3xl font-bold text-white mb-6">Playlists</h2>
+              <div className={containerClass}>
+                {results.playlists.map((playlist) => (
+                  <AlbumCard
+                    key={playlist.id}
+                    item={playlist}
+                    kind="PLAYLIST"
+                    layout={cardLayout}
+                    onOpen={() => setOpenCollection({
+                      id: playlist.id, type: 'PLAYLIST', name: playlist.name, iconURL: playlist.iconURL,
+                      artists: playlist.artists,
                     })}
                   />
                 ))}

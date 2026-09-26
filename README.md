@@ -4,8 +4,9 @@ React-based music search and download client with Spotify-inspired UI.
 
 ## Features
 
-- Search for songs, albums, and artists
-- Filter results by category (All, Songs, Albums, Artists)
+- Search for songs, albums, artists, and playlists
+- Filter results by category (All, Songs, Albums, Artists, Playlists)
+- Open an album or playlist and download one song or all of them
 - Download a song by its YouTube id; the server works out what to fetch
 - Downloads panel and history show server-resolved artwork and titles as they arrive
 - Responsive design for mobile and desktop
