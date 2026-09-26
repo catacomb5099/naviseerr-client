@@ -57,6 +57,7 @@ React-based music search and download client with Spotify-inspired UI.
 npm run build
 ```
 
+`npm run check` runs the self-checks (`scripts/check-download-state.ts`, which pulls in `scripts/check-collection-progress.ts`) with the installed tsc and node; there is no test framework.
 
 Output: `dist/`
 
