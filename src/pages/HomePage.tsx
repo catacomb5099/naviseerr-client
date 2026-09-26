@@ -7,6 +7,7 @@ import { FilterPills, FilterType } from '../components/FilterPills'
 import { SongCard } from '../components/SongCard'
 import { ArtistCard } from '../components/ArtistCard'
 import { AlbumCard } from '../components/AlbumCard'
+import { CollectionDialog, OpenCollection } from '../components/CollectionDialog'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
 import { search, searchSongs, searchAlbums, searchArtists } from '../api/endpoints'
 import { DownloadType, SearchResponse } from '../api/types'
@@ -26,6 +27,7 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedPill, setSelectedPill] = useState<FilterType>('all')
+  const [openCollection, setOpenCollection] = useState<OpenCollection | null>(null)
 
   const handleSearch = async (searchQuery: string, filter?: FilterType) => {
     setQuery(searchQuery)
@@ -175,8 +177,13 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
                 {results.albums.map((album) => (
                   <AlbumCard
                     key={album.id}
-                    album={album}
+                    item={album}
+                    kind="ALBUM"
                     layout={cardLayout}
+                    onOpen={() => setOpenCollection({
+                      id: album.id, type: 'ALBUM', name: album.name, iconURL: album.iconURL,
+                      artists: album.artists, year: album.year,
+                    })}
                   />
                 ))}
               </div>
@@ -184,6 +191,12 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
           )}
         </main>
       )}
+
+      <CollectionDialog
+        collection={openCollection}
+        onClose={() => setOpenCollection(null)}
+        onDownload={onDownload}
+      />
     </div>
   )
 }
