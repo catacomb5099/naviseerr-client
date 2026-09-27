@@ -88,6 +88,33 @@ export interface ArtistDetail {
   similarArtists: Artist[]
 }
 
+/** An artist (`id` = channel id) or an album (`id` = browse id) named on a song's info page; the id
+ *  is null when YouTube Music has no page for it, so the name is shown as plain text. */
+export interface SongRef {
+  id: string | null
+  name: string
+}
+
+/** GET /songs/{videoId} - one song's info page: header, album, a few numbers and the credits
+ *  YouTube Music lists. Resolved live; 404 for an unknown id. */
+export interface SongInfo {
+  id: string
+  name: string
+  artists: SongRef[]
+  /** null for an official-video id: YouTube Music knows no album for those. */
+  album: SongRef | null
+  durationSeconds: number | null
+  year: number | null
+  viewCount: number | null
+  /** "" when none. */
+  iconURL: string
+  /** null when unknown (official videos), not false. */
+  explicit: boolean | null
+  /** `role` is YouTube's own heading ("Written by", "Produced by"), rendered verbatim. Empty when
+   *  YouTube Music lists none. */
+  credits: { role: string; names: string[] }[]
+}
+
 // Keep Song as alias for backwards compatibility
 export type Song = Track
 

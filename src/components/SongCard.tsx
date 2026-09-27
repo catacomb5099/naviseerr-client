@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Card } from './ui/card'
 import { Button } from './ui/button'
 import { Track } from '../api/types'
-import { Download } from 'lucide-react'
+import { Download, Info } from 'lucide-react'
 
 interface SongCardProps {
   track: Track
@@ -10,9 +10,11 @@ interface SongCardProps {
   /** The server is asked for `track.id` (the YouTube videoId) and words the search itself; the
    *  resolved names come back with the track so the caller can record what was requested. */
   onDownload: (track: Track, artistNames: string[]) => void
+  /** Opens the song info pop-up for `track.id`. */
+  onInfo: (videoId: string) => void
 }
 
-export function SongCard({ track, artistNames, onDownload }: SongCardProps) {
+export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardProps) {
   const [iconFailed, setIconFailed] = useState(false)
 
   return (
@@ -42,6 +44,16 @@ export function SongCard({ track, artistNames, onDownload }: SongCardProps) {
             {artistNames.length > 0 ? artistNames.join(', ') : 'Unknown Artist'}
           </p>
         </div>
+
+        <Button
+          onClick={() => onInfo(track.id)}
+          variant="ghost"
+          size="sm"
+          aria-label={`Details for ${track.name}`}
+          className="flex-shrink-0 px-2 text-zinc-400 hover:text-white hover:bg-white/10"
+        >
+          <Info className="w-4 h-4" />
+        </Button>
 
         {/* Download Button */}
         <Button

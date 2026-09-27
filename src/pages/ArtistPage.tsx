@@ -15,6 +15,8 @@ import { CAROUSEL_CONTAINER } from '../components/cardLayout'
 interface ArtistPageProps {
   /** Same plumbing as HomePage's song rows: App requests the download and records its metadata. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
+  /** Opens the song info pop-up App owns. */
+  onInfo: (videoId: string) => void
 }
 
 type Load =
@@ -41,7 +43,7 @@ function Shelf({ title, children }: { title: string; children: ReactNode }) {
 /** An artist as its own page. Everything comes from the URL and one fetch, so a deep link, a
  *  refresh, or a hop from one artist to a similar one all work the same way: skeleton until the
  *  detail arrives. */
-export function ArtistPage({ onDownload }: ArtistPageProps) {
+export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   // The router gives the very first entry of a session the key 'default': a deep link or a
@@ -154,6 +156,7 @@ export function ArtistPage({ onDownload }: ArtistPageProps) {
                           <SongCard
                             track={track}
                             artistNames={track.artists}
+                            onInfo={onInfo}
                             onDownload={(t, artistNames) => void onDownload(t.id, 'SONG', {
                               youtubeId: t.id,
                               downloadType: 'SONG',

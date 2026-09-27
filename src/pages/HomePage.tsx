@@ -19,6 +19,8 @@ interface HomePageProps {
    *  videoId for a song or the collection id for an album/playlist. Resolves true once the server
    *  accepted the request. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
+  /** Opens the song info pop-up App owns. */
+  onInfo: (videoId: string) => void
 }
 
 const FILTERS: FilterType[] = ['all', 'songs', 'albums', 'artists', 'playlists']
@@ -40,7 +42,7 @@ async function runSearch(query: string, filter: FilterType): Promise<SearchRespo
 
 type Fetched = { key: string } & ({ results: SearchResponse } | { error: string })
 
-export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
+export function HomePage({ onNavigateToDownloads, onDownload, onInfo }: HomePageProps) {
   // The URL is the search state (/?q=...&type=...): opening an album and pressing the browser's
   // back button lands here again and the search re-runs from what the address says.
   const [searchParams, setSearchParams] = useSearchParams()
@@ -153,6 +155,7 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
                     key={track.id || `song-${index}`}
                     track={track}
                     artistNames={track.artists}
+                    onInfo={onInfo}
                     onDownload={(downloadedTrack, artistNames) => void onDownload(downloadedTrack.id, 'SONG', {
                       youtubeId: downloadedTrack.id,
                       downloadType: 'SONG',
