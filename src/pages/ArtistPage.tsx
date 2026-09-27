@@ -134,7 +134,10 @@ export function ArtistPage({ onDownload }: ArtistPageProps) {
               {loading && (
                 <ol aria-label="Loading songs" className="space-y-2">
                   {Array.from({ length: COLLAPSED_SONGS }, (_, i) => (
-                    <li key={i} className={`h-24 rounded-md ${PULSE}`} />
+                    <li key={i} className="flex items-center gap-3">
+                      <span className="w-6" />
+                      <div className={`flex-1 h-24 rounded-md ${PULSE}`} />
+                    </li>
                   ))}
                 </ol>
               )}
@@ -143,9 +146,9 @@ export function ArtistPage({ onDownload }: ArtistPageProps) {
               )}
               {artist && songs.length > 0 && (
                 <>
-                  <ol className="space-y-2">
+                  <ol id="top-songs" className="space-y-2">
                     {shownSongs.map((track, i) => (
-                      <li key={track.id} className="flex items-center gap-3">
+                      <li key={i} className="flex items-center gap-3">
                         <span className="w-6 text-right text-sm text-zinc-500 tabular-nums">{i + 1}</span>
                         <div className="flex-1 min-w-0">
                           <SongCard
@@ -171,6 +174,7 @@ export function ArtistPage({ onDownload }: ArtistPageProps) {
                       type="button"
                       onClick={() => setExpandedId(expanded ? null : id)}
                       aria-expanded={expanded}
+                      aria-controls="top-songs"
                       className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded"
                     >
                       {expanded ? <ChevronUp className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
