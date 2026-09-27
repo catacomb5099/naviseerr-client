@@ -8,6 +8,7 @@ React-based music search and download client with Spotify-inspired UI.
 - Filter results by category (All, Songs, Albums, Artists, Playlists)
 - Open an album or playlist and download one song or all of them
 - Open an artist to see their top songs, albums, singles, playlists and similar artists
+- Press "i" on any song to see its details and credits before downloading
 - Download a song by its YouTube id; the server works out what to fetch
 - Downloads panel and history show server-resolved artwork and titles as they arrive
 - Responsive design for mobile and desktop
@@ -104,6 +105,7 @@ Expected endpoints:
 - `GET /search/{query}/artists` - Search artists only
 - `GET /search/{query}/playlists` - Search playlists only
 - `GET /collections/{id}?type=ALBUM|PLAYLIST` - Expand a collection to its tracks
+- `GET /songs/{videoId}` - Details and credits for one song
 - `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
 - `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
 - `GET /downloads/all?pageSize=&pageNumber=` - Every download, paged, for the Downloads page

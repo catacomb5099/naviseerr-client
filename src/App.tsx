@@ -28,8 +28,13 @@ function App() {
     requestDownload,
   } = useActiveDownloads(playSwoosh)
   const library = useDownloadLibrary()
-  // Which song's info pop-up is open. One dialog for the whole app: every song row opens it by id.
-  const [songInfoId, setSongInfoId] = useState<string | null>(null)
+  // Which song's info pop-up is open, and on which page. One dialog for the whole app: every song row
+  // opens it by id. Leaving that page (a link, Back, Forward) closes it: the pop-up belongs to the row
+  // it was opened from. The dialog's own close event then clears the record.
+  const [songInfo, setSongInfo] = useState<{ id: string; pathname: string } | null>(null)
+  const songInfoId = songInfo?.pathname === pathname ? songInfo.id : null
+  const openSongInfo = (id: string) => setSongInfo({ id, pathname })
+  const closeSongInfo = () => setSongInfo(null)
 
   /** True once the server accepted the request - what a button that asked for it shows. */
   const handleDownload = async (
@@ -52,7 +57,7 @@ function App() {
           <HomePage
             onNavigateToDownloads={() => navigate('/downloads')}
             onDownload={handleDownload}
-            onInfo={setSongInfoId}
+            onInfo={openSongInfo}
           />
         } />
         <Route path="/downloads" element={
@@ -63,15 +68,15 @@ function App() {
             onNavigateHome={() => navigate('/')}
           />
         } />
-        <Route path="/album/:id" element={<CollectionPage type="ALBUM" onDownload={handleDownload} onInfo={setSongInfoId} />} />
-        <Route path="/playlist/:id" element={<CollectionPage type="PLAYLIST" onDownload={handleDownload} onInfo={setSongInfoId} />} />
-        <Route path="/artist/:id" element={<ArtistPage onDownload={handleDownload} onInfo={setSongInfoId} />} />
+        <Route path="/album/:id" element={<CollectionPage type="ALBUM" onDownload={handleDownload} onInfo={openSongInfo} />} />
+        <Route path="/playlist/:id" element={<CollectionPage type="PLAYLIST" onDownload={handleDownload} onInfo={openSongInfo} />} />
+        <Route path="/artist/:id" element={<ArtistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       <SongInfoDialog
         videoId={songInfoId}
-        onClose={() => setSongInfoId(null)}
+        onClose={closeSongInfo}
         onDownload={handleDownload}
       />
 

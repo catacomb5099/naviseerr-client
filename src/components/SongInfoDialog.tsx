@@ -5,6 +5,7 @@ import { getSongInfo } from '../api/endpoints'
 import { ApiError } from '../api/client'
 import { DownloadType, SongInfo } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
+import { REQUEST_FAILED_COPY, RequestState } from '../pages/CollectionPage'
 import { formatDuration } from '../lib/utils'
 
 interface SongInfoDialogProps {
@@ -22,9 +23,6 @@ type Load =
   | { status: 'notFound' }
   | { status: 'ready'; info: SongInfo }
 
-/** The footer button's request. Absent means never asked; `pending` and `sent` keep it inert. */
-type RequestState = 'pending' | 'sent' | 'failed'
-
 /** "1.2M", "998K" - how YouTube itself abbreviates a play count. */
 const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 
@@ -38,7 +36,7 @@ const LINK = 'hover:underline focus-visible:outline-none focus-visible:ring-2 fo
 export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   // Keyed by what was fetched: a result for another song (or an earlier attempt) is simply not ours
-  // yet, which is what "loading" means. No state reset needed when the song changes.
+  // yet, which is what "loading" means; a result for this exact key is ours and is not fetched again.
   const [fetched, setFetched] = useState<(Load & { key: string }) | null>(null)
   const [attempt, setAttempt] = useState(0)
   // Keyed by song, so reopening the same song still shows it was requested and another song starts fresh.
@@ -52,8 +50,9 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
   }, [videoId])
 
   const key = `${videoId}:${attempt}`
+  const cached = fetched?.key === key
   useEffect(() => {
-    if (!videoId) return
+    if (!videoId || cached) return
     let cancelled = false
     getSongInfo(videoId)
       .then(info => { if (!cancelled) setFetched({ key, status: 'ready', info }) })
@@ -63,7 +62,7 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
         setFetched({ key, status: notFound ? 'notFound' : 'error' })
       })
     return () => { cancelled = true }
-  }, [videoId, key])
+  }, [videoId, key, cached])
 
   if (!videoId) return <dialog ref={dialogRef} onClose={onClose} />
 
@@ -94,8 +93,9 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      // Clicks on the backdrop land on the <dialog> itself; clicks inside land on children.
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      // Clicks on the backdrop land on the <dialog> itself; clicks inside land on children. A drag that
+      // selects text and ends over the backdrop also counts as a click on the dialog, so it is ignored.
+      onClick={e => { if (e.target === e.currentTarget && !window.getSelection()?.toString()) onClose() }}
       aria-label="Song details"
       className="w-[min(100vw-2rem,32rem)] bg-zinc-900 border border-zinc-800 rounded-xl p-0 text-white backdrop:bg-black/70"
     >
@@ -182,9 +182,8 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
                   <p className="text-sm text-zinc-500">No credits available from YouTube Music</p>
                 ) : (
                   <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-                    {info.credits.map(credit => (
-                      // A role can only appear once per song, so it is its own key.
-                      <div key={credit.role} className="contents">
+                    {info.credits.map((credit, i) => (
+                      <div key={i} className="contents">
                         <dt className="text-zinc-400">{credit.role}</dt>
                         <dd className="text-white">{credit.names.join(', ')}</dd>
                       </div>
@@ -212,7 +211,7 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
                 {!state || state === 'failed' ? <ArrowDownToLine className="w-4 h-4" aria-hidden="true" /> : null}
                 {state === 'sent' ? 'Requested' : state === 'pending' ? 'Requesting…' : 'Download'}
               </button>
-              {state === 'failed' && <p role="status" className="text-xs text-red-400">Couldn't request this — try again</p>}
+              {state === 'failed' && <p role="status" className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
             </div>
           </>
         )}

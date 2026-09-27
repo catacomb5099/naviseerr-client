@@ -25,9 +25,9 @@ type Load =
 
 /** One button's request, keyed by what it posted (the collection id or a track id). Absent means
  *  never asked. `sent` and `pending` keep the button in place but inert, so focus is not dropped. */
-type RequestState = 'pending' | 'sent' | 'failed'
+export type RequestState = 'pending' | 'sent' | 'failed'
 
-const REQUEST_FAILED_COPY = "Couldn't request this — try again"
+export const REQUEST_FAILED_COPY = "Couldn't request this — try again"
 
 /** "52 min" / "5 hr 34 min"; null when no track carried a duration. */
 function formatTotal(tracks: CollectionTrack[]): string | null {
