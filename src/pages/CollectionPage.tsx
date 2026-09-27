@@ -41,9 +41,10 @@ function formatTotal(tracks: CollectionTrack[]): string | null {
 export function CollectionPage({ type, onDownload }: CollectionPageProps) {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  // The router gives the very first entry of a session the key 'default': a deep link or a
-  // refresh. Anything else was reached from inside the app, so the browser's back is the right way
-  // out and keeps the search results the user came from.
+  // The router gives an entry the key 'default' only when it has no history behind it: a typed
+  // address, a fresh tab, an external link. A refresh keeps the entry's key. Anything else was
+  // reached from inside the app, so the browser's back is the right way out and keeps the search
+  // results the user came from.
   const cameFromApp = useLocation().key !== 'default'
   // Keyed by what was fetched: a result for another collection (or an earlier attempt) is simply
   // not ours yet, which is what "loading" means. No state reset needed when the key changes.
@@ -66,6 +67,11 @@ export function CollectionPage({ type, onDownload }: CollectionPageProps) {
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const detail = load.status === 'ready' ? load.detail : null
   const name = detail?.name ?? ''
+  // The tab, bookmark and history entry are labelled by the page, not just "Naviseerr".
+  useEffect(() => {
+    document.title = name ? `${name} - Naviseerr` : 'Naviseerr'
+    return () => { document.title = 'Naviseerr' }
+  }, [name])
   const artists = detail?.artists ?? []
   const iconURL = detail?.iconURL ?? null
   const isAlbum = type === 'ALBUM'

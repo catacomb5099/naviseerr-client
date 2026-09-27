@@ -46,9 +46,10 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') ?? ''
   const selectedPill = parseFilter(searchParams.get('type'))
-  // Keyed by what was fetched: a result for another query or pill is not ours yet, which is what
-  // "loading" means. No state reset needed when the key changes.
-  const key = `${selectedPill}:${query}`
+  // Keyed by what was fetched: a result for another query or pill (or an earlier attempt) is not
+  // ours yet, which is what "loading" means. No state reset needed when the key changes.
+  const [attempt, setAttempt] = useState(0)
+  const key = `${selectedPill}:${query}:${attempt}`
   const [fetched, setFetched] = useState<Fetched | null>(null)
 
   useEffect(() => {
@@ -68,6 +69,9 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
   const error = current && 'error' in current ? current.error : null
 
   const setSearch = (q: string, filter: FilterType) => {
+    // Same search again (the way to retry after a failure): the address would not change, so
+    // nothing would re-run. Fetch again in place rather than pushing a duplicate history entry.
+    if (q === query && filter === selectedPill) { setAttempt(a => a + 1); return }
     const params: Record<string, string> = {}
     if (q) params.q = q
     if (filter !== 'all') params.type = filter
