@@ -5,10 +5,12 @@ import { Button } from './ui/button'
 interface SearchBarProps {
   onSearch: (query: string) => void
   loading: boolean
+  /** What the box shows on mount - the query from the URL, so coming back to the page reads right. */
+  initialQuery?: string
 }
 
-export function SearchBar({ onSearch, loading }: SearchBarProps) {
-  const [query, setQuery] = useState('')
+export function SearchBar({ onSearch, loading, initialQuery = '' }: SearchBarProps) {
+  const [query, setQuery] = useState(initialQuery)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()

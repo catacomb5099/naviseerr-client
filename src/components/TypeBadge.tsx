@@ -12,7 +12,7 @@ interface TypeBadgeProps {
 
 /**
  * The one way the app says what kind of thing a row or a header is about. Used as the eyebrow of
- * the collection dialog and in the downloads table, so the two can never drift apart: a user who
+ * the collection page and in the downloads table, so the two can never drift apart: a user who
  * learns the badge in one place reads it in the other.
  */
 export function TypeBadge({ type, className }: TypeBadgeProps) {

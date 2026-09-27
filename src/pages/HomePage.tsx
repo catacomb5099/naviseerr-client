@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ListMusic } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { SearchBar } from '../components/SearchBar'
@@ -7,7 +8,6 @@ import { FilterPills, FilterType } from '../components/FilterPills'
 import { SongCard } from '../components/SongCard'
 import { ArtistCard } from '../components/ArtistCard'
 import { AlbumCard } from '../components/AlbumCard'
-import { CollectionDialog, OpenCollection } from '../components/CollectionDialog'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
 import { search, searchSongs, searchAlbums, searchArtists, searchPlaylists } from '../api/endpoints'
 import { DownloadType, SearchResponse } from '../api/types'
@@ -21,58 +21,60 @@ interface HomePageProps {
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
 }
 
+const FILTERS: FilterType[] = ['all', 'songs', 'albums', 'artists', 'playlists']
+
+/** A hand-typed or stale `?type=` falls back to All rather than breaking the page. */
+function parseFilter(raw: string | null): FilterType {
+  return FILTERS.find(f => f === raw) ?? 'all'
+}
+
+async function runSearch(query: string, filter: FilterType): Promise<SearchResponse> {
+  switch (filter) {
+    case 'songs': return { tracks: await searchSongs(query), albums: [], artists: [], playlists: [] }
+    case 'albums': return { tracks: [], albums: await searchAlbums(query), artists: [], playlists: [] }
+    case 'artists': return { tracks: [], albums: [], artists: await searchArtists(query), playlists: [] }
+    case 'playlists': return { tracks: [], albums: [], artists: [], playlists: await searchPlaylists(query) }
+    default: return search(query)
+  }
+}
+
+type Fetched = { key: string } & ({ results: SearchResponse } | { error: string })
+
 export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResponse | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedPill, setSelectedPill] = useState<FilterType>('all')
-  const [openCollection, setOpenCollection] = useState<OpenCollection | null>(null)
+  // The URL is the search state (/?q=...&type=...): opening an album and pressing the browser's
+  // back button lands here again and the search re-runs from what the address says.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') ?? ''
+  const selectedPill = parseFilter(searchParams.get('type'))
+  // Keyed by what was fetched: a result for another query or pill is not ours yet, which is what
+  // "loading" means. No state reset needed when the key changes.
+  const key = `${selectedPill}:${query}`
+  const [fetched, setFetched] = useState<Fetched | null>(null)
 
-  const handleSearch = async (searchQuery: string, filter?: FilterType) => {
-    setQuery(searchQuery)
-    setResults(null) // Clear old results before new search
-    setLoading(true)
-    setError(null)
+  useEffect(() => {
+    if (!query) return
+    let cancelled = false
+    runSearch(query, selectedPill)
+      .then(results => { if (!cancelled) setFetched({ key, results }) })
+      .catch(err => {
+        if (!cancelled) setFetched({ key, error: err instanceof Error ? err.message : 'Search failed' })
+      })
+    return () => { cancelled = true }
+  }, [query, selectedPill, key])
 
-    // Use provided filter or fall back to current selectedPill
-    const activeFilter = filter ?? selectedPill
+  const current = query && fetched?.key === key ? fetched : null
+  const loading = query !== '' && current === null
+  const results = current && 'results' in current ? current.results : null
+  const error = current && 'error' in current ? current.error : null
 
-    try {
-      let data: SearchResponse
-
-      if (activeFilter === 'all') {
-        data = await search(searchQuery)
-      } else if (activeFilter === 'songs') {
-        const tracks = await searchSongs(searchQuery)
-        data = { tracks, albums: [], artists: [], playlists: [] }
-      } else if (activeFilter === 'albums') {
-        const albums = await searchAlbums(searchQuery)
-        data = { tracks: [], albums, artists: [], playlists: [] }
-      } else if (activeFilter === 'artists') {
-        const artists = await searchArtists(searchQuery)
-        data = { tracks: [], albums: [], artists, playlists: [] }
-      } else {
-        const playlists = await searchPlaylists(searchQuery)
-        data = { tracks: [], albums: [], artists: [], playlists }
-      }
-
-      setResults(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed')
-      setResults(null)
-    } finally {
-      setLoading(false)
-    }
+  const setSearch = (q: string, filter: FilterType) => {
+    const params: Record<string, string> = {}
+    if (q) params.q = q
+    if (filter !== 'all') params.type = filter
+    setSearchParams(params)
   }
-
-  const handlePillChange = (filter: FilterType) => {
-    setSelectedPill(filter)
-    // Re-run search with new filter if we have a query
-    if (query) {
-      handleSearch(query, filter) // Pass the new filter directly
-    }
-  }
+  const handleSearch = (searchQuery: string) => setSearch(searchQuery, selectedPill)
+  const handlePillChange = (filter: FilterType) => setSearch(query, filter)
 
   const showSongs = selectedPill === 'all' || selectedPill === 'songs'
   const showArtists = selectedPill === 'all' || selectedPill === 'artists'
@@ -100,7 +102,8 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
         />
       }>
         {/* Search Bar */}
-        <SearchBar onSearch={handleSearch} loading={loading} />
+        {/* Keyed so the box follows the URL when back/forward changes the query. */}
+        <SearchBar key={query} onSearch={handleSearch} loading={loading} initialQuery={query} />
 
         {/* Filter Pills */}
         <div className="mt-4">
@@ -179,16 +182,7 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
               <h2 className="text-3xl font-bold text-white mb-6">Albums</h2>
               <div className={containerClass}>
                 {results.albums.map((album) => (
-                  <AlbumCard
-                    key={album.id}
-                    item={album}
-                    kind="ALBUM"
-                    layout={cardLayout}
-                    onOpen={() => setOpenCollection({
-                      id: album.id, type: 'ALBUM', name: album.name, iconURL: album.iconURL,
-                      artists: album.artists, year: album.year,
-                    })}
-                  />
+                  <AlbumCard key={album.id} item={album} kind="ALBUM" layout={cardLayout} />
                 ))}
               </div>
             </section>
@@ -200,28 +194,13 @@ export function HomePage({ onNavigateToDownloads, onDownload }: HomePageProps) {
               <h2 className="text-3xl font-bold text-white mb-6">Playlists</h2>
               <div className={containerClass}>
                 {results.playlists.map((playlist) => (
-                  <AlbumCard
-                    key={playlist.id}
-                    item={playlist}
-                    kind="PLAYLIST"
-                    layout={cardLayout}
-                    onOpen={() => setOpenCollection({
-                      id: playlist.id, type: 'PLAYLIST', name: playlist.name, iconURL: playlist.iconURL,
-                      artists: playlist.artists,
-                    })}
-                  />
+                  <AlbumCard key={playlist.id} item={playlist} kind="PLAYLIST" layout={cardLayout} />
                 ))}
               </div>
             </section>
           )}
         </main>
       )}
-
-      <CollectionDialog
-        collection={openCollection}
-        onClose={() => setOpenCollection(null)}
-        onDownload={onDownload}
-      />
     </div>
   )
 }

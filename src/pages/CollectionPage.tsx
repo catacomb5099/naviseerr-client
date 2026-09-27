@@ -1,30 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowDownToLine, Check, Loader2, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowDownToLine, ArrowLeft, Check, Loader2 } from 'lucide-react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCollection } from '../api/endpoints'
 import { CollectionDetail, CollectionTrack, CollectionType, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { formatDuration } from '../lib/utils'
-import { TypeBadge } from './TypeBadge'
+import { AppHeader } from '../components/AppHeader'
+import { PageNavButton } from '../components/PageNavButton'
+import { TypeBadge } from '../components/TypeBadge'
 
-/** What a search card knows about the collection it opened; enough to draw the header while the
- *  tracks load. `id` is the exact Album.id / Playlist.id the search returned. */
-export interface OpenCollection {
-  id: string
+interface CollectionPageProps {
+  /** From the route: /album/:id or /playlist/:id. The id is read from the URL. */
   type: CollectionType
-  name: string
-  iconURL: string
-  artists: string[]
-  /** Albums only. Known from the search result, so the meta line does not reflow when the detail
-   *  lands. */
-  year?: number
-}
-
-interface CollectionDialogProps {
-  collection: OpenCollection | null
-  onClose: () => void
-  /** Resolves true once the server accepted the request. The page behind the modal backdrop is
-   *  inert, so the downloads panel cannot give that feedback - the button that asked shows it. The
-   *  panel stays the source of truth for what actually queued. */
+  /** Resolves true once the server accepted the request; the button that asked shows it. The
+   *  downloads panel stays the source of truth for what actually queued. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
 }
 
@@ -47,35 +36,26 @@ function formatTotal(tracks: CollectionTrack[]): string | null {
   return hr > 0 ? `${hr} hr ${minutes % 60} min` : `${minutes} min`
 }
 
-export function CollectionDialog({ collection, onClose, onDownload }: CollectionDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null)
+/** An album or playlist as its own page. Everything comes from the URL and one fetch, so a deep
+ *  link or a refresh works with no search state behind it: skeleton until the detail arrives. */
+export function CollectionPage({ type, onDownload }: CollectionPageProps) {
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+  // The router gives the very first entry of a session the key 'default': a deep link or a
+  // refresh. Anything else was reached from inside the app, so the browser's back is the right way
+  // out and keeps the search results the user came from.
+  const cameFromApp = useLocation().key !== 'default'
   // Keyed by what was fetched: a result for another collection (or an earlier attempt) is simply
   // not ours yet, which is what "loading" means. No state reset needed when the key changes.
   const [fetched, setFetched] = useState<(Load & { key: string }) | null>(null)
   const [attempt, setAttempt] = useState(0)
-  // Forgotten on close - the panel is the record of what queued.
+  // Forgotten on leaving the page - the panel is the record of what queued.
   const [requests, setRequests] = useState<Record<string, RequestState>>({})
   // What the live region reads out. Text, not an icon: the check alone says nothing to a reader.
   const [announcement, setAnnouncement] = useState('')
 
-  // The native dialog owns open/close, Esc, and focus: showModal() moves focus inside and close()
-  // hands it back to the card that opened it.
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-    if (collection && !dialog.open) dialog.showModal()
-    if (!collection && dialog.open) dialog.close()
-  }, [collection])
-
-  // Forget the last result on close so reopening after an error shows the skeleton, not a stale
-  // error panel for one frame before the refetch lands.
-  const close = () => { setFetched(null); setRequests({}); setAnnouncement(''); onClose() }
-
-  const id = collection?.id
-  const type = collection?.type
   const key = `${type}:${id}:${attempt}`
   useEffect(() => {
-    if (!id || !type) return
     let cancelled = false
     getCollection(id, type)
       .then(detail => { if (!cancelled) setFetched({ key, status: 'ready', detail }) })
@@ -83,25 +63,22 @@ export function CollectionDialog({ collection, onClose, onDownload }: Collection
     return () => { cancelled = true }
   }, [id, type, key])
 
-  if (!collection) return <dialog ref={dialogRef} onClose={close} />
-
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const detail = load.status === 'ready' ? load.detail : null
-  const name = detail?.name ?? collection.name
-  const artists = detail?.artists ?? collection.artists
-  const iconURL = detail?.iconURL ?? collection.iconURL
-  const year = detail?.year ?? collection.year
-  const isAlbum = collection.type === 'ALBUM'
+  const name = detail?.name ?? ''
+  const artists = detail?.artists ?? []
+  const iconURL = detail?.iconURL ?? null
+  const isAlbum = type === 'ALBUM'
   const isEmpty = detail?.tracks.length === 0
 
   const meta: string[] = []
-  if (isAlbum) {
-    if (artists.length > 0) meta.push(artists.join(', '))
-    if (year) meta.push(String(year))
-  } else {
-    meta.push(`By ${artists[0] ?? 'Unknown Artist'}`)
-  }
   if (detail) {
+    if (isAlbum) {
+      if (artists.length > 0) meta.push(artists.join(', '))
+      if (detail.year) meta.push(String(detail.year))
+    } else {
+      meta.push(`By ${artists[0] ?? 'Unknown Artist'}`)
+    }
     meta.push(`${detail.trackCount} songs`)
     const total = formatTotal(detail.tracks)
     if (total) meta.push(total)
@@ -114,9 +91,9 @@ export function CollectionDialog({ collection, onClose, onDownload }: Collection
     setAnnouncement(accepted ? `Requested ${title}` : `Couldn't request ${title}`)
   }
 
-  const downloadAll = () => send(collection.id, collection.type, name, {
-    youtubeId: collection.id,
-    downloadType: collection.type,
+  const downloadAll = () => send(id, type, name, {
+    youtubeId: id,
+    downloadType: type,
     title: name,
     artistNames: artists,
     albumName: null,
@@ -132,42 +109,44 @@ export function CollectionDialog({ collection, onClose, onDownload }: Collection
     iconURL: track.iconURL || iconURL || null,
   })
 
-  const allState = requests[collection.id]
+  const allState = requests[id]
   // Inert (not `disabled`) while it cannot be pressed, so a keyboard user's focus stays on it: while
   // the list is still loading, when there is nothing to download, and once the request is in flight
   // or accepted.
   const allInert = load.status !== 'ready' || isEmpty || allState === 'pending' || allState === 'sent'
 
   return (
-    <dialog
-      ref={dialogRef}
-      onClose={close}
-      // Clicks on the backdrop land on the <dialog> itself; clicks inside land on children.
-      onClick={e => { if (e.target === e.currentTarget) close() }}
-      aria-labelledby="collection-dialog-title"
-      className="w-[min(100vw-2rem,40rem)] bg-zinc-900 border border-zinc-800 rounded-xl p-0 text-white backdrop:bg-black/70"
-    >
-      <div className="relative max-h-[70vh] overflow-y-auto overscroll-contain p-6">
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Close"
-          className="absolute top-3 right-3 h-8 w-8 inline-flex items-center justify-center rounded-full text-zinc-400 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
-        >
-          <X className="w-4 h-4" aria-hidden="true" />
-        </button>
+    <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
+      <AppHeader action={
+        <PageNavButton
+          label="Back"
+          icon={<ArrowLeft className="w-4 h-4" />}
+          onClick={() => cameFromApp ? navigate(-1) : navigate('/')}
+        />
+      } />
 
+      <main>
         {/* Header */}
-        <div className="flex flex-col sm:flex-row gap-6 pr-8">
+        <div className="flex flex-col sm:flex-row gap-6" aria-busy={load.status === 'loading'}>
           {iconURL ? (
-            <img src={iconURL} alt="" referrerPolicy="no-referrer" className="h-32 w-32 sm:h-40 sm:w-40 flex-shrink-0 rounded-md object-cover shadow-lg" />
+            <img src={iconURL} alt="" referrerPolicy="no-referrer" className="h-40 w-40 sm:h-48 sm:w-48 flex-shrink-0 rounded-md object-cover shadow-lg" />
           ) : (
-            <div className="h-32 w-32 sm:h-40 sm:w-40 flex-shrink-0 rounded-md bg-zinc-800 shadow-lg" />
+            <div className={`h-40 w-40 sm:h-48 sm:w-48 flex-shrink-0 rounded-md bg-zinc-800 shadow-lg ${detail ? '' : 'animate-pulse motion-reduce:animate-none'}`} />
           )}
           <div className="min-w-0 flex flex-col gap-2">
-            <TypeBadge type={collection.type} className="self-start" />
-            <h2 id="collection-dialog-title" className="text-2xl font-bold line-clamp-2">{name}</h2>
-            <p className="text-sm text-zinc-400">{meta.join(' · ')}</p>
+            <TypeBadge type={type} className="self-start" />
+            {detail ? (
+              <>
+                <h2 className="text-3xl font-bold line-clamp-2">{name}</h2>
+                <p className="text-sm text-zinc-400">{meta.join(' · ')}</p>
+              </>
+            ) : (
+              <>
+                {/* Same heights as the real title and meta line, so nothing jumps when they land. */}
+                <div className="h-9 w-64 max-w-full rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none" />
+                <div className="h-5 w-40 rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none" />
+              </>
+            )}
             <div className="mt-auto flex flex-col items-start gap-1.5">
               <button
                 type="button"
@@ -185,10 +164,10 @@ export function CollectionDialog({ collection, onClose, onDownload }: Collection
         </div>
 
         {/* Tracks */}
-        <div className="mt-6" aria-busy={load.status === 'loading'}>
+        <div className="mt-8" aria-busy={load.status === 'loading'}>
           {load.status === 'loading' && (
             <ul aria-label="Loading songs" className="space-y-1">
-              {Array.from({ length: 5 }, (_, i) => (
+              {Array.from({ length: 8 }, (_, i) => (
                 <li key={i} className="h-14 rounded-md bg-zinc-800/60 animate-pulse motion-reduce:animate-none" />
               ))}
             </ul>
@@ -261,7 +240,7 @@ export function CollectionDialog({ collection, onClose, onDownload }: Collection
         </div>
 
         <p role="status" className="sr-only">{announcement}</p>
-      </div>
-    </dialog>
+      </main>
+    </div>
   )
 }
