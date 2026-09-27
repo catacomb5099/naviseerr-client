@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { HomePage } from './pages/HomePage'
 import { DownloadsPage } from './pages/DownloadsPage'
 import { CollectionPage } from './pages/CollectionPage'
+import { ArtistPage } from './pages/ArtistPage'
 import { DownloadPanel } from './components/DownloadPanel'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
@@ -60,6 +61,7 @@ function App() {
         } />
         <Route path="/album/:id" element={<CollectionPage type="ALBUM" onDownload={handleDownload} />} />
         <Route path="/playlist/:id" element={<CollectionPage type="PLAYLIST" onDownload={handleDownload} />} />
+        <Route path="/artist/:id" element={<ArtistPage onDownload={handleDownload} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

@@ -68,6 +68,26 @@ export interface CollectionDetail {
   tracks: CollectionTrack[]
 }
 
+/** GET /artists/{id} - an artist's page: header plus the shelves YouTube Music shows. Every list is
+ *  present (empty, never null) and capped at 10 by the server, in YouTube Music's own order. */
+export interface ArtistDetail {
+  id: string
+  name: string
+  /** "" when none. */
+  iconURL: string
+  description: string | null
+  /** YouTube's own wording without the noun, e.g. "498K"; null when unknown. */
+  subscribers: string | null
+  /** `albumId` is always "" here: the server names the song's album but has no id for it. */
+  topSongs: Track[]
+  albums: Album[]
+  singles: Album[]
+  /** A playlist search for the artist's name - the closest YouTube Music has to "featured on". */
+  playlists: Playlist[]
+  /** `iconUrl` is "" here: related artists come without artwork. */
+  similarArtists: Artist[]
+}
+
 // Keep Song as alias for backwards compatibility
 export type Song = Track
 

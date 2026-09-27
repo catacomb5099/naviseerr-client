@@ -1,6 +1,7 @@
 import {
-  Track, Album, Artist, Playlist, SearchResponse, CollectionDetail, CollectionType,
+  Track, Album, Artist, Playlist, SearchResponse, CollectionDetail, CollectionType, ArtistDetail,
 } from './types'
+import { ApiError } from './client'
 
 /**
  * Mock data based on Last.fm API response for "jay sean"
@@ -226,6 +227,26 @@ export function getMockCollection(id: string, type: CollectionType): CollectionD
       durationSeconds: 180 + i * 17,
       position: i + 1,
     })),
+  }
+}
+
+/** Mirrors GET /artists/{id}. Only the three mock artists exist; anything else is the server's 404.
+ *  Every artist gets the same shelves: all ten tracks (so "See more" has something to reveal), the
+ *  albums, the playlist, and the other two artists as similar. */
+export function getMockArtist(id: string): ArtistDetail {
+  const artist = mockArtists.find(a => a.id === id)
+  if (!artist) throw new ApiError('API request failed: Not Found', 404, 'Not Found')
+  return {
+    id,
+    name: artist.name,
+    iconURL: artist.iconUrl,
+    description: null,
+    subscribers: '1.2M',
+    topSongs: mockTracks,
+    albums: mockAlbums,
+    singles: mockAlbums.slice(0, 2),
+    playlists: mockPlaylists,
+    similarArtists: mockArtists.filter(a => a.id !== id),
   }
 }
 

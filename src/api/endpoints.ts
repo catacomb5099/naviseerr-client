@@ -2,11 +2,11 @@ import { apiClient } from './client'
 import {
   SearchResponse, Track, Album, Artist, Playlist, Download, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse,
-  CollectionDetail, CollectionType,
+  CollectionDetail, CollectionType, ArtistDetail,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
-  getMockDownloadDetail, getMockAllDownloads, getMockCollection,
+  getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -90,6 +90,18 @@ export async function getCollection(id: string, type: CollectionType): Promise<C
     return Promise.resolve(getMockCollection(id, type))
   }
   return apiClient<CollectionDetail>(`/collections/${encodeURIComponent(id)}?type=${type}`)
+}
+
+/**
+ * An artist's page: header, top songs, albums, singles, playlists, similar artists
+ * GET /artists/{channelId}  (404 for an id the adapter does not know)
+ */
+export async function getArtist(id: string): Promise<ArtistDetail> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] getArtist called with id: ${id}`)
+    return Promise.resolve(getMockArtist(id))
+  }
+  return apiClient<ArtistDetail>(`/artists/${encodeURIComponent(id)}`)
 }
 
 /**
