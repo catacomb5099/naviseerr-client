@@ -1,5 +1,6 @@
 import {
   Track, Album, Artist, Playlist, SearchResponse, CollectionDetail, CollectionType, ArtistDetail,
+  SongInfo,
 } from './types'
 import { ApiError } from './client'
 
@@ -247,6 +248,29 @@ export function getMockArtist(id: string): ArtistDetail {
     singles: mockAlbums.slice(0, 2),
     playlists: mockPlaylists,
     similarArtists: mockArtists.filter(a => a.id !== id),
+  }
+}
+
+/** Any mock track id resolves; the first one carries credits, the rest show the empty-credits copy. */
+export function getMockSongInfo(id: string): SongInfo {
+  const track = mockTracks.find(t => t.id === id)
+  if (!track) throw new ApiError('API request failed: Not Found', 404, 'Not Found')
+  const album = mockAlbums.find(a => a.id === track.albumId)
+  return {
+    id,
+    name: track.name,
+    artists: track.artists.map(name => ({ id: mockArtists.find(a => a.name === name)?.id ?? null, name })),
+    album: album ? { id: album.id, name: album.name } : null,
+    durationSeconds: 212,
+    year: track.year,
+    viewCount: 1_234_567,
+    iconURL: track.iconURL,
+    explicit: track.id === 'song-1',
+    credits: track.id === 'song-1' ? [
+      { role: 'Performed by', names: track.artists },
+      { role: 'Written by', names: ['Jay Sean', 'Jared Cotter', 'J-Remy', 'Bobby Bass'] },
+      { role: 'Produced by', names: ['J-Remy', 'Bobby Bass'] },
+    ] : [],
   }
 }
 

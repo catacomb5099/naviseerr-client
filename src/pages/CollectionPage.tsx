@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowDownToLine, ArrowLeft, Check, Loader2 } from 'lucide-react'
+import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2 } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCollection } from '../api/endpoints'
 import { CollectionDetail, CollectionTrack, CollectionType, DownloadType } from '../api/types'
@@ -15,6 +15,8 @@ interface CollectionPageProps {
   /** Resolves true once the server accepted the request; the button that asked shows it. The
    *  downloads panel stays the source of truth for what actually queued. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
+  /** Opens the song info pop-up App owns. */
+  onInfo: (videoId: string) => void
 }
 
 type Load =
@@ -23,9 +25,9 @@ type Load =
 
 /** One button's request, keyed by what it posted (the collection id or a track id). Absent means
  *  never asked. `sent` and `pending` keep the button in place but inert, so focus is not dropped. */
-type RequestState = 'pending' | 'sent' | 'failed'
+export type RequestState = 'pending' | 'sent' | 'failed'
 
-const REQUEST_FAILED_COPY = "Couldn't request this — try again"
+export const REQUEST_FAILED_COPY = "Couldn't request this — try again"
 
 /** "52 min" / "5 hr 34 min"; null when no track carried a duration. */
 function formatTotal(tracks: CollectionTrack[]): string | null {
@@ -38,7 +40,7 @@ function formatTotal(tracks: CollectionTrack[]): string | null {
 
 /** An album or playlist as its own page. Everything comes from the URL and one fetch, so a deep
  *  link or a refresh works with no search state behind it: skeleton until the detail arrives. */
-export function CollectionPage({ type, onDownload }: CollectionPageProps) {
+export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps) {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   // The router gives an entry the key 'default' only when it has no history behind it: a typed
@@ -221,6 +223,14 @@ export function CollectionPage({ type, onDownload }: CollectionPageProps) {
                     <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
                       {track.durationSeconds != null && formatDuration(track.durationSeconds)}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => onInfo(track.id)}
+                      aria-label={`Details for ${track.name}`}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                    >
+                      <Info className="w-4 h-4" aria-hidden="true" />
+                    </button>
                     {/* The same element through every state, so a keyboard user's focus stays put
                         when a click turns the arrow into a check. */}
                     <button

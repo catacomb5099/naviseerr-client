@@ -2,11 +2,11 @@ import { apiClient } from './client'
 import {
   SearchResponse, Track, Album, Artist, Playlist, Download, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse,
-  CollectionDetail, CollectionType, ArtistDetail,
+  CollectionDetail, CollectionType, ArtistDetail, SongInfo,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
-  getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist,
+  getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -102,6 +102,18 @@ export async function getArtist(id: string): Promise<ArtistDetail> {
     return Promise.resolve(getMockArtist(id))
   }
   return apiClient<ArtistDetail>(`/artists/${encodeURIComponent(id)}`)
+}
+
+/**
+ * One song's info page: header, album, numbers and credits
+ * GET /songs/{videoId}  (404 for an id YouTube Music does not know)
+ */
+export async function getSongInfo(id: string): Promise<SongInfo> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] getSongInfo called with id: ${id}`)
+    return Promise.resolve(getMockSongInfo(id))
+  }
+  return apiClient<SongInfo>(`/songs/${encodeURIComponent(id)}`)
 }
 
 /**

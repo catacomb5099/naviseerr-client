@@ -89,6 +89,8 @@ Songs include:
 - `getMockArtist(id)` - each of the three artists gets the same page: all 10 tracks as top songs
   (so "See more" has something to reveal), the 4 albums, the first 2 as singles, the playlist, and
   the other two artists as similar. Any other id throws a 404-shaped `ApiError`, like the server.
+- `getMockSongInfo(id)` - the song info pop-up for any mock track id; `song-1` carries credits and
+  the explicit flag, the others show the "No credits available" copy. Unknown ids throw a 404.
 - `getMockDownload(id, type)` - starts a time-based simulated download (SONG, ALBUM or PLAYLIST)
   that walks every stage; metadata is null while QUEUED, like the real server.
 - Two static fixtures are always in `/downloads/active`: an ALBUM at DOWNLOADING (4 songs, 2 done,
