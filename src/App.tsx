@@ -1,6 +1,8 @@
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { DownloadsPage } from './pages/DownloadsPage'
+import { CollectionPage } from './pages/CollectionPage'
 import { DownloadPanel } from './components/DownloadPanel'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
@@ -10,6 +12,9 @@ import { DownloadType } from './api/types'
 
 function App() {
   const navigate = useNavigate()
+  // A new page starts at the top; the query string (search, downloads paging) is not a new page.
+  const { pathname } = useLocation()
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
   const { muted, toggleMuted, playSwoosh } = useDismissSound()
   const {
     cards: downloadCards,
@@ -53,6 +58,8 @@ function App() {
             onNavigateHome={() => navigate('/')}
           />
         } />
+        <Route path="/album/:id" element={<CollectionPage type="ALBUM" onDownload={handleDownload} />} />
+        <Route path="/playlist/:id" element={<CollectionPage type="PLAYLIST" onDownload={handleDownload} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
