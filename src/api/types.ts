@@ -85,7 +85,8 @@ export interface ArtistDetail {
   topSongs: Track[]
   albums: Album[]
   singles: Album[]
-  /** A playlist search for the artist's name - the closest YouTube Music has to "featured on". */
+  /** YouTube Music's own featured playlists linked to the artist, minus those titled after the artist or a
+   *  related artist (those are effectively "best of" lists, not appearances). */
   playlists: Playlist[]
   /** `iconUrl` is "" here: related artists come without artwork. */
   similarArtists: Artist[]

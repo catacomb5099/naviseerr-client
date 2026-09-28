@@ -215,7 +215,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
               </Shelf>
             )}
             {artist && artist.playlists.length > 0 && (
-              <Shelf title="Playlists">
+              <Shelf title="Featured on">
                 {artist.playlists.map(playlist => <AlbumCard key={playlist.id} item={playlist} kind="PLAYLIST" />)}
               </Shelf>
             )}
