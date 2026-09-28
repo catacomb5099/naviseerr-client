@@ -7,6 +7,7 @@ interface CollectionProgressProps {
   songCount: number
   songsSucceeded: number
   songsFailed: number
+  songsCancelled: number
   stage: DownloadStage
   size: 'panel' | 'table'
   /** id of the visible summary line; the bar is labelled by it rather than repeating the counts. */
@@ -15,25 +16,26 @@ interface CollectionProgressProps {
   animate: boolean
 }
 
-const ORDER: (keyof CollectionSegments)[] = ['succeeded', 'failed', 'inProgress']
+const ORDER: (keyof CollectionSegments)[] = ['succeeded', 'failed', 'cancelled', 'inProgress']
 const FILL: Record<keyof CollectionSegments, string> = {
   succeeded: 'bg-green-600',
   failed: 'bg-red-500',
+  cancelled: 'bg-zinc-600',
   inProgress: 'bg-zinc-500',
 }
 
 /**
- * One bar per collection, split into grouped segments in the ratio done / failed / in progress /
- * not started (the zinc-800 track showing through) - never one bar per song. Hidden for a single
- * song, which has its own row state.
+ * One bar per collection, split into grouped segments in the ratio done / failed / cancelled /
+ * in progress / not started (the zinc-800 track showing through) - never one bar per song.
+ * Hidden for a single song, which has its own row state.
  */
 export function CollectionProgress({
-  songCount, songsSucceeded, songsFailed, stage, size, summaryId, animate,
+  songCount, songsSucceeded, songsFailed, songsCancelled, stage, size, summaryId, animate,
 }: CollectionProgressProps) {
   if (songCount <= 1) return null
-  const segments = collectionSegments({ songCount, songsSucceeded, songsFailed, stage, failureCode: null })
+  const segments = collectionSegments({ songCount, songsSucceeded, songsFailed, songsCancelled, stage, failureCode: null })
   // The server's tallies can briefly overshoot songCount mid-race; never report more than the whole.
-  const settled = Math.min(songCount, songsSucceeded + songsFailed)
+  const settled = Math.min(songCount, songsSucceeded + songsFailed + songsCancelled)
 
   return (
     <div

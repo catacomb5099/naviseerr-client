@@ -7,7 +7,7 @@ import './check-collection-progress'
 import './check-download-polling'
 import './check-suggested'
 import { ActiveDownloadView } from '../src/api/types'
-import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
+import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard } from '../src/lib/downloadPanel'
 import { DownloadMeta, evictToCap, pageItems } from '../src/lib/downloadLibrary'
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -20,7 +20,7 @@ const card: DownloadCardState = {
   downloadId: 'd1', youtubeId: 'v1', downloadType: 'SONG',
   title: 'Down', artists: ['Jay Sean'], imageUrl: 'https://img/1.png',
   stage: 'SEARCHING', progressPercent: null,
-  songCount: 1, songsSucceeded: 0, songsFailed: 0, failureCode: null,
+  songCount: 1, songsSucceeded: 0, songsFailed: 0, songsCancelled: 0, failureCode: null,
   requestedAt: T0, stageEnteredAt: T0, updatedAt: T0,
   lastChangedAt: 1, lastSeenAt: 1,
 }
@@ -29,7 +29,7 @@ const row: ActiveDownloadView = {
   downloadId: 'd1', youtubeId: 'v1', downloadType: 'SONG',
   title: null, artists: [], imageUrl: null,
   stage: 'SEARCHING', progressPercent: null,
-  songCount: 1, songsSucceeded: 0, songsFailed: 0,
+  songCount: 1, songsSucceeded: 0, songsFailed: 0, songsCancelled: 0,
   requestedAt: T0, stageEnteredAt: T0, updatedAt: T0, finishedAt: null, failureCode: null,
 }
 
@@ -49,6 +49,8 @@ assert(resolved.title === 'Down (Remix)' && resolved.artists.length === 2 && res
 const tallied = mergeCard(card, { ...row, songsSucceeded: 1 })
 assert(tallied.lastChangedAt > 1, 'songsSucceeded change must bump lastChangedAt')
 assert(mergeCard(card, { ...row, songsFailed: 1 }).lastChangedAt > 1, 'songsFailed change must bump lastChangedAt')
+assert(mergeCard(card, { ...row, songsCancelled: 1 }).lastChangedAt > 1, 'songsCancelled change must bump lastChangedAt')
+assert(mergeCard(card, { ...row, songsCancelled: undefined }).songsCancelled === 0, 'an older server with no songsCancelled reads as 0')
 
 // A terminal card ignores a later non-terminal row.
 const done: DownloadCardState = { ...card, stage: 'SUCCEEDED' }
@@ -57,6 +59,10 @@ assert(mergeCard(done, { ...row, stage: 'DOWNLOADING', progressPercent: 50 }) ==
 
 assert(isTerminal('PARTIAL_SUCCESS') && isTerminal('SUCCEEDED') && isTerminal('FAILED'), 'terminal stages')
 assert(!isTerminal('DOWNLOADING') && !isTerminal('QUEUED'), 'non-terminal stages')
+assert(failureCopy('CANCELLED') === 'Cancelled', 'cancelled wording')
+assert(isCancelled({ stage: 'FAILED', failureCode: 'CANCELLED' }), 'a failed card with the cancelled code is cancelled')
+assert(!isCancelled({ stage: 'DOWNLOADING', failureCode: 'CANCELLED' }), 'a live album with one cancelled song is not itself cancelled')
+assert(!isCancelled({ stage: 'PARTIAL_SUCCESS', failureCode: 'CANCELLED' }), 'a partly downloaded album is not cancelled')
 
 // Page rows: the server's row first, then the live card, then the cached meta.
 const meta: DownloadMeta = {

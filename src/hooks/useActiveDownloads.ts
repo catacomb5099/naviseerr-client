@@ -337,6 +337,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
           songCount: 0,
           songsSucceeded: 0,
           songsFailed: 0,
+          songsCancelled: 0,
           failureCode: null,
           requestedAt: result.createdAt,
           stageEnteredAt: result.createdAt,

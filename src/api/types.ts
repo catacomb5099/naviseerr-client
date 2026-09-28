@@ -158,6 +158,8 @@ export type DownloadFailureCode =
   | 'TIMED_OUT'
   | 'TRANSFER_NOT_FOUND'
   | 'METADATA_UNAVAILABLE'
+  /** The user stopped it. Comes with stage FAILED; shown in grey, not red. */
+  | 'CANCELLED'
 
 export interface ActiveDownloadView {
   downloadId: string
@@ -176,6 +178,9 @@ export interface ActiveDownloadView {
   songCount: number
   songsSucceeded: number
   songsFailed: number
+  /** Songs the user stopped. Kept apart from songsFailed so the card never calls the user's own
+   *  action a failure. Absent from an older server; read as 0. */
+  songsCancelled?: number
   requestedAt: string
   stageEnteredAt: string
   /** Recency sort key, and the only field that moves when nothing but progress changes. */

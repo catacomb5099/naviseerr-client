@@ -14,6 +14,7 @@ export interface DownloadCardState {
   songCount: number
   songsSucceeded: number
   songsFailed: number
+  songsCancelled: number
   failureCode: string | null
   requestedAt: string
   stageEnteredAt: string
@@ -26,6 +27,12 @@ export interface DownloadCardState {
 
 export function isTerminal(stage: DownloadStage): boolean {
   return stage === 'SUCCEEDED' || stage === 'FAILED' || stage === 'PARTIAL_SUCCESS'
+}
+
+/** A download the user stopped. Both conditions: a live album with one cancelled song carries the code too,
+ *  and must not be painted grey. */
+export function isCancelled(x: { stage: DownloadStage; failureCode: string | null }): boolean {
+  return x.stage === 'FAILED' && x.failureCode === 'CANCELLED'
 }
 
 export function displayTitle(card: Pick<DownloadCardState, 'title'>): string {
@@ -70,6 +77,7 @@ const FAILURE_COPY: Record<string, string> = {
   SEARCH_FAILED: 'Search failed',
   TRANSFER_NOT_FOUND: 'Source dropped the transfer',
   METADATA_UNAVAILABLE: "Couldn't find this on YouTube Music",
+  CANCELLED: 'Cancelled',
 }
 
 export function failureCopy(failureCode: string | null): string {
@@ -131,6 +139,7 @@ export function mergeCard(
 
   const progressPercent = row.progressPercent ?? existing?.progressPercent ?? null
   const failureCode = row.failureCode ?? existing?.failureCode ?? null
+  const songsCancelled = row.songsCancelled ?? 0
 
   // Compared against the coalesced value, not the raw row: a null sample after a real reading is
   // not a change, and treating it as one reorders the list for nothing. Stage is included so a
@@ -140,6 +149,7 @@ export function mergeCard(
     || existing.progressPercent !== progressPercent
     || existing.songsSucceeded !== row.songsSucceeded
     || existing.songsFailed !== row.songsFailed
+    || existing.songsCancelled !== songsCancelled
 
   return {
     downloadId: row.downloadId,
@@ -153,6 +163,7 @@ export function mergeCard(
     songCount: row.songCount,
     songsSucceeded: row.songsSucceeded,
     songsFailed: row.songsFailed,
+    songsCancelled,
     failureCode,
     requestedAt: row.requestedAt,
     stageEnteredAt: row.stageEnteredAt,

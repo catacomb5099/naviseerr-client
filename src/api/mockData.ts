@@ -562,6 +562,7 @@ function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
     songCount: resolved ? entry.songCount : 0,
     songsSucceeded: stage === 'SUCCEEDED' ? entry.songCount : 0,
     songsFailed: stage === 'FAILED' ? entry.songCount : 0,
+    songsCancelled: 0,
     requestedAt: iso(entry.createdAt),
     stageEnteredAt: iso(stageEnteredAt),
     // Progress moves every poll even when the stage does not, which is exactly why the real server
@@ -595,6 +596,7 @@ const fixtureAlbum: ActiveDownloadView = {
   songCount: 4,
   songsSucceeded: 2,
   songsFailed: 1,
+  songsCancelled: 0,
   requestedAt: iso(FIXTURE_BOOT - 90000),
   stageEnteredAt: iso(FIXTURE_BOOT - 60000),
   updatedAt: iso(FIXTURE_BOOT - 1000),
@@ -614,6 +616,7 @@ const fixturePartial: ActiveDownloadView = {
   songCount: 4,
   songsSucceeded: 3,
   songsFailed: 1,
+  songsCancelled: 0,
   requestedAt: iso(FIXTURE_BOOT - 300000),
   stageEnteredAt: iso(FIXTURE_BOOT - 5000),
   updatedAt: iso(FIXTURE_BOOT - 5000),

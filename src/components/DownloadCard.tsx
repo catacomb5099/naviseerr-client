@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CircleCheck, AlertCircle, Search, ArrowDown, Clock, X } from 'lucide-react'
+import { CircleCheck, AlertCircle, Ban, Search, ArrowDown, Clock, X } from 'lucide-react'
 import {
-  DownloadCardState, displayTitle, isIndeterminate, isTerminal, showsElapsed, stageLabel,
+  DownloadCardState, displayTitle, isCancelled, isIndeterminate, isTerminal, showsElapsed, stageLabel,
 } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 import { CollectionProgress, CollectionSummary } from './CollectionProgress'
@@ -74,8 +74,13 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
       subColor = 'text-green-500'
       break
     case 'FAILED':
-      glyph = <AlertCircle className="w-4 h-4 text-red-500" aria-hidden="true" />
-      subColor = 'text-red-500'
+      if (isCancelled(card)) {
+        glyph = <Ban className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+        subColor = 'text-zinc-400'
+      } else {
+        glyph = <AlertCircle className="w-4 h-4 text-red-500" aria-hidden="true" />
+        subColor = 'text-red-500'
+      }
       break
     case 'PARTIAL_SUCCESS':
       glyph = <AlertCircle className="w-4 h-4 text-amber-500" aria-hidden="true" />
@@ -117,6 +122,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
                   songCount={card.songCount}
                   songsSucceeded={card.songsSucceeded}
                   songsFailed={card.songsFailed}
+                  songsCancelled={card.songsCancelled}
                   stage={card.stage}
                   size="panel"
                   summaryId={summaryId}

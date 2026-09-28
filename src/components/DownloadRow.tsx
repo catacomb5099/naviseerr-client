@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, ChevronRight, CircleCheck, Clock, Loader2 } from 'lucide-react'
+import { AlertCircle, Ban, ChevronRight, CircleCheck, Clock, Loader2 } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
 import { DownloadItem, itemStageLabel } from '../lib/downloadLibrary'
-import { failureCopy, isTerminal } from '../lib/downloadPanel'
+import { failureCopy, isCancelled, isTerminal } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 import { formatDuration } from '../lib/utils'
 import { CollectionProgress, CollectionSummary } from './CollectionProgress'
@@ -16,6 +16,7 @@ interface DownloadRowProps {
 
 function stageColor(item: DownloadItem): string {
   if (item.stage === 'SUCCEEDED') return 'text-green-500'
+  if (isCancelled(item)) return 'text-zinc-400'
   if (item.stage === 'FAILED') return 'text-red-500'
   if (item.stage === 'PARTIAL_SUCCESS') return 'text-amber-500'
   return 'text-zinc-400'
@@ -39,6 +40,9 @@ function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; c
     case 'SUCCEEDED':
       return { glyph: <CircleCheck className="w-4 h-4" aria-hidden="true" />, word: 'Done', color: 'text-green-500' }
     case 'FAILED':
+      if (song.failureCode === 'CANCELLED') {
+        return { glyph: <Ban className="w-4 h-4" aria-hidden="true" />, word: 'Cancelled', color: 'text-zinc-400' }
+      }
       return { glyph: <AlertCircle className="w-4 h-4" aria-hidden="true" />, word: failureCopy(song.failureCode), color: 'text-red-500' }
     case 'DOWNLOADING':
       return {
@@ -204,6 +208,7 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
                   songCount={item.songCount}
                   songsSucceeded={item.songsSucceeded}
                   songsFailed={item.songsFailed}
+                  songsCancelled={item.songsCancelled}
                   stage={item.stage}
                   size="table"
                   summaryId={summaryId}

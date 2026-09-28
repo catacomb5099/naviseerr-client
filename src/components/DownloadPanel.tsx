@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download as DownloadIcon, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react'
 import { DownloadCard } from './DownloadCard'
-import { DownloadCardState, displayTitle, failureCopy } from '../lib/downloadPanel'
+import { DownloadCardState, displayTitle, failureCopy, isCancelled } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 
 interface DownloadPanelProps {
@@ -43,7 +43,9 @@ export function DownloadPanel({
         announcedRef.current.add(card.downloadId)
         // The reason belongs in the announcement too - a screen reader user gets no glance at the
         // sub-label, so "failed to download" alone withholds the only actionable part.
-        setAnnouncement(`${title} failed to download. ${failureCopy(card.failureCode)}.`)
+        setAnnouncement(isCancelled(card)
+          ? `${title} cancelled.`
+          : `${title} failed to download. ${failureCopy(card.failureCode)}.`)
       }
     })
   }, [cards])
