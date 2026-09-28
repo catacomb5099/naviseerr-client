@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CircleCheck, AlertCircle, Search, ArrowDown, Clock, X } from 'lucide-react'
+import { CircleCheck, AlertCircle, Ban, Search, ArrowDown, Clock, RotateCcw, Square, X } from 'lucide-react'
 import {
-  DownloadCardState, displayTitle, isIndeterminate, isTerminal, showsElapsed, stageLabel,
+  DownloadCardState, displayTitle, isCancelled, isIndeterminate, isTerminal, showsElapsed, stageLabel,
 } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 import { CollectionProgress, CollectionSummary } from './CollectionProgress'
@@ -11,6 +11,9 @@ interface DownloadCardProps {
   exiting: boolean
   pollIntervalMs: number
   onDismiss: () => void
+  onCancel: () => void
+  onRetry: () => void
+  inFlight: boolean
 }
 
 /**
@@ -31,7 +34,7 @@ function useNow(active: boolean): number {
   return now
 }
 
-export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: DownloadCardProps) {
+export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCancel, onRetry, inFlight }: DownloadCardProps) {
   const fillRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef(0)
 
@@ -74,8 +77,13 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
       subColor = 'text-green-500'
       break
     case 'FAILED':
-      glyph = <AlertCircle className="w-4 h-4 text-red-500" aria-hidden="true" />
-      subColor = 'text-red-500'
+      if (isCancelled(card)) {
+        glyph = <Ban className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+        subColor = 'text-zinc-400'
+      } else {
+        glyph = <AlertCircle className="w-4 h-4 text-red-500" aria-hidden="true" />
+        subColor = 'text-red-500'
+      }
       break
     case 'PARTIAL_SUCCESS':
       glyph = <AlertCircle className="w-4 h-4 text-amber-500" aria-hidden="true" />
@@ -117,6 +125,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
                   songCount={card.songCount}
                   songsSucceeded={card.songsSucceeded}
                   songsFailed={card.songsFailed}
+                  songsCancelled={card.songsCancelled}
                   stage={card.stage}
                   size="panel"
                   summaryId={summaryId}
@@ -146,14 +155,38 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
             </div>
           )}
         </div>
-        {terminal && (
+        {!terminal && (
           <button
-            className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
-            aria-label={`Dismiss ${title}`}
-            onClick={onDismiss}
+            type="button"
+            className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+            aria-label={`Cancel ${title}`}
+            disabled={inFlight}
+            onClick={onCancel}
           >
-            <X className="w-3.5 h-3.5" aria-hidden="true" />
+            <Square className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
+        )}
+        {terminal && (
+          <>
+            {(card.stage === 'FAILED' || card.stage === 'PARTIAL_SUCCESS') && (
+              <button
+                type="button"
+                className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+                aria-label={`Retry ${title}`}
+                disabled={inFlight}
+                onClick={onRetry}
+              >
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            )}
+            <button
+              className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+              aria-label={`Dismiss ${title}`}
+              onClick={onDismiss}
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          </>
         )}
       </div>
     </div>

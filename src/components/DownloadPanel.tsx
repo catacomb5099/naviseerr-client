@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download as DownloadIcon, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react'
 import { DownloadCard } from './DownloadCard'
-import { DownloadCardState, displayTitle, failureCopy } from '../lib/downloadPanel'
+import { DownloadCardState, displayTitle, failureCopy, isCancelled, isTerminal } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 
 interface DownloadPanelProps {
@@ -11,6 +11,9 @@ interface DownloadPanelProps {
   minimized: boolean
   onToggleMinimized: () => void
   onDismiss: (id: string) => void
+  onCancel: (id: string) => void
+  onRetry: (id: string) => void
+  inFlight: Set<string>
   muted: boolean
   onToggleMuted: () => void
 }
@@ -22,6 +25,9 @@ export function DownloadPanel({
   minimized,
   onToggleMinimized,
   onDismiss,
+  onCancel,
+  onRetry,
+  inFlight,
   muted,
   onToggleMuted,
 }: DownloadPanelProps) {
@@ -30,6 +36,12 @@ export function DownloadPanel({
 
   useEffect(() => {
     cards.forEach(card => {
+      if (announcedRef.current.has(card.downloadId) && !isTerminal(card.stage)) {
+        // Announced this card as finished before; it is live again, which only happens on a retry.
+        announcedRef.current.delete(card.downloadId)
+        setAnnouncement(`Retrying ${displayTitle(card)}.`)
+        return
+      }
       if (announcedRef.current.has(card.downloadId)) return
       const title = displayTitle(card)
       if (card.stage === 'SUCCEEDED') {
@@ -43,7 +55,9 @@ export function DownloadPanel({
         announcedRef.current.add(card.downloadId)
         // The reason belongs in the announcement too - a screen reader user gets no glance at the
         // sub-label, so "failed to download" alone withholds the only actionable part.
-        setAnnouncement(`${title} failed to download. ${failureCopy(card.failureCode)}.`)
+        setAnnouncement(isCancelled(card)
+          ? `${title} cancelled.`
+          : `${title} failed to download. ${failureCopy(card.failureCode)}.`)
       }
     })
   }, [cards])
@@ -101,6 +115,9 @@ export function DownloadPanel({
             exiting={exiting.has(card.downloadId)}
             pollIntervalMs={pollIntervalMs}
             onDismiss={() => onDismiss(card.downloadId)}
+            onCancel={() => onCancel(card.downloadId)}
+            onRetry={() => onRetry(card.downloadId)}
+            inFlight={inFlight.has(card.downloadId)}
           />
         ))}
       </div>

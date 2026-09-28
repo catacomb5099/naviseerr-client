@@ -27,6 +27,9 @@ function App() {
     setMinimized: setDownloadsMinimized,
     dismiss: dismissDownload,
     requestDownload,
+    cancel: cancelDownload,
+    retry: retryDownload,
+    inFlight: downloadsInFlight,
   } = useActiveDownloads(playSwoosh)
   const library = useDownloadLibrary()
   // Which song's info pop-up is open, and on which page. One dialog for the whole app: every song row
@@ -66,6 +69,9 @@ function App() {
             metas={library.metas}
             cards={downloadCards}
             pollIntervalMs={pollIntervalMs}
+            onCancel={cancelDownload}
+            onRetry={retryDownload}
+            inFlight={downloadsInFlight}
             onNavigateHome={() => navigate('/')}
           />
         } />
@@ -89,6 +95,9 @@ function App() {
         minimized={downloadsMinimized}
         onToggleMinimized={() => setDownloadsMinimized(m => !m)}
         onDismiss={dismissDownload}
+        onCancel={cancelDownload}
+        onRetry={retryDownload}
+        inFlight={downloadsInFlight}
         muted={muted}
         onToggleMuted={toggleMuted}
       />

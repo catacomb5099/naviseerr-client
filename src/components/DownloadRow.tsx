@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertCircle, ChevronRight, CircleCheck, Clock, Loader2 } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Loader2, RotateCcw, Square } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
-import { DownloadItem, itemStageLabel } from '../lib/downloadLibrary'
-import { failureCopy, isTerminal } from '../lib/downloadPanel'
+import { DownloadItem, collectionPath, itemStageLabel } from '../lib/downloadLibrary'
+import { failureCopy, isCancelled, isTerminal } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 import { formatDuration } from '../lib/utils'
 import { CollectionProgress, CollectionSummary } from './CollectionProgress'
@@ -13,10 +13,14 @@ import { TypeBadge } from './TypeBadge'
 interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
+  onCancel: (id: string, taskId?: string) => void | Promise<void>
+  onRetry: (id: string) => void
+  inFlight: Set<string>
 }
 
 function stageColor(item: DownloadItem): string {
   if (item.stage === 'SUCCEEDED') return 'text-green-500'
+  if (isCancelled(item)) return 'text-zinc-400'
   if (item.stage === 'FAILED') return 'text-red-500'
   if (item.stage === 'PARTIAL_SUCCESS') return 'text-amber-500'
   return 'text-zinc-400'
@@ -64,6 +68,9 @@ function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; c
     case 'SUCCEEDED':
       return { glyph: <CircleCheck className="w-4 h-4" aria-hidden="true" />, word: 'Done', color: 'text-green-500' }
     case 'FAILED':
+      if (song.failureCode === 'CANCELLED') {
+        return { glyph: <Ban className="w-4 h-4" aria-hidden="true" />, word: 'Cancelled', color: 'text-zinc-400' }
+      }
       return { glyph: <AlertCircle className="w-4 h-4" aria-hidden="true" />, word: failureCopy(song.failureCode), color: 'text-red-500' }
     case 'DOWNLOADING':
       return {
@@ -76,7 +83,15 @@ function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; c
   }
 }
 
-function SongRow({ song }: { song: DownloadSongView }) {
+interface SongRowProps {
+  song: DownloadSongView
+  downloadId: string
+  onCancel: (id: string, taskId?: string) => void | Promise<void>
+  inFlight: boolean
+  onActed: () => void
+}
+
+function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps) {
   const status = songStatus(song)
   return (
     <li className="flex items-center gap-3 h-12">
@@ -96,6 +111,19 @@ function SongRow({ song }: { song: DownloadSongView }) {
         {status.glyph}
         {status.word}
       </span>
+      {!isTerminal(song.stage) && (
+        <button
+          type="button"
+          className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+          aria-label={`Cancel ${song.title ?? 'song'}`}
+          disabled={inFlight}
+          // Reload the song list only once the cancel has been answered: a reload fired alongside the
+          // POST reads the song still live and the row keeps its stage until the next refresh.
+          onClick={async () => { await onCancel(downloadId, song.taskId); onActed() }}
+        >
+          <Square className="w-3.5 h-3.5" aria-hidden="true" />
+        </button>
+      )}
       <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
         {song.durationSeconds !== null && formatDuration(song.durationSeconds)}
       </span>
@@ -103,7 +131,7 @@ function SongRow({ song }: { song: DownloadSongView }) {
   )
 }
 
-export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
+export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight }: DownloadRowProps) {
   const [iconFailed, setIconFailed] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [songs, setSongs] = useState<DownloadSongView[] | null>(null)
@@ -165,6 +193,7 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
   const kind = kindLine(item)
   const summaryId = `download-row-summary-${item.downloadId}`
   const songsId = `download-songs-${item.downloadId}`
+  const openPath = collectionPath(item)
 
   const toggle = () => setExpanded(e => !e)
 
@@ -232,6 +261,7 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
                   songCount={item.songCount}
                   songsSucceeded={item.songsSucceeded}
                   songsFailed={item.songsFailed}
+                  songsCancelled={item.songsCancelled}
                   stage={item.stage}
                   size="table"
                   summaryId={summaryId}
@@ -260,6 +290,45 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
             </>
           )}
         </div>
+
+        {/* One fixed-width column for the action button and the Open link, rendered for every row,
+            so the content to its left ends at the same x whether or not a row has either. Wide enough
+            for one action plus Open. Stops propagation like the chevron: a click here must not also
+            expand the row. */}
+        <div className="w-16 flex-none flex items-center justify-end gap-1">
+          {!terminal && (
+            <button
+              type="button"
+              className="p-2 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              aria-label={`Cancel ${item.title}`}
+              disabled={inFlight.has(item.downloadId)}
+              onClick={e => { e.stopPropagation(); onCancel(item.downloadId) }}
+            >
+              <Square className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          {terminal && (item.stage === 'FAILED' || item.stage === 'PARTIAL_SUCCESS') && (
+            <button
+              type="button"
+              className="p-2 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              aria-label={`Retry ${item.title}`}
+              disabled={inFlight.has(item.downloadId)}
+              onClick={e => { e.stopPropagation(); onRetry(item.downloadId) }}
+            >
+              <RotateCcw className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          {openPath && (
+            <Link
+              to={openPath}
+              aria-label={`Open ${item.title}`}
+              onClick={e => e.stopPropagation()}
+              className="w-6 h-6 flex-none flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+            >
+              <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          )}
+        </div>
       </div>
 
       {collection && expanded && (
@@ -286,7 +355,16 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
             </p>
           ) : (
             <ul className="pr-3">
-              {songs.map(song => <SongRow key={song.taskId} song={song} />)}
+              {songs.map(song => (
+                <SongRow
+                  key={song.taskId}
+                  song={song}
+                  downloadId={item.downloadId}
+                  onCancel={onCancel}
+                  inFlight={inFlight.has(song.taskId)}
+                  onActed={() => setAttempt(a => a + 1)}
+                />
+              ))}
             </ul>
           )}
         </div>

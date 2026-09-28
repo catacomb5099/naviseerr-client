@@ -46,6 +46,10 @@ export type CollectionType = 'ALBUM' | 'PLAYLIST'
  *  category key (e.g. "80s-indie-pop"), not a YouTube id. It is not a CollectionType because
  *  GET /collections rejects it: a suggested playlist is read on GET /suggested-playlists/{category}. */
 export type DownloadType = 'SONG' | CollectionType | 'CURATED'
+/** `GET /downloads/all?type=`: the Downloads page's pills as the server takes them. No CURATED: the
+ *  server does accept it (curated editions only) but there is no pill for it, and PLAYLIST already
+ *  counts suggested playlists in. A word the server has never heard of is a 400. */
+export type DownloadTypeFilter = Exclude<DownloadType, 'CURATED'>
 
 /** One track inside a collection view. `id` is the YouTube videoId, `position` is 1-based. */
 export interface CollectionTrack {
@@ -54,6 +58,8 @@ export interface CollectionTrack {
   artists: string[]
   iconURL: string | null
   durationSeconds: number | null
+  /** YouTube's own wording, e.g. "28M plays". Only album tracks carry one; null for playlist tracks. */
+  plays: string | null
   position: number
 }
 
@@ -85,7 +91,8 @@ export interface ArtistDetail {
   topSongs: Track[]
   albums: Album[]
   singles: Album[]
-  /** A playlist search for the artist's name - the closest YouTube Music has to "featured on". */
+  /** YouTube Music's own featured playlists linked to the artist, minus those titled after the artist or a
+   *  related artist (those are effectively "best of" lists, not appearances). */
   playlists: Playlist[]
   /** `iconUrl` is "" here: related artists come without artwork. */
   similarArtists: Artist[]
@@ -158,6 +165,8 @@ export type DownloadFailureCode =
   | 'TIMED_OUT'
   | 'TRANSFER_NOT_FOUND'
   | 'METADATA_UNAVAILABLE'
+  /** The user stopped it. Comes with stage FAILED; shown in grey, not red. */
+  | 'CANCELLED'
 
 export interface ActiveDownloadView {
   downloadId: string
@@ -180,6 +189,9 @@ export interface ActiveDownloadView {
   songCount: number
   songsSucceeded: number
   songsFailed: number
+  /** Songs the user stopped. Kept apart from songsFailed so the card never calls the user's own
+   *  action a failure. Absent from an older server; read as 0. */
+  songsCancelled?: number
   requestedAt: string
   stageEnteredAt: string
   /** Recency sort key, and the only field that moves when nothing but progress changes. */
@@ -222,7 +234,7 @@ export interface DownloadDetailView {
   songs: DownloadSongView[]
 }
 
-/** GET /downloads/all?pageSize=&pageNumber= */
+/** GET /downloads/all?pageSize=&pageNumber=&type= - `totalPages` counts pages of the type asked for. */
 export interface AllDownloadsResponse {
   downloads: ActiveDownloadView[]
   totalPages: number

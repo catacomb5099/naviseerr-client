@@ -1,4 +1,4 @@
-import { ActiveDownloadView, DownloadStage, DownloadType } from '../api/types'
+import { ActiveDownloadView, DownloadStage, DownloadType, DownloadTypeFilter } from '../api/types'
 import { DownloadCardState, displayTitle, failureCopy } from './downloadPanel'
 
 /** What the client knew about a download at the moment it was requested. The server reports
@@ -39,11 +39,26 @@ export interface DownloadItem {
   songCount: number
   songsSucceeded: number
   songsFailed: number
+  songsCancelled: number
   updatedAt: string
   requestedAt: string
   /** True when the live feed still reports this download, i.e. the stage is being observed right
    *  now rather than read once from /downloads/all. Only that case animates. */
   live: boolean
+}
+
+/** Where a downloads row's "Open" link goes, by kind. A CURATED id is the curator's category key,
+ *  so it opens the suggested-playlist page, not /playlist. A song has no page: the info pop-up
+ *  covers it, so it gets no link. */
+const COLLECTION_ROUTE: Record<Exclude<DownloadType, 'SONG'>, string> = {
+  ALBUM: 'album',
+  PLAYLIST: 'playlist',
+  CURATED: 'suggested',
+}
+
+export function collectionPath(item: Pick<DownloadItem, 'youtubeId' | 'downloadType'>): string | null {
+  if (item.downloadType === 'SONG') return null
+  return `/${COLLECTION_ROUTE[item.downloadType]}/${encodeURIComponent(item.youtubeId)}`
 }
 
 /** Cap on stored entries. 250 rows is more history than the page can usefully show, and at a few
@@ -89,6 +104,7 @@ export function pageItems(
       songCount: source.songCount,
       songsSucceeded: source.songsSucceeded,
       songsFailed: source.songsFailed,
+      songsCancelled: source.songsCancelled ?? 0,
       updatedAt: source.updatedAt,
       requestedAt: row.requestedAt,
       live: card !== undefined,
@@ -129,4 +145,11 @@ export function itemStageLabel(item: DownloadItem): string {
   if (item.stage === 'DOWNLOADING') return `${Math.round(item.progressPercent ?? 0)}%`
   if (item.stage === 'FAILED') return failureCopy(item.failureCode)
   return ITEM_STAGE_COPY[item.stage]
+}
+
+/** The Downloads page's `?type=`. Absent means every kind, and so does anything that is not a value
+ *  the server takes (hand-typed, or a pill that has since been renamed): land on All rather than
+ *  send the server a word it answers with a 400 - the same posture as a bad `?page=`. */
+export function parseTypeFilter(raw: string | null): DownloadTypeFilter | undefined {
+  return raw === 'SONG' || raw === 'ALBUM' || raw === 'PLAYLIST' ? raw : undefined
 }

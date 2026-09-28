@@ -226,6 +226,8 @@ export function getMockCollection(id: string, type: CollectionType): CollectionD
       artists: t.artists,
       iconURL: t.iconURL,
       durationSeconds: 180 + i * 17,
+      // Like the real server: YouTube's wording for album tracks, nothing for playlist tracks.
+      plays: type === 'ALBUM' ? `${28 - i * 7}M plays` : null,
       position: i + 1,
     })),
   }
@@ -386,7 +388,7 @@ export function getMockSongInfo(id: string): SongInfo {
 
 import type {
   ActiveDownloadsResponse, ActiveDownloadView, AllDownloadsResponse, Download, DownloadDetailView,
-  DownloadFailureCode, DownloadStage, DownloadType,
+  DownloadFailureCode, DownloadStage, DownloadType, DownloadTypeFilter,
 } from './types'
 
 interface MockDownloadEntry {
@@ -553,6 +555,7 @@ function stageAt(entry: MockDownloadEntry, now: number): {
 function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
   const { stage, progressPercent, stageEnteredAt } = stageAt(entry, now)
   const terminal = stage === 'SUCCEEDED' || stage === 'FAILED'
+  const cancelled = stage === 'FAILED' && entry.failureCode === 'CANCELLED'
   // Like the real server, metadata is unresolved while QUEUED. The client must keep what it knew.
   const resolved = stage !== 'QUEUED'
   return {
@@ -567,7 +570,8 @@ function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
     progressPercent,
     songCount: resolved ? entry.songCount : 0,
     songsSucceeded: stage === 'SUCCEEDED' ? entry.songCount : 0,
-    songsFailed: stage === 'FAILED' ? entry.songCount : 0,
+    songsFailed: stage === 'FAILED' && !cancelled ? entry.songCount : 0,
+    songsCancelled: cancelled ? entry.songCount : 0,
     requestedAt: iso(entry.createdAt),
     stageEnteredAt: iso(stageEnteredAt),
     // Progress moves every poll even when the stage does not, which is exactly why the real server
@@ -602,6 +606,7 @@ const fixtureAlbum: ActiveDownloadView = {
   songCount: 4,
   songsSucceeded: 2,
   songsFailed: 1,
+  songsCancelled: 0,
   requestedAt: iso(FIXTURE_BOOT - 90000),
   stageEnteredAt: iso(FIXTURE_BOOT - 60000),
   updatedAt: iso(FIXTURE_BOOT - 1000),
@@ -623,6 +628,7 @@ const fixturePartial: ActiveDownloadView = {
   songCount: 4,
   songsSucceeded: 3,
   songsFailed: 1,
+  songsCancelled: 0,
   requestedAt: iso(FIXTURE_BOOT - 300000),
   stageEnteredAt: iso(FIXTURE_BOOT - 5000),
   updatedAt: iso(FIXTURE_BOOT - 5000),
@@ -698,6 +704,45 @@ export function getMockActiveDownloads(): ActiveDownloadsResponse {
   }
 }
 
+/** Mirrors POST /downloads/{id}/cancel. The simulator has no songs, so it cancels the whole download:
+ *  the clock is rewound so the entry reads finished now. 409 with the current card when there is
+ *  nothing left to cancel (and for the fixtures, which stay put); 404 for an unknown id. */
+export function cancelMockDownload(id: string): ActiveDownloadView {
+  const fixture = FIXTURES[id]
+  if (fixture) throw new ApiError('conflict', 409, 'Conflict', fixture)
+  const entry = mockDownloads.get(id)
+  if (!entry) throw new ApiError('not found', 404, 'Not Found')
+  const { stage } = stageAt(entry, Date.now())
+  if (stage === 'SUCCEEDED' || stage === 'FAILED') {
+    throw new ApiError('conflict', 409, 'Conflict', toView(entry, Date.now()))
+  }
+  entry.outcome = 'FAILED'
+  entry.failureCode = 'CANCELLED'
+  entry.createdAt = Date.now() - T_FINISHED
+  persistMockDownloads()
+  return toView(entry, Date.now())
+}
+
+/** Mirrors POST /downloads/{id}/retry. The simulator has no per-song state, so a retry starts the
+ *  whole download over, exactly like a fresh request: the clock resets and a new outcome is picked.
+ *  409 with the current card when the download is still running (and for the fixtures, which stay
+ *  put); 404 for an unknown id. */
+export function retryMockDownload(id: string): ActiveDownloadView {
+  const fixture = FIXTURES[id]
+  if (fixture) throw new ApiError('conflict', 409, 'Conflict', fixture)
+  const entry = mockDownloads.get(id)
+  if (!entry) throw new ApiError('not found', 404, 'Not Found')
+  const { stage } = stageAt(entry, Date.now())
+  if (stage !== 'SUCCEEDED' && stage !== 'FAILED') {
+    throw new ApiError('conflict', 409, 'Conflict', toView(entry, Date.now()))
+  }
+  entry.createdAt = Date.now()
+  entry.outcome = Math.random() < 0.8 ? 'SUCCEEDED' : 'FAILED'
+  entry.failureCode = FAILURE_CODES[Math.floor(Math.random() * FAILURE_CODES.length)]
+  persistMockDownloads()
+  return toView(entry, Date.now())
+}
+
 /** Ignores the retention window, like the real GET /downloads?ids=. Unknown ids are omitted. */
 export function getMockDownloadsByIds(ids: string[]): ActiveDownloadView[] {
   const now = Date.now()
@@ -710,11 +755,17 @@ export function getMockDownloadsByIds(ids: string[]): ActiveDownloadView[] {
 }
 
 /** Ignores the retention window too, like the real GET /downloads/all - every download the server
- *  has ever seen is a candidate row, not just the currently-active ones. */
-export function getMockAllDownloads(pageSize: number, pageNumber: number): AllDownloadsResponse {
+ *  has ever seen is a candidate row, not just the currently-active ones. Filters before paging, like
+ *  the server, so `totalPages` counts pages of the type asked for; PLAYLIST takes CURATED too. */
+export function getMockAllDownloads(
+  pageSize: number, pageNumber: number, type?: DownloadTypeFilter,
+): AllDownloadsResponse {
   const now = Date.now()
-  const downloads = Array.from(mockDownloads.values()).map(entry => toView(entry, now))
-  downloads.push(...Object.values(FIXTURES))
+  const all = Array.from(mockDownloads.values()).map(entry => toView(entry, now))
+  all.push(...Object.values(FIXTURES))
+  const downloads = type
+    ? all.filter(d => d.downloadType === type || (type === 'PLAYLIST' && d.downloadType === 'CURATED'))
+    : all
   downloads.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
   const start = (pageNumber - 1) * pageSize
   const page = downloads.slice(start, start + pageSize)

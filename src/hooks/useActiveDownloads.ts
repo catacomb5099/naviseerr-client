@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ApiError } from '../api/client'
 import {
-  getActiveDownloads, resolveDownloads, downloadSong, downloadCollection,
+  getActiveDownloads, resolveDownloads, downloadSong, downloadCollection, cancelDownload, retryDownload,
 } from '../api/endpoints'
 import { ActiveDownloadsResponse, ActiveDownloadView, Download, DownloadType } from '../api/types'
 import {
-  DownloadCardState, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, sortCards,
+  DownloadCardState, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, replaceCard, sortCards,
 } from '../lib/downloadPanel'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { ACTIVE_POLL_MS, nextPollDelayMs } from '../lib/downloadPolling'
@@ -48,6 +49,10 @@ function loadSnapshot(): Snapshot | null {
   }
 }
 
+function isView(x: unknown): x is ActiveDownloadView {
+  return typeof x === 'object' && x !== null && 'downloadId' in x && 'stage' in x
+}
+
 function saveSnapshot(snapshot: Snapshot) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
@@ -71,7 +76,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
 
   const [cards, setCards] = useState<Record<string, DownloadCardState>>(() => {
     const result: Record<string, DownloadCardState> = {}
-    initial?.cards.forEach(c => { result[c.downloadId] = c })
+    // A snapshot written before songsCancelled existed has no such field; the type says number.
+    initial?.cards.forEach(c => { result[c.downloadId] = { ...c, songsCancelled: c.songsCancelled ?? 0 } })
     return result
   })
   const [exiting, setExiting] = useState<Set<string>>(new Set())
@@ -95,6 +101,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
   const staleReconciledAtRef = useRef<number>(Date.now())
   const cardsRef = useRef<Record<string, DownloadCardState>>(cards)
   const exitingRef = useRef<Set<string>>(exiting)
+  const inFlightRef = useRef<Set<string>>(new Set())
+  const [inFlight, setInFlight] = useState<Set<string>>(new Set())
 
   useEffect(() => { cardsRef.current = cards }, [cards])
   useEffect(() => { exitingRef.current = exiting }, [exiting])
@@ -146,7 +154,12 @@ export function useActiveDownloads(playSwoosh: () => void) {
     setCards(prev => {
       const next = { ...prev }
       for (const row of rows) {
-        if (dismissedRef.current.has(row.downloadId)) continue
+        if (dismissedRef.current.has(row.downloadId)) {
+          // A finished row for a dismissed card stays dismissed. A LIVE row for one can only mean the
+          // download was retried (from this tab or another), and a retried download gets its card back.
+          if (isTerminal(row.stage)) continue
+          dismissedRef.current.delete(row.downloadId)
+        }
         next[row.downloadId] = mergeCard(prev[row.downloadId], row)
       }
       // Anything not in `rows` is left exactly as it was. A download the runner has not admitted
@@ -302,7 +315,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
       const list = Object.values(cards)
       const ttl = dismissTtlMs(list.length, retentionRef.current)
       list.forEach(card => {
-        if (isTerminal(card.stage) && !exitingRef.current.has(card.downloadId)) {
+        if (isTerminal(card.stage) && !exitingRef.current.has(card.downloadId)
+          && !inFlightRef.current.has(card.downloadId)) {
           if (Date.now() - card.lastChangedAt >= ttl) {
             dismiss(card.downloadId)
           }
@@ -337,6 +351,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
           songCount: 0,
           songsSucceeded: 0,
           songsFailed: 0,
+          songsCancelled: 0,
           failureCode: null,
           requestedAt: result.createdAt,
           stageEnteredAt: result.createdAt,
@@ -356,6 +371,38 @@ export function useActiveDownloads(playSwoosh: () => void) {
     }
   }, [pollNow])
 
+  /**
+   * One retry or cancel. `key` is the task id for a song, else the download id, so two songs of one
+   * album can be cancelled at once while the whole-download button stays single-flight. The server
+   * refuses a duplicate anyway (409); this stops the duplicate being sent at all.
+   */
+  const act = useCallback(async (id: string, key: string, call: () => Promise<ActiveDownloadView>) => {
+    if (inFlightRef.current.has(key)) return
+    inFlightRef.current.add(key); setInFlight(new Set(inFlightRef.current))
+    try {
+      const view = await call()
+      dismissedRef.current.delete(id)   // a dismissed card that the user acts on comes back
+      setCards(prev => ({ ...prev, [id]: replaceCard(prev[id], view) }))
+      lastRequestedAtRef.current = Date.now()   // the 30 s fast-poll window, as after a new request
+      void pollNow()
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409 && isView(err.body)) {
+        applyRows([err.body]); void pollNow()   // the server's answer is settled; show it
+      } else if (err instanceof ApiError && err.status === 404) {
+        dismiss(id, { silent: true })
+      } else {
+        console.error('Download action failed:', err)
+      }
+    } finally {
+      inFlightRef.current.delete(key); setInFlight(new Set(inFlightRef.current))
+    }
+  }, [applyRows, dismiss, pollNow])
+
+  const cancel = useCallback((id: string, taskId?: string) =>
+    act(id, taskId ?? id, () => cancelDownload(id, taskId)), [act])
+
+  const retry = useCallback((id: string) => act(id, id, () => retryDownload(id)), [act])
+
   return {
     cards: sortCards(Object.values(cards)),
     exiting,
@@ -365,5 +412,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
     setMinimized,
     dismiss,
     requestDownload,
+    cancel,
+    retry,
+    inFlight,
   }
 }
