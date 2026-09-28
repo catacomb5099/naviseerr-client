@@ -16,6 +16,8 @@ interface DownloadsPageProps {
   cards: DownloadCardState[]
   /** Drives the live progress bar's transition duration, same as the panel's cards. */
   pollIntervalMs: number
+  onCancel: (id: string, taskId?: string) => void
+  inFlight: Set<string>
   onNavigateHome: () => void
 }
 
@@ -45,7 +47,7 @@ const EMPTY_BY_FILTER: Record<DownloadFilter, string> = {
   PLAYLIST: 'No playlists on this page',
 }
 
-export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: DownloadsPageProps) {
+export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, inFlight, onNavigateHome }: DownloadsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageNumber = parsePageNumber(searchParams.get('page'))
   // A download requested from the search page reaches `cards` first; refetching when the SET of
@@ -109,7 +111,13 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: 
           ) : (
             <div className="divide-y divide-zinc-800">
               {visibleItems.map(item => (
-                <DownloadRow key={item.downloadId} item={item} pollIntervalMs={pollIntervalMs} />
+                <DownloadRow
+                  key={item.downloadId}
+                  item={item}
+                  pollIntervalMs={pollIntervalMs}
+                  onCancel={onCancel}
+                  inFlight={inFlight}
+                />
               ))}
             </div>
           )}

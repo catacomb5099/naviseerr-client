@@ -548,6 +548,7 @@ function stageAt(entry: MockDownloadEntry, now: number): {
 function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
   const { stage, progressPercent, stageEnteredAt } = stageAt(entry, now)
   const terminal = stage === 'SUCCEEDED' || stage === 'FAILED'
+  const cancelled = stage === 'FAILED' && entry.failureCode === 'CANCELLED'
   // Like the real server, metadata is unresolved while QUEUED. The client must keep what it knew.
   const resolved = stage !== 'QUEUED'
   return {
@@ -561,8 +562,8 @@ function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
     progressPercent,
     songCount: resolved ? entry.songCount : 0,
     songsSucceeded: stage === 'SUCCEEDED' ? entry.songCount : 0,
-    songsFailed: stage === 'FAILED' ? entry.songCount : 0,
-    songsCancelled: 0,
+    songsFailed: stage === 'FAILED' && !cancelled ? entry.songCount : 0,
+    songsCancelled: cancelled ? entry.songCount : 0,
     requestedAt: iso(entry.createdAt),
     stageEnteredAt: iso(stageEnteredAt),
     // Progress moves every poll even when the stage does not, which is exactly why the real server
@@ -689,6 +690,25 @@ export function getMockActiveDownloads(): ActiveDownloadsResponse {
     terminalRetentionMs: MOCK_RETENTION_MS,
     downloads,
   }
+}
+
+/** Mirrors POST /downloads/{id}/cancel. The simulator has no songs, so it cancels the whole download:
+ *  the clock is rewound so the entry reads finished now. 409 with the current card when there is
+ *  nothing left to cancel (and for the fixtures, which stay put); 404 for an unknown id. */
+export function cancelMockDownload(id: string): ActiveDownloadView {
+  const fixture = FIXTURES[id]
+  if (fixture) throw new ApiError('conflict', 409, 'Conflict', fixture)
+  const entry = mockDownloads.get(id)
+  if (!entry) throw new ApiError('not found', 404, 'Not Found')
+  const { stage } = stageAt(entry, Date.now())
+  if (stage === 'SUCCEEDED' || stage === 'FAILED') {
+    throw new ApiError('conflict', 409, 'Conflict', toView(entry, Date.now()))
+  }
+  entry.outcome = 'FAILED'
+  entry.failureCode = 'CANCELLED'
+  entry.createdAt = Date.now() - T_FINISHED
+  persistMockDownloads()
+  return toView(entry, Date.now())
 }
 
 /** Ignores the retention window, like the real GET /downloads?ids=. Unknown ids are omitted. */

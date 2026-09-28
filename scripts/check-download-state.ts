@@ -7,7 +7,7 @@ import './check-collection-progress'
 import './check-download-polling'
 import './check-suggested'
 import { ActiveDownloadView } from '../src/api/types'
-import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard } from '../src/lib/downloadPanel'
+import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard, replaceCard } from '../src/lib/downloadPanel'
 import { DownloadMeta, evictToCap, pageItems } from '../src/lib/downloadLibrary'
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -73,6 +73,12 @@ assert(mergeCard(liveCard, { ...row, stage: 'FAILED', failureCode: 'TIMED_OUT', 
 assert(mergeCard(liveCard, { ...row, stage: 'FAILED', failureCode: 'TIMED_OUT', updatedAt: T2 }).stage === 'FAILED', 'an equal-timestamp finished row lands (fail-before-admission)')
 // Live to live is untouched by the timestamp rule: the optimistic card's clock is the server's JVM, the rows' is Postgres.
 assert(mergeCard(liveCard, { ...row, stage: 'SEARCHING', updatedAt: T1 }).stage === 'SEARCHING', 'live rows merge regardless of timestamp')
+
+// The body of the user's own click replaces stage and counts outright, but metadata still only fills in.
+const fromBody = replaceCard(card, { ...row, stage: 'FAILED', failureCode: 'CANCELLED', title: null, updatedAt: T0 })
+assert(fromBody.stage === 'FAILED' && fromBody.failureCode === 'CANCELLED', 'the body wins on stage and outcome')
+assert(fromBody.title === 'Down' && fromBody.imageUrl === 'https://img/1.png', 'a null title in the body does not blank the card')
+assert(fromBody.lastChangedAt > card.lastChangedAt, 'an action restarts the dismiss clock')
 
 assert(isTerminal('PARTIAL_SUCCESS') && isTerminal('SUCCEEDED') && isTerminal('FAILED'), 'terminal stages')
 assert(!isTerminal('DOWNLOADING') && !isTerminal('QUEUED'), 'non-terminal stages')

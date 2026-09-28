@@ -193,3 +193,17 @@ export function mergeCard(
     lastSeenAt: Date.now(),
   }
 }
+
+/** The card after the user's own retry/cancel: the response body is computed after the write, so it is
+ *  authoritative on stage, outcome and counts, and it restarts the dismiss clock. Metadata still only
+ *  fills in: a re-queued download's body has no title yet. */
+export function replaceCard(existing: DownloadCardState | undefined, view: ActiveDownloadView): DownloadCardState {
+  const fresh = mergeCard(undefined, view)
+  return {
+    ...fresh,
+    title: fresh.title ?? existing?.title ?? null,
+    artists: fresh.artists.length > 0 ? fresh.artists : existing?.artists ?? [],
+    imageUrl: fresh.imageUrl ?? existing?.imageUrl ?? null,
+    lastChangedAt: Date.now(),
+  }
+}
