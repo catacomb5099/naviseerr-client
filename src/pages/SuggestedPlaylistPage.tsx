@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2, Sparkles } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getSuggestedPlaylist } from '../api/endpoints'
@@ -7,6 +7,7 @@ import { DownloadType, SuggestedPlaylist, SuggestedTrack } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { categoryName, editionDateLong, filtersCopy, tierCopy } from '../lib/suggested'
 import { useSuggestedRefresh } from '../hooks/useSuggestedRefresh'
+import { useRetry } from '../hooks/useRetry'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { SuggestedPlaylistCover } from '../components/SuggestedPlaylistCover'
@@ -52,18 +53,17 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
   const cameFromApp = useLocation().key !== 'default'
   // Keyed by what was fetched: a result for another category (or an earlier attempt) is not ours yet.
   const [fetched, setFetched] = useState<(Load & { key: string }) | null>(null)
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, retry] = useRetry(category)
   // Forgotten on leaving the page - the downloads panel is the record of what queued.
   const [requests, setRequests] = useState<Record<string, RequestState>>({})
   const [announcement, setAnnouncement] = useState('')
   // Owned here, not by the panel, so a run's outcome survives the re-fetch it triggers.
-  const refetch = useCallback(() => setAttempt(a => a + 1), [])
-  const refresh = useSuggestedRefresh(refetch)
+  const refresh = useSuggestedRefresh(retry)
 
   const key = `${category}:${attempt}`
   useEffect(() => {
     let cancelled = false
-    getSuggestedPlaylist(category)
+    getSuggestedPlaylist(category, { fresh: attempt > 0 })
       .then(playlist => { if (!cancelled) setFetched({ key, status: 'ready', playlist }) })
       .catch(err => {
         if (cancelled) return
@@ -71,7 +71,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
         setFetched({ key, status: status === 404 ? 'notBuilt' : status === 503 ? 'off' : 'error' })
       })
     return () => { cancelled = true }
-  }, [category, key])
+  }, [category, key, attempt])
 
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const playlist = load.status === 'ready' ? load.playlist : null
@@ -201,7 +201,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
           {load.status === 'error' && (
             <div className="py-8 text-center text-zinc-400">
               <p role="status">Couldn't load this playlist.</p>
-              <button type="button" onClick={() => setAttempt(a => a + 1)} className={`mt-3 ${BUTTON}`}>Try again</button>
+              <button type="button" onClick={retry} className={`mt-3 ${BUTTON}`}>Try again</button>
             </div>
           )}
           {playlist && playlist.tracks.length === 0 && (

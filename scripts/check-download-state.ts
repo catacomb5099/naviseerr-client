@@ -6,6 +6,7 @@
 import './check-collection-progress'
 import './check-download-polling'
 import './check-suggested'
+import './check-request-cache'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems } from '../src/lib/downloadLibrary'
