@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download as DownloadIcon, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react'
 import { DownloadCard } from './DownloadCard'
-import { DownloadCardState, displayTitle, failureCopy, isCancelled } from '../lib/downloadPanel'
+import { DownloadCardState, displayTitle, failureCopy, isCancelled, isTerminal } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 
 interface DownloadPanelProps {
@@ -30,6 +30,12 @@ export function DownloadPanel({
 
   useEffect(() => {
     cards.forEach(card => {
+      if (announcedRef.current.has(card.downloadId) && !isTerminal(card.stage)) {
+        // Announced this card as finished before; it is live again, which only happens on a retry.
+        announcedRef.current.delete(card.downloadId)
+        setAnnouncement(`Retrying ${displayTitle(card)}.`)
+        return
+      }
       if (announcedRef.current.has(card.downloadId)) return
       const title = displayTitle(card)
       if (card.stage === 'SUCCEEDED') {
