@@ -9,7 +9,7 @@ import './check-suggested'
 import './check-request-cache'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
-import { collectionPath, DownloadMeta, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
+import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -115,6 +115,6 @@ assert(parseTypeFilter('SONG') === 'SONG' && parseTypeFilter('ALBUM') === 'ALBUM
   'a pill value in the URL is that pill')
 assert(parseTypeFilter(null) === undefined, 'no ?type= is every kind')
 assert(parseTypeFilter('CURATED') === undefined && parseTypeFilter('song') === undefined && parseTypeFilter('') === undefined,
-  'a word the server would reject falls back to every kind instead of a 400')
+  'a word that is not a pill (even one the server accepts) falls back to every kind')
 
 console.log('check-download-state: ok')
