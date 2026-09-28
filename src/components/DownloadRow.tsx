@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Loader2 } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Loader2, Square } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
 import { DownloadItem, collectionPath, itemStageLabel } from '../lib/downloadLibrary'
@@ -13,6 +13,8 @@ import { TypeBadge } from './TypeBadge'
 interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
+  onCancel: (id: string, taskId?: string) => void
+  inFlight: Set<string>
 }
 
 function stageColor(item: DownloadItem): string {
@@ -81,7 +83,7 @@ function SongRow({ song }: { song: DownloadSongView }) {
   )
 }
 
-export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
+export function DownloadRow({ item, pollIntervalMs, onCancel, inFlight }: DownloadRowProps) {
   const [iconFailed, setIconFailed] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [songs, setSongs] = useState<DownloadSongView[] | null>(null)
@@ -240,18 +242,33 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
           )}
         </div>
 
-        {/* Same box as the chevron so the row keeps its height. Stops propagation or the row would
-            also toggle open under the click. */}
-        {openPath && (
-          <Link
-            to={openPath}
-            aria-label={`Open ${item.title}`}
-            onClick={e => e.stopPropagation()}
-            className="w-6 h-6 flex-none flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
-          >
-            <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-          </Link>
-        )}
+        {/* One fixed-width column for the action button and the Open link, rendered for every row,
+            so the content to its left ends at the same x whether or not a row has either. Wide enough
+            for one action plus Open. Stops propagation like the chevron: a click here must not also
+            expand the row. */}
+        <div className="w-16 flex-none flex items-center justify-end gap-1">
+          {!terminal && (
+            <button
+              type="button"
+              className="p-2 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              aria-label={`Cancel ${item.title}`}
+              disabled={inFlight.has(item.downloadId)}
+              onClick={e => { e.stopPropagation(); onCancel(item.downloadId) }}
+            >
+              <Square className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          {openPath && (
+            <Link
+              to={openPath}
+              aria-label={`Open ${item.title}`}
+              onClick={e => e.stopPropagation()}
+              className="w-6 h-6 flex-none flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+            >
+              <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          )}
+        </div>
       </div>
 
       {collection && expanded && (

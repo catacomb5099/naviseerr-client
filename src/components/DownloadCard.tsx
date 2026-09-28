@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CircleCheck, AlertCircle, Ban, Search, ArrowDown, Clock, X } from 'lucide-react'
+import { CircleCheck, AlertCircle, Ban, Search, ArrowDown, Clock, Square, X } from 'lucide-react'
 import {
   DownloadCardState, displayTitle, isCancelled, isIndeterminate, isTerminal, showsElapsed, stageLabel,
 } from '../lib/downloadPanel'
@@ -11,6 +11,8 @@ interface DownloadCardProps {
   exiting: boolean
   pollIntervalMs: number
   onDismiss: () => void
+  onCancel: () => void
+  inFlight: boolean
 }
 
 /**
@@ -31,7 +33,7 @@ function useNow(active: boolean): number {
   return now
 }
 
-export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: DownloadCardProps) {
+export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCancel, inFlight }: DownloadCardProps) {
   const fillRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef(0)
 
@@ -152,6 +154,17 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
             </div>
           )}
         </div>
+        {!terminal && (
+          <button
+            type="button"
+            className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+            aria-label={`Cancel ${title}`}
+            disabled={inFlight}
+            onClick={onCancel}
+          >
+            <Square className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        )}
         {terminal && (
           <button
             className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"

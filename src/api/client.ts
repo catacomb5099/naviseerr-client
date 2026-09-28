@@ -6,7 +6,9 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public statusText: string
+    public statusText: string,
+    /** The parsed JSON body of a non-2xx response, when it had one (a 409 carries the current card). */
+    public body: unknown = undefined
   ) {
     super(message)
     this.name = 'ApiError'
@@ -45,10 +47,14 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
     })
 
     if (!response.ok) {
+      const body = response.headers.get('content-type')?.includes('application/json')
+        ? await response.json().catch(() => undefined)
+        : undefined
       throw new ApiError(
         `API request failed: ${response.statusText}`,
         response.status,
-        response.statusText
+        response.statusText,
+        body
       )
     }
 

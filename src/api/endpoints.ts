@@ -9,6 +9,7 @@ import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
+  cancelMockDownload,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -202,6 +203,16 @@ export async function getDownloadDetail(
 ): Promise<DownloadDetailView> {
   if (USE_MOCK_DATA) return Promise.resolve(getMockDownloadDetail(downloadId))
   return apiClient<DownloadDetailView>(`/downloads/${encodeURIComponent(downloadId)}`, { signal })
+}
+
+/**
+ * Cancel a download, or one song of it
+ * POST /downloads/{id}/cancel[?taskId=]  (200 with the fresh card; 409 with the current card when nothing was left to cancel; 404 unknown)
+ */
+export async function cancelDownload(id: string, taskId?: string): Promise<ActiveDownloadView> {
+  if (USE_MOCK_DATA) return Promise.resolve(cancelMockDownload(id))
+  const query = taskId ? `?taskId=${encodeURIComponent(taskId)}` : ''
+  return apiClient<ActiveDownloadView>(`/downloads/${encodeURIComponent(id)}/cancel${query}`, { method: 'POST' })
 }
 
 /**
