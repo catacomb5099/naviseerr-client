@@ -61,7 +61,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
   const key = `${id}:${attempt}`
   useEffect(() => {
     let cancelled = false
-    getArtist(id)
+    getArtist(id, { fresh: attempt > 0 })
       .then(artist => { if (!cancelled) setFetched({ key, status: 'ready', artist }) })
       .catch(err => {
         if (cancelled) return
@@ -69,7 +69,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
         setFetched({ key, status: notFound ? 'notFound' : 'error' })
       })
     return () => { cancelled = true }
-  }, [id, key])
+  }, [id, key, attempt])
 
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const artist = load.status === 'ready' ? load.artist : null

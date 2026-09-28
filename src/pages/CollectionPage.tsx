@@ -60,11 +60,11 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   const key = `${type}:${id}:${attempt}`
   useEffect(() => {
     let cancelled = false
-    getCollection(id, type)
+    getCollection(id, type, { fresh: attempt > 0 })
       .then(detail => { if (!cancelled) setFetched({ key, status: 'ready', detail }) })
       .catch(() => { if (!cancelled) setFetched({ key, status: 'error' }) })
     return () => { cancelled = true }
-  }, [id, type, key])
+  }, [id, type, key, attempt])
 
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const detail = load.status === 'ready' ? load.detail : null

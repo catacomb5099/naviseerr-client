@@ -63,7 +63,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
   const key = `${category}:${attempt}`
   useEffect(() => {
     let cancelled = false
-    getSuggestedPlaylist(category)
+    getSuggestedPlaylist(category, { fresh: attempt > 0 })
       .then(playlist => { if (!cancelled) setFetched({ key, status: 'ready', playlist }) })
       .catch(err => {
         if (cancelled) return
@@ -71,7 +71,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
         setFetched({ key, status: status === 404 ? 'notBuilt' : status === 503 ? 'off' : 'error' })
       })
     return () => { cancelled = true }
-  }, [category, key])
+  }, [category, key, attempt])
 
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const playlist = load.status === 'ready' ? load.playlist : null

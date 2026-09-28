@@ -31,13 +31,13 @@ function parseFilter(raw: string | null): FilterType {
   return FILTERS.find(f => f === raw) ?? 'all'
 }
 
-async function runSearch(query: string, filter: FilterType): Promise<SearchResponse> {
+async function runSearch(query: string, filter: FilterType, fresh: boolean): Promise<SearchResponse> {
   switch (filter) {
-    case 'songs': return { tracks: await searchSongs(query), albums: [], artists: [], playlists: [] }
-    case 'albums': return { tracks: [], albums: await searchAlbums(query), artists: [], playlists: [] }
-    case 'artists': return { tracks: [], albums: [], artists: await searchArtists(query), playlists: [] }
-    case 'playlists': return { tracks: [], albums: [], artists: [], playlists: await searchPlaylists(query) }
-    default: return search(query)
+    case 'songs': return { tracks: await searchSongs(query, { fresh }), albums: [], artists: [], playlists: [] }
+    case 'albums': return { tracks: [], albums: await searchAlbums(query, { fresh }), artists: [], playlists: [] }
+    case 'artists': return { tracks: [], albums: [], artists: await searchArtists(query, { fresh }), playlists: [] }
+    case 'playlists': return { tracks: [], albums: [], artists: [], playlists: await searchPlaylists(query, { fresh }) }
+    default: return search(query, { fresh })
   }
 }
 
@@ -58,13 +58,13 @@ export function HomePage({ onNavigateToDownloads, onDownload, onInfo }: HomePage
   useEffect(() => {
     if (!query) return
     let cancelled = false
-    runSearch(query, selectedPill)
+    runSearch(query, selectedPill, attempt > 0)
       .then(results => { if (!cancelled) setFetched({ key, results }) })
       .catch(err => {
         if (!cancelled) setFetched({ key, error: err instanceof Error ? err.message : 'Search failed' })
       })
     return () => { cancelled = true }
-  }, [query, selectedPill, key])
+  }, [query, selectedPill, key, attempt])
 
   const current = query && fetched?.key === key ? fetched : null
   const loading = query !== '' && current === null
@@ -73,7 +73,8 @@ export function HomePage({ onNavigateToDownloads, onDownload, onInfo }: HomePage
 
   const setSearch = (q: string, filter: FilterType) => {
     // Same search again (the way to retry after a failure): the address would not change, so
-    // nothing would re-run. Fetch again in place rather than pushing a duplicate history entry.
+    // nothing would re-run. Fetch again in place, past the kept answer, rather than pushing a
+    // duplicate history entry.
     if (q === query && filter === selectedPill) { setAttempt(a => a + 1); return }
     const params: Record<string, string> = {}
     if (q) params.q = q

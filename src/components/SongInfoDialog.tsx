@@ -54,7 +54,7 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
   useEffect(() => {
     if (!videoId || cached) return
     let cancelled = false
-    getSongInfo(videoId)
+    getSongInfo(videoId, { fresh: attempt > 0 })
       .then(info => { if (!cancelled) setFetched({ key, status: 'ready', info }) })
       .catch(err => {
         if (cancelled) return
@@ -62,7 +62,7 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
         setFetched({ key, status: notFound ? 'notFound' : 'error' })
       })
     return () => { cancelled = true }
-  }, [videoId, key, cached])
+  }, [videoId, key, cached, attempt])
 
   if (!videoId) return <dialog ref={dialogRef} onClose={onClose} />
 
