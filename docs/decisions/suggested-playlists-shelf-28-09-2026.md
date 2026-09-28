@@ -1,7 +1,7 @@
 # Suggested playlists: a "Made for you" shelf and a page per playlist
 
 **Date:** 28-09-2026
-**Status:** Accepted, implemented in two PRs (shelf + page; then asking for this week's playlists when none are ready). Downloading a whole playlist as one download is a separate PR.
+**Status:** Accepted, implemented in three PRs (shelf + page; asking for this week's playlists when none are ready; Download all).
 **Research:** `docs/research/suggested-playlists-platforms-28-09-2026.md` (how Spotify, YouTube Music, Apple Music, Tidal and others present their pre-computed playlists)
 
 ## Context
@@ -49,11 +49,14 @@ it the same way. We copied the pattern rather than invent one; the research file
    owns the server. The shelf's subtitle names the refresh day the server reports ("New edition every
    Monday"), the way every service names its day.
 
+8. **Download all.** The playlist page's header has the same green "Download all" button the album and
+   playlist pages have. It requests the edition as ONE download of the server's `CURATED` type, keyed by
+   the category, so the downloads panel shows one card ("80s indie pop · 40 songs") with the usual
+   split progress, and the library gets one playlist file. The card wears a "Suggested" badge. Copies
+   YouTube Music's Discover Mix, which can be saved and downloaded whole.
+
 ## Not in these PRs
 
-- **Download all.** Songs download one by one for now. A whole-playlist download needs a server-side
-  download type for a curated list (the songs are a list of YouTube ids with no YouTube playlist behind
-  them); that is a naviseerr change first.
 - **Last week's edition.** The curator keeps every edition (`?date=`), naviseerr does not expose it yet.
   The research shows people want this (Spotify users run archive tools); a "Last week" link is the
   natural follow-up.

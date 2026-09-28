@@ -7,6 +7,7 @@ const PILLS: { label: string; value: DownloadFilter }[] = [
   { label: 'Songs', value: 'SONG' },
   { label: 'Albums', value: 'ALBUM' },
   { label: 'Playlists', value: 'PLAYLIST' },
+  { label: 'Suggested', value: 'CURATED' },
 ]
 
 interface DownloadFilterPillsProps {
