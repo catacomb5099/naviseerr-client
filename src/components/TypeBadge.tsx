@@ -1,9 +1,9 @@
-import { Disc3, ListMusic, Music } from 'lucide-react'
+import { Disc3, ListMusic, Music, Sparkles } from 'lucide-react'
 import { DownloadType } from '../api/types'
 import { cn } from '../lib/utils'
 
-const LABEL: Record<DownloadType, string> = { SONG: 'Song', ALBUM: 'Album', PLAYLIST: 'Playlist' }
-const ICON = { SONG: Music, ALBUM: Disc3, PLAYLIST: ListMusic } as const
+const LABEL: Record<DownloadType, string> = { SONG: 'Song', ALBUM: 'Album', PLAYLIST: 'Playlist', CURATED: 'Suggested' }
+const ICON = { SONG: Music, ALBUM: Disc3, PLAYLIST: ListMusic, CURATED: Sparkles } as const
 
 interface TypeBadgeProps {
   type: DownloadType

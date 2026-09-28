@@ -1,6 +1,6 @@
 import { apiClient } from './client'
 import {
-  SearchResponse, Track, Album, Artist, Playlist, Download, ActiveDownloadsResponse,
+  SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun,
@@ -170,10 +170,12 @@ export async function downloadSong(videoId: string): Promise<Download> {
 }
 
 /**
- * Download every track of an album or playlist
- * POST /download/collection/{id}?type=ALBUM|PLAYLIST
+ * Download every track of an album or playlist, or every song of a suggested playlist's edition
+ * POST /download/collection/{id}?type=ALBUM|PLAYLIST|CURATED
+ *
+ * For CURATED, `id` is the curator's category key, the same one GET /suggested-playlists/{category} takes.
  */
-export async function downloadCollection(id: string, type: CollectionType): Promise<Download> {
+export async function downloadCollection(id: string, type: Exclude<DownloadType, 'SONG'>): Promise<Download> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] downloadCollection called with id: ${id}, type: ${type}`)
     return Promise.resolve(getMockDownload(id, type))

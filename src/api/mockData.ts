@@ -452,16 +452,20 @@ function iso(ms: number): string {
 export function getMockDownload(youtubeId: string, downloadType: DownloadType): Download {
   const downloadId = randomId()
   const track = mockTracks.find(t => t.id === youtubeId)
-  const collection = downloadType === 'SONG' ? null : getMockCollection(youtubeId, downloadType)
+  // A curated download is keyed by the category; its name, picture and size come from the edition.
+  const suggested = downloadType === 'CURATED' ? getMockSuggestedPlaylist(youtubeId) : null
+  const collection = downloadType === 'SONG' || downloadType === 'CURATED'
+    ? null
+    : getMockCollection(youtubeId, downloadType)
   const createdAt = Date.now()
   mockDownloads.set(downloadId, {
     downloadId,
     youtubeId,
     downloadType,
-    title: collection?.name ?? track?.name ?? youtubeId,
-    artists: collection?.artists ?? track?.artists ?? [],
-    imageUrl: collection?.iconURL ?? track?.iconURL ?? mockArtists[0].iconUrl,
-    songCount: collection?.trackCount ?? 1,
+    title: suggested?.title ?? collection?.name ?? track?.name ?? youtubeId,
+    artists: suggested ? ['Naviseerr'] : collection?.artists ?? track?.artists ?? [],
+    imageUrl: suggested?.tracks[0]?.iconURL ?? collection?.iconURL ?? track?.iconURL ?? mockArtists[0].iconUrl,
+    songCount: suggested?.trackCount ?? collection?.trackCount ?? 1,
     createdAt,
     // ~80% succeed, so failures are visible but not the common case
     outcome: Math.random() < 0.8 ? 'SUCCEEDED' : 'FAILED',

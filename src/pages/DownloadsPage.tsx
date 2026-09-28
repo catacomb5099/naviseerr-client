@@ -35,6 +35,7 @@ const EMPTY_BY_FILTER: Record<DownloadFilter, string> = {
   SONG: 'No songs on this page',
   ALBUM: 'No albums on this page',
   PLAYLIST: 'No playlists on this page',
+  CURATED: 'No suggested playlists on this page',
 }
 
 export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: DownloadsPageProps) {

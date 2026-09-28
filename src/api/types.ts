@@ -42,7 +42,10 @@ export interface SearchResponse {
 }
 
 export type CollectionType = 'ALBUM' | 'PLAYLIST'
-export type DownloadType = 'SONG' | CollectionType
+/** 'CURATED' is one edition of a suggested playlist, downloaded as ONE download: the id is the curator's
+ *  category key (e.g. "80s-indie-pop"), not a YouTube id. It is not a CollectionType because
+ *  GET /collections rejects it: a suggested playlist is read on GET /suggested-playlists/{category}. */
+export type DownloadType = 'SONG' | CollectionType | 'CURATED'
 
 /** One track inside a collection view. `id` is the YouTube videoId, `position` is 1-based. */
 export interface CollectionTrack {

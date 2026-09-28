@@ -90,19 +90,36 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
     meta.push(`${playlist.trackCount} songs`)
   }
 
-  const downloadTrack = async (track: SuggestedTrack) => {
-    setRequests(prev => ({ ...prev, [track.id]: 'pending' }))
-    const accepted = await onDownload(track.id, 'SONG', {
-      youtubeId: track.id,
-      downloadType: 'SONG',
-      title: track.name,
-      artistNames: track.artists,
-      albumName: track.album,
-      iconURL: track.iconURL || null,
-    })
-    setRequests(prev => ({ ...prev, [track.id]: accepted ? 'sent' : 'failed' }))
-    setAnnouncement(accepted ? `Requested ${track.name}` : `Couldn't request ${track.name}`)
+  const send = async (id: string, type: DownloadType, name: string, meta: DownloadMetaInput) => {
+    setRequests(prev => ({ ...prev, [id]: 'pending' }))
+    const accepted = await onDownload(id, type, meta)
+    setRequests(prev => ({ ...prev, [id]: accepted ? 'sent' : 'failed' }))
+    setAnnouncement(accepted ? `Requested ${name}` : `Couldn't request ${name}`)
   }
+
+  const downloadTrack = (track: SuggestedTrack) => send(track.id, 'SONG', track.name, {
+    youtubeId: track.id,
+    downloadType: 'SONG',
+    title: track.name,
+    artistNames: track.artists,
+    albumName: track.album,
+    iconURL: track.iconURL || null,
+  })
+
+  // The whole edition as ONE download, keyed by the category: the server fetches the same edition
+  // from the curator at admission and files it like a playlist. The card borrows the first song's art.
+  const downloadAll = () => playlist && send(playlist.category, 'CURATED', playlist.title, {
+    youtubeId: playlist.category,
+    downloadType: 'CURATED',
+    title: playlist.title,
+    artistNames: ['Naviseerr'],
+    albumName: null,
+    iconURL: playlist.tracks[0]?.iconURL ?? null,
+  })
+
+  const allState = requests[category]
+  // Inert (not `disabled`) while it cannot be pressed, so a keyboard user's focus stays on it.
+  const allInert = !playlist || playlist.tracks.length === 0 || allState === 'pending' || allState === 'sent'
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
@@ -134,6 +151,19 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                 <p className="text-xs text-zinc-500 max-w-prose">
                   A new edition replaces this one every week. Download the songs you like before it goes.
                 </p>
+                <div className="mt-auto pt-2 flex flex-col items-start gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { if (!allInert) void downloadAll() }}
+                    aria-disabled={allInert}
+                    className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    {allState === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
+                    {allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                    {allState === 'sent' ? 'Requested' : allState === 'pending' ? 'Requesting…' : 'Download all'}
+                  </button>
+                  {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
+                </div>
               </>
             ) : load.status === 'loading' ? (
               <>
