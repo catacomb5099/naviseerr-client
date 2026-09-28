@@ -236,7 +236,34 @@ export interface DownloadsByIdResponse {
  *  and nothing built yet the list is empty and `enabled` is true. */
 export interface SuggestedPlaylistsResponse {
   enabled: boolean
+  /** The weekday the weekly refresh runs, e.g. "MONDAY"; null when the server's schedule is not one plain
+   *  weekday. Lets the shelf say "New edition every Monday". */
+  refreshDay: string | null
   playlists: SuggestedPlaylistSummary[]
+}
+
+/** POST and GET /suggested-playlists/refresh: the curator's own record of a run - "make this week's
+ *  playlists". Building takes minutes; `final` is true once the run is over, whatever the outcome. */
+export interface CuratorRun {
+  runId: string
+  /** 'queued' | 'running' | 'succeeded' | 'partial' (some categories got a playlist) | 'failed'. Widened
+   *  to string; `final` is the flag to branch on. */
+  status: string
+  requestedAt: string
+  startedAt: string | null
+  finishedAt: string | null
+  final: boolean
+  categories: CuratorCategoryResult[]
+}
+
+/** One category inside a run. `status` is 'queued' | 'running' | 'written' | 'exists' | 'no_albums' |
+ *  'thin_pool' | 'error'; `message` is the curator's plain-language line. See categoryStatusCopy. */
+export interface CuratorCategoryResult {
+  key: string
+  status: string
+  editionDate: string | null
+  trackCount: number | null
+  message: string | null
 }
 
 export interface SuggestedPlaylistSummary {

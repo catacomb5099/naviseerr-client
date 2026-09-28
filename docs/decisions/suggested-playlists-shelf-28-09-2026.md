@@ -1,7 +1,7 @@
 # Suggested playlists: a "Made for you" shelf and a page per playlist
 
 **Date:** 28-09-2026
-**Status:** Accepted, implemented (shelf + page). Asking for this week's playlists when none are ready, and downloading a whole playlist as one download, are separate PRs.
+**Status:** Accepted, implemented in two PRs (shelf + page; then asking for this week's playlists when none are ready). Downloading a whole playlist as one download is a separate PR.
 **Research:** `docs/research/suggested-playlists-platforms-28-09-2026.md` (how Spotify, YouTube Music, Apple Music, Tidal and others present their pre-computed playlists)
 
 ## Context
@@ -39,11 +39,18 @@ it the same way. We copied the pattern rather than invent one; the research file
 6. **Three empty states the server lets us tell apart**: not built yet (404: "Playlists are made once a
    week"), not set up on this server (503), and a real error with Try again (502 or network).
 
-## Not in this PR
+7. **"Make this week's playlists now."** When the shelf is empty, or a category is not built, the same
+   spot shows the reason and a button that asks the server to run the curator
+   (`POST /suggested-playlists/refresh`), then follows the run every few seconds
+   (`GET /suggested-playlists/refresh`): "Making this week's playlists… 1 of 3 done", one line per
+   category in plain words ("in progress", "ready", "nothing found on Discogs"), and the playlists
+   appear by themselves when it is over. A run already in progress (the weekly one) is picked up and
+   shown the same way. No streaming service offers this button; it is naviseerr's own, because the user
+   owns the server. The shelf's subtitle names the refresh day the server reports ("New edition every
+   Monday"), the way every service names its day.
 
-- **"Make this week's playlists now."** When the shelf is empty (or a category is not built), the server
-  can be asked to run the curator (`POST /suggested-playlists/refresh`) and followed while it works.
-  Next PR. No streaming service offers this; it is naviseerr's own, because the user owns the server.
+## Not in these PRs
+
 - **Download all.** Songs download one by one for now. A whole-playlist download needs a server-side
   download type for a curated list (the songs are a list of YouTube ids with no YouTube playlist behind
   them); that is a naviseerr change first.

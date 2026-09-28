@@ -1,4 +1,5 @@
 /** Words and looks for the suggested playlists: pure functions, checked by scripts/check-suggested.ts. */
+import { CuratorRun } from '../api/types'
 
 /** Plain words for the curator's tiers. An unknown tier (a future curator) shows its raw word. */
 export function tierCopy(tier: string): string {
@@ -63,4 +64,51 @@ export function coverGradient(category: string): string {
   const hue = hash % 360
   const hue2 = (hue + 48) % 360
   return `linear-gradient(135deg, hsl(${hue} 70% 46%) 0%, hsl(${hue2} 75% 24%) 100%)`
+}
+
+/** "New edition every Monday." from the server's "MONDAY"; "A new edition every week." when it cannot say. */
+export function cadenceCopy(refreshDay: string | null): string {
+  if (!refreshDay) return 'A new edition every week.'
+  const day = refreshDay.charAt(0).toUpperCase() + refreshDay.slice(1).toLowerCase()
+  return `New edition every ${day}.`
+}
+
+/** Plain words for a category's status inside a curator run; an unknown status shows its raw word. */
+export function categoryStatusCopy(status: string): string {
+  switch (status) {
+    case 'queued': return 'waiting'
+    case 'running': return 'in progress'
+    case 'written': return 'ready'
+    case 'exists': return 'already made this week'
+    case 'no_albums': return 'nothing found on Discogs'
+    case 'thin_pool': return 'not enough songs'
+    case 'error': return 'failed'
+    default: return status
+  }
+}
+
+/** True for a category the run has finished with, whatever the outcome. */
+export function categoryDone(status: string): boolean {
+  return status !== 'queued' && status !== 'running'
+}
+
+/** "80s indie pop" from the run's category key, which is all the run record carries. */
+export function categoryName(key: string): string {
+  return key.replace(/-/g, ' ')
+}
+
+/**
+ * One sentence for where a run is: progress while it works, the outcome once it is over. "Ready"
+ * counts a playlist written this run and one that already existed - either way the user has it.
+ */
+export function runSummary(run: CuratorRun): string {
+  const total = run.categories.length
+  if (!run.final) {
+    const done = run.categories.filter(c => categoryDone(c.status)).length
+    return `Making this week's playlists… ${done} of ${total} done. This usually takes a few minutes.`
+  }
+  const ready = run.categories.filter(c => c.status === 'written' || c.status === 'exists').length
+  if (total > 0 && ready === total) return "This week's playlists are ready."
+  if (ready > 0) return `${ready} of ${total} playlists are ready.`
+  return "Couldn't make this week's playlists."
 }
