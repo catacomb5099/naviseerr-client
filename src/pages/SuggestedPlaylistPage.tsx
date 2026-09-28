@@ -6,6 +6,7 @@ import { ApiError } from '../api/client'
 import { DownloadType, SuggestedPlaylist, SuggestedTrack } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { categoryName, editionDateLong, filtersCopy, tierCopy } from '../lib/suggested'
+import { formatPlays } from '../lib/utils'
 import { useSuggestedRefresh } from '../hooks/useSuggestedRefresh'
 import { useRetry } from '../hooks/useRetry'
 import { AppHeader } from '../components/AppHeader'
@@ -212,6 +213,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
               {playlist.tracks.map(track => {
                 const state = requests[track.id]
                 const inert = state === 'pending' || state === 'sent'
+                const plays = formatPlays(track.popularity)
                 return (
                   <li key={track.position} className="h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
                     <span className="w-6 text-right text-sm text-zinc-500 tabular-nums">{track.position}</span>
@@ -228,6 +230,11 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                         <p className="text-xs text-zinc-400 truncate">{trackLine(track)}</p>
                       )}
                     </div>
+                    {plays && (
+                      <span className="hidden sm:inline w-20 text-right text-xs text-zinc-400 tabular-nums whitespace-nowrap">
+                        {plays}
+                      </span>
+                    )}
                     {/* Why this song: the curator's tier as a chip, its one-line reason as the tooltip and
                         for screen readers. Hidden on phones, where the row has no room for it. */}
                     <span

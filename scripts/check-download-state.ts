@@ -10,6 +10,7 @@ import './check-request-cache'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
+import { formatPlays } from '../src/lib/utils'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -116,5 +117,9 @@ assert(parseTypeFilter('SONG') === 'SONG' && parseTypeFilter('ALBUM') === 'ALBUM
 assert(parseTypeFilter(null) === undefined, 'no ?type= is every kind')
 assert(parseTypeFilter('CURATED') === undefined && parseTypeFilter('song') === undefined && parseTypeFilter('') === undefined,
   'a word that is not a pill (even one the server accepts) falls back to every kind')
+// Play counts read the way YouTube writes them; an unknown count stays unknown, never "0 plays".
+assert(formatPlays(null) === null && formatPlays(undefined) === null, 'formatPlays: unknown count is null')
+assert(formatPlays(998) === '998 plays', 'formatPlays: small counts are written in full')
+assert(formatPlays(1_234_567) === '1.2M plays', 'formatPlays: millions are abbreviated to one decimal')
 
 console.log('check-download-state: ok')

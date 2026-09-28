@@ -58,6 +58,8 @@ export interface CollectionTrack {
   artists: string[]
   iconURL: string | null
   durationSeconds: number | null
+  /** YouTube's own wording, e.g. "28M plays". Only album tracks carry one; null for playlist tracks. */
+  plays: string | null
   position: number
 }
 
