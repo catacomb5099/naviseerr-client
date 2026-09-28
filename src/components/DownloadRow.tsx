@@ -13,7 +13,7 @@ import { TypeBadge } from './TypeBadge'
 interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
-  onCancel: (id: string, taskId?: string) => void
+  onCancel: (id: string, taskId?: string) => void | Promise<void>
   onRetry: (id: string) => void
   inFlight: Set<string>
 }
@@ -62,7 +62,7 @@ function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; c
 interface SongRowProps {
   song: DownloadSongView
   downloadId: string
-  onCancel: (id: string, taskId?: string) => void
+  onCancel: (id: string, taskId?: string) => void | Promise<void>
   inFlight: boolean
   onActed: () => void
 }
@@ -91,7 +91,9 @@ function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps
           className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
           aria-label={`Cancel ${song.title ?? 'song'}`}
           disabled={inFlight}
-          onClick={() => { onCancel(downloadId, song.taskId); onActed() }}
+          // Reload the song list only once the cancel has been answered: a reload fired alongside the
+          // POST reads the song still live and the row keeps its stage until the next refresh.
+          onClick={async () => { await onCancel(downloadId, song.taskId); onActed() }}
         >
           <Square className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
