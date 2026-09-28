@@ -46,6 +46,9 @@ export type CollectionType = 'ALBUM' | 'PLAYLIST'
  *  category key (e.g. "80s-indie-pop"), not a YouTube id. It is not a CollectionType because
  *  GET /collections rejects it: a suggested playlist is read on GET /suggested-playlists/{category}. */
 export type DownloadType = 'SONG' | CollectionType | 'CURATED'
+/** `GET /downloads/all?type=`: the Downloads page's pills as the server takes them. No CURATED: a
+ *  suggested playlist is a playlist, so the server counts it under PLAYLIST. Any other word is a 400. */
+export type DownloadTypeFilter = Exclude<DownloadType, 'CURATED'>
 
 /** One track inside a collection view. `id` is the YouTube videoId, `position` is 1-based. */
 export interface CollectionTrack {
@@ -216,7 +219,7 @@ export interface DownloadDetailView {
   songs: DownloadSongView[]
 }
 
-/** GET /downloads/all?pageSize=&pageNumber= */
+/** GET /downloads/all?pageSize=&pageNumber=&type= - `totalPages` counts pages of the type asked for. */
 export interface AllDownloadsResponse {
   downloads: ActiveDownloadView[]
   totalPages: number

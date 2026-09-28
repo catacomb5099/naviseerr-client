@@ -9,7 +9,7 @@ import './check-suggested'
 import './check-request-cache'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
-import { DownloadMeta, collectionPath, evictToCap, pageItems } from '../src/lib/downloadLibrary'
+import { collectionPath, DownloadMeta, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -110,5 +110,11 @@ assert(collectionPath({ downloadType: 'PLAYLIST', youtubeId: 'PL1' }) === '/play
 assert(collectionPath({ downloadType: 'CURATED', youtubeId: '80s indie/pop' }) === '/suggested/80s%20indie%2Fpop',
   'a suggested playlist opens /suggested by its encoded category key')
 assert(collectionPath({ downloadType: 'SONG', youtubeId: 'v1' }) === null, 'a song has no page to open')
+// The Downloads page's `?type=`: the three pills round-trip, everything else reads as All.
+assert(parseTypeFilter('SONG') === 'SONG' && parseTypeFilter('ALBUM') === 'ALBUM' && parseTypeFilter('PLAYLIST') === 'PLAYLIST',
+  'a pill value in the URL is that pill')
+assert(parseTypeFilter(null) === undefined, 'no ?type= is every kind')
+assert(parseTypeFilter('CURATED') === undefined && parseTypeFilter('song') === undefined && parseTypeFilter('') === undefined,
+  'a word the server would reject falls back to every kind instead of a 400')
 
 console.log('check-download-state: ok')

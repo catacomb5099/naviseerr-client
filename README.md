@@ -109,7 +109,7 @@ Expected endpoints:
 - `GET /songs/{videoId}` - Details and credits for one song
 - `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
 - `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
-- `GET /downloads/all?pageSize=&pageNumber=` - Every download, paged, for the Downloads page
+- `GET /downloads/all?pageSize=&pageNumber=&type=SONG|ALBUM|PLAYLIST` - Every download, paged, for the Downloads page; `type` is optional and narrows to one kind (PLAYLIST includes suggested playlists), with page counts per kind
 
 ## License
 

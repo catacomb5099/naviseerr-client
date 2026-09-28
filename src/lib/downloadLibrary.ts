@@ -1,4 +1,4 @@
-import { ActiveDownloadView, DownloadStage, DownloadType } from '../api/types'
+import { ActiveDownloadView, DownloadStage, DownloadType, DownloadTypeFilter } from '../api/types'
 import { DownloadCardState, displayTitle, failureCopy } from './downloadPanel'
 
 /** What the client knew about a download at the moment it was requested. The server reports
@@ -135,4 +135,11 @@ export function itemStageLabel(item: DownloadItem): string {
   if (item.stage === 'DOWNLOADING') return `${Math.round(item.progressPercent ?? 0)}%`
   if (item.stage === 'FAILED') return failureCopy(item.failureCode)
   return ITEM_STAGE_COPY[item.stage]
+}
+
+/** The Downloads page's `?type=`. Absent means every kind, and so does anything that is not a value
+ *  the server takes (hand-typed, or a pill that has since been renamed): land on All rather than
+ *  send the server a word it answers with a 400 - the same posture as a bad `?page=`. */
+export function parseTypeFilter(raw: string | null): DownloadTypeFilter | undefined {
+  return raw === 'SONG' || raw === 'ALBUM' || raw === 'PLAYLIST' ? raw : undefined
 }
