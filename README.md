@@ -7,8 +7,9 @@ React-based music search and download client with Spotify-inspired UI.
 - Search for songs, albums, artists, and playlists
 - Filter results by category (All, Songs, Albums, Artists, Playlists)
 - Open an album or playlist and download one song or all of them
-- Open an artist to see their top songs, albums, singles, playlists and similar artists
+- Open an artist to see their top songs, albums, singles, the playlists they are featured on, and similar artists
 - Press "i" on any song to see its details and credits before downloading
+- Album tracks and suggested-playlist songs show their YouTube Music play count next to the duration
 - A "Made for you" shelf shows the weekly suggested playlists the server's curator built, one row per era (all-time hits, then each decade); open one to see why each song is in, download a song, or download the whole playlist as one download
 - Download a song by its YouTube id; the server works out what to fetch
 - Downloads panel and history show server-resolved artwork and titles as they arrive
@@ -61,7 +62,7 @@ React-based music search and download client with Spotify-inspired UI.
 npm run build
 ```
 
-`npm run check` runs the self-checks (`scripts/check-download-state.ts`, which pulls in `scripts/check-collection-progress.ts`) with the installed tsc and node; there is no test framework.
+`npm run check` runs the self-checks (`scripts/check-download-state.ts`, which pulls in the other `scripts/check-*.ts` files) with the installed tsc and node; there is no test framework.
 
 Output: `dist/`
 
@@ -109,7 +110,7 @@ Expected endpoints:
 - `GET /songs/{videoId}` - Details and credits for one song
 - `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
 - `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
-- `GET /downloads/all?pageSize=&pageNumber=` - Every download, paged, for the Downloads page
+- `GET /downloads/all?pageSize=&pageNumber=&type=SONG|ALBUM|PLAYLIST` - Every download, paged, for the Downloads page; `type` is optional and narrows to one kind (PLAYLIST includes suggested playlists), with page counts per kind
 
 ## License
 
