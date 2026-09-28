@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, Ban, ChevronRight, CircleCheck, Clock, Loader2, RotateCcw, Square } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Loader2, RotateCcw, Square } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
-import { DownloadItem, itemStageLabel } from '../lib/downloadLibrary'
+import { DownloadItem, collectionPath, itemStageLabel } from '../lib/downloadLibrary'
 import { failureCopy, isCancelled, isTerminal } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 import { formatDuration } from '../lib/utils'
@@ -166,6 +167,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
     .join(' · ')
   const summaryId = `download-row-summary-${item.downloadId}`
   const songsId = `download-songs-${item.downloadId}`
+  const openPath = collectionPath(item)
 
   const toggle = () => setExpanded(e => !e)
 
@@ -260,8 +262,11 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
           )}
         </div>
 
-        {/* Stops propagation like the chevron: a click here must not also expand the row. */}
-        <div className="flex-none flex items-center justify-end">
+        {/* One fixed-width column for the action button and the Open link, rendered for every row,
+            so the content to its left ends at the same x whether or not a row has either. Wide enough
+            for one action plus Open. Stops propagation like the chevron: a click here must not also
+            expand the row. */}
+        <div className="w-16 flex-none flex items-center justify-end gap-1">
           {!terminal && (
             <button
               type="button"
@@ -283,6 +288,16 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
             >
               <RotateCcw className="w-4 h-4" aria-hidden="true" />
             </button>
+          )}
+          {openPath && (
+            <Link
+              to={openPath}
+              aria-label={`Open ${item.title}`}
+              onClick={e => e.stopPropagation()}
+              className="w-6 h-6 flex-none flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+            >
+              <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
           )}
         </div>
       </div>

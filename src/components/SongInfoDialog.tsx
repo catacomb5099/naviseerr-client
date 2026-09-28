@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowDownToLine, Check, Loader2, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getSongInfo } from '../api/endpoints'
+import { useRetry } from '../hooks/useRetry'
 import { ApiError } from '../api/client'
 import { DownloadType, SongInfo } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { REQUEST_FAILED_COPY, RequestState } from '../pages/CollectionPage'
-import { formatDuration } from '../lib/utils'
+import { formatDuration, formatPlays } from '../lib/utils'
 
 interface SongInfoDialogProps {
   /** The YouTube videoId to show, or null while closed. */
@@ -23,9 +24,6 @@ type Load =
   | { status: 'notFound' }
   | { status: 'ready'; info: SongInfo }
 
-/** "1.2M", "998K" - how YouTube itself abbreviates a play count. */
-const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
-
 const PULSE = 'rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
 const BUTTON = 'rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 const LINK = 'hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded'
@@ -38,7 +36,7 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
   // Keyed by what was fetched: a result for another song (or an earlier attempt) is simply not ours
   // yet, which is what "loading" means; a result for this exact key is ours and is not fetched again.
   const [fetched, setFetched] = useState<(Load & { key: string }) | null>(null)
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, retry] = useRetry(videoId ?? '')
   // Keyed by song, so reopening the same song still shows it was requested and another song starts fresh.
   const [request, setRequest] = useState<{ id: string; state: RequestState } | null>(null)
 
@@ -54,7 +52,7 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
   useEffect(() => {
     if (!videoId || cached) return
     let cancelled = false
-    getSongInfo(videoId)
+    getSongInfo(videoId, { fresh: attempt > 0 })
       .then(info => { if (!cancelled) setFetched({ key, status: 'ready', info }) })
       .catch(err => {
         if (cancelled) return
@@ -62,7 +60,7 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
         setFetched({ key, status: notFound ? 'notFound' : 'error' })
       })
     return () => { cancelled = true }
-  }, [videoId, key, cached])
+  }, [videoId, key, cached, attempt])
 
   if (!videoId) return <dialog ref={dialogRef} onClose={onClose} />
 
@@ -87,7 +85,8 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
   const facts: string[] = []
   if (info?.durationSeconds != null) facts.push(formatDuration(info.durationSeconds))
   if (info?.year) facts.push(String(info.year))
-  if (info?.viewCount != null) facts.push(`${COMPACT.format(info.viewCount)} plays`)
+  const plays = formatPlays(info?.viewCount)
+  if (plays) facts.push(plays)
 
   return (
     <dialog
@@ -115,7 +114,7 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
         {load.status === 'error' && (
           <div className="py-12 text-center text-zinc-400">
             <p role="status">Couldn't load this song's details.</p>
-            <button type="button" onClick={() => setAttempt(a => a + 1)} className={`mt-3 ${BUTTON}`}>
+            <button type="button" onClick={retry} className={`mt-3 ${BUTTON}`}>
               Try again
             </button>
           </div>
