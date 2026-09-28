@@ -8,7 +8,7 @@ import './check-download-polling'
 import './check-suggested'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
-import { DownloadMeta, evictToCap, pageItems } from '../src/lib/downloadLibrary'
+import { DownloadMeta, collectionPath, evictToCap, pageItems } from '../src/lib/downloadLibrary'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -102,5 +102,12 @@ for (let i = 0; i < 5; i++) {
 const kept = evictToCap(many, 2)
 assert(Object.keys(kept).length === 2 && 'm4' in kept && 'm3' in kept, 'evictToCap keeps the newest entries')
 assert(evictToCap(many, 10) === many, 'under the cap, evictToCap returns the same object')
+
+// The downloads row's "Open" link: each collection kind has its own page, a song has none.
+assert(collectionPath({ downloadType: 'ALBUM', youtubeId: 'MPREb_1' }) === '/album/MPREb_1', 'an album opens /album')
+assert(collectionPath({ downloadType: 'PLAYLIST', youtubeId: 'PL1' }) === '/playlist/PL1', 'a playlist opens /playlist')
+assert(collectionPath({ downloadType: 'CURATED', youtubeId: '80s indie/pop' }) === '/suggested/80s%20indie%2Fpop',
+  'a suggested playlist opens /suggested by its encoded category key')
+assert(collectionPath({ downloadType: 'SONG', youtubeId: 'v1' }) === null, 'a song has no page to open')
 
 console.log('check-download-state: ok')

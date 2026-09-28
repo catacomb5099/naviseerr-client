@@ -43,6 +43,20 @@ export interface DownloadItem {
   live: boolean
 }
 
+/** Where a downloads row's "Open" link goes, by kind. A CURATED id is the curator's category key,
+ *  so it opens the suggested-playlist page, not /playlist. A song has no page: the info pop-up
+ *  covers it, so it gets no link. */
+const COLLECTION_ROUTE: Record<Exclude<DownloadType, 'SONG'>, string> = {
+  ALBUM: 'album',
+  PLAYLIST: 'playlist',
+  CURATED: 'suggested',
+}
+
+export function collectionPath(item: Pick<DownloadItem, 'youtubeId' | 'downloadType'>): string | null {
+  if (item.downloadType === 'SONG') return null
+  return `/${COLLECTION_ROUTE[item.downloadType]}/${encodeURIComponent(item.youtubeId)}`
+}
+
 /** Cap on stored entries. 250 rows is more history than the page can usefully show, and at a few
  *  hundred bytes each it is well under 100KB - two orders of magnitude below the localStorage
  *  quota, which matters because this key shares that quota with the panel snapshot. */

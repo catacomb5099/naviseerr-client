@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, ChevronRight, CircleCheck, Clock, Loader2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AlertCircle, ArrowUpRight, ChevronRight, CircleCheck, Clock, Loader2 } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
-import { DownloadItem, itemStageLabel } from '../lib/downloadLibrary'
+import { DownloadItem, collectionPath, itemStageLabel } from '../lib/downloadLibrary'
 import { failureCopy, isTerminal } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 import { formatDuration } from '../lib/utils'
@@ -140,6 +141,7 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
     .join(' · ')
   const summaryId = `download-row-summary-${item.downloadId}`
   const songsId = `download-songs-${item.downloadId}`
+  const openPath = collectionPath(item)
 
   const toggle = () => setExpanded(e => !e)
 
@@ -232,6 +234,19 @@ export function DownloadRow({ item, pollIntervalMs }: DownloadRowProps) {
             </>
           )}
         </div>
+
+        {/* Same box as the chevron so the row keeps its height. Stops propagation or the row would
+            also toggle open under the click. */}
+        {openPath && (
+          <Link
+            to={openPath}
+            aria-label={`Open ${item.title}`}
+            onClick={e => e.stopPropagation()}
+            className="w-6 h-6 flex-none flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+          >
+            <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+          </Link>
+        )}
       </div>
 
       {collection && expanded && (
