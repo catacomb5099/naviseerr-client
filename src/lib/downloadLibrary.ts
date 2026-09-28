@@ -36,6 +36,7 @@ export interface DownloadItem {
   songCount: number
   songsSucceeded: number
   songsFailed: number
+  songsCancelled: number
   updatedAt: string
   requestedAt: string
   /** True when the live feed still reports this download, i.e. the stage is being observed right
@@ -95,6 +96,7 @@ export function pageItems(
       songCount: source.songCount,
       songsSucceeded: source.songsSucceeded,
       songsFailed: source.songsFailed,
+      songsCancelled: source.songsCancelled ?? 0,
       updatedAt: source.updatedAt,
       requestedAt: row.requestedAt,
       live: card !== undefined,

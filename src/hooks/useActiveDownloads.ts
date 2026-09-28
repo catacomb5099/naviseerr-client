@@ -71,7 +71,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
 
   const [cards, setCards] = useState<Record<string, DownloadCardState>>(() => {
     const result: Record<string, DownloadCardState> = {}
-    initial?.cards.forEach(c => { result[c.downloadId] = c })
+    // A snapshot written before songsCancelled existed has no such field; the type says number.
+    initial?.cards.forEach(c => { result[c.downloadId] = { ...c, songsCancelled: c.songsCancelled ?? 0 } })
     return result
   })
   const [exiting, setExiting] = useState<Set<string>>(new Set())
@@ -337,6 +338,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
           songCount: 0,
           songsSucceeded: 0,
           songsFailed: 0,
+          songsCancelled: 0,
           failureCode: null,
           requestedAt: result.createdAt,
           stageEnteredAt: result.createdAt,
