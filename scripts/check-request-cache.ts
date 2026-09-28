@@ -73,11 +73,29 @@ async function main() {
     ac1.abort()
     assert(isAbort(await rejected(a)) && f.aborted() === false, 'the first to leave does not abort the request')
     ac2.abort()
-    assert(isAbort(await rejected(b)) && f.aborted() === true, 'the last to leave aborts the request')
+    assert(isAbort(await rejected(b)) && f.aborted() === false, 'the last to leave is told at once, but the request is given a tick')
+    await settled()
+    assert(f.aborted() === true, 'nobody came back: the request is aborted')
     f.reject(new DOMException('The operation was aborted.', 'AbortError')) // what fetch then does
     await settled()
     void share('k3', f.start)
     assert(f.calls() === 2, 'an abandoned request is not joined later')
+  }
+
+  // StrictMode: effect, cleanup, effect, all in one go. The caller that comes straight back joins the
+  // request the first one just let go of, so the network sees one request, not two.
+  {
+    const f = fakeStart()
+    const ac1 = new AbortController(), ac2 = new AbortController()
+    const a = share('k3c', f.start, { signal: ac1.signal })
+    ac1.abort()
+    const b = share('k3c', f.start, { signal: ac2.signal })
+    assert(f.calls() === 1, 'a caller that comes straight back joins the request that was let go of')
+    assert(isAbort(await rejected(a)), 'the caller that left is still told so')
+    await settled()
+    assert(f.aborted() === false, 'the request lives on for the one that came back')
+    f.resolve('v')
+    assert(await b === 'v', 'and answers it')
   }
 
   // A signal that is already aborted never starts anything, again as fetch behaves.

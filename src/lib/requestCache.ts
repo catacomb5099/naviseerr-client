@@ -33,7 +33,8 @@ const abortError = () => new DOMException('The operation was aborted.', 'AbortEr
  * Start `start` for `key`, or join the one already running. Every caller gets the same answer.
  *
  * - A caller's own `signal` detaches only that caller (its promise rejects with an AbortError, like
- *   fetch); the request itself is aborted only when the last waiting caller has gone.
+ *   fetch); the request itself is aborted only when the last waiting caller has gone and nobody has
+ *   joined again a tick later.
  * - A resolved value is reused for `cacheMs` (0: forgotten as soon as it arrives). A rejection is
  *   never kept, so a retry really retries.
  * - `fresh` forgets a kept value before starting, but still joins a request in flight: there is no
@@ -80,11 +81,16 @@ function join(entry: Entry, signal: AbortSignal | undefined): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const onAbort = () => {
       entry.waiting--
-      if (entry.waiting === 0 && entry.expiresAt === null) {
-        entry.controller.abort()
-        if (registry.get(entry.key) === entry) registry.delete(entry.key)
-      }
       reject(abortError())
+      // The request itself is let go a tick later, not now: StrictMode runs effect, cleanup, effect
+      // in one go, so the caller that just left is about to come back for the same key. Aborting at
+      // once would make its return a second request, the very thing this file exists to prevent.
+      setTimeout(() => {
+        if (entry.waiting === 0 && entry.expiresAt === null) {
+          entry.controller.abort()
+          if (registry.get(entry.key) === entry) registry.delete(entry.key)
+        }
+      })
     }
     signal.addEventListener('abort', onAbort, { once: true })
     const done = () => signal.removeEventListener('abort', onAbort)

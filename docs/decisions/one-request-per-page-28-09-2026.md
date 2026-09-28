@@ -43,7 +43,10 @@ download request (POST) is never shared or kept.
 - **While a request is in flight, every caller asking the same address joins it.** This is what
   removes the double: StrictMode's second mount joins the first mount's request instead of starting
   another. Each caller can still cancel on its own; the request itself is only cancelled when the
-  last waiting caller has gone.
+  last waiting caller has gone and nobody has come back a moment later. That last part matters:
+  StrictMode unmounts and remounts in one go, so a page that cancels on unmount (the "Made for you"
+  shelf, the downloads page and panel) lets go of the request and asks for it again in the same
+  instant. Cancelling straight away would have made that second ask a second request.
 - **Search results and pages are kept for five minutes**: search (all five pills), album and
   playlist pages, artist pages, the song info pop-up, the "Made for you" shelf and a suggested
   playlist's page. This is what makes Back free: the page mounts, asks, and gets the kept answer
@@ -54,7 +57,9 @@ download request (POST) is never shared or kept.
   the one request, but the moment it arrives it is forgotten, so the next poll really polls.
 - **"Try again" and re-running the same search go past the kept answer.** Every page already had a
   retry counter; a retry now asks the server again rather than being handed back the same failure
-  or the same stale list. A failed request is never kept in the first place.
+  or the same stale list. A failed request is never kept in the first place. The counter belongs to
+  one subject (one search, one artist, one song): a page stays on screen while its subject changes,
+  and a retry on one must not make every later fetch from that page skip what was kept.
 - **The memory is bounded** at 200 kept answers; the oldest go first.
 
 StrictMode stays. Production builds behave the same as before in every way except that Back no

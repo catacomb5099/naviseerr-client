@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from 'react'
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getArtist } from '../api/endpoints'
+import { useRetry } from '../hooks/useRetry'
 import { ApiError } from '../api/client'
 import { ArtistDetail, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
@@ -53,7 +54,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
   // Keyed by what was fetched: a result for another artist (or an earlier attempt) is simply not
   // ours yet, which is what "loading" means. No state reset needed when the key changes.
   const [fetched, setFetched] = useState<(Load & { key: string }) | null>(null)
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, retry] = useRetry(id)
   // Which artist's Top songs is expanded - so hopping to a similar artist starts collapsed again
   // without an effect to reset it.
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -99,7 +100,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
         {load.status === 'error' && (
           <div className="py-20 text-center text-zinc-400">
             <p role="status">Couldn't load this artist.</p>
-            <button type="button" onClick={() => setAttempt(a => a + 1)} className={`mt-3 ${BUTTON}`}>
+            <button type="button" onClick={retry} className={`mt-3 ${BUTTON}`}>
               Try again
             </button>
           </div>

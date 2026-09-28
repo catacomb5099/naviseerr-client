@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2 } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCollection } from '../api/endpoints'
+import { useRetry } from '../hooks/useRetry'
 import { CollectionDetail, CollectionTrack, CollectionType, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { formatDuration } from '../lib/utils'
@@ -51,7 +52,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   // Keyed by what was fetched: a result for another collection (or an earlier attempt) is simply
   // not ours yet, which is what "loading" means. No state reset needed when the key changes.
   const [fetched, setFetched] = useState<(Load & { key: string }) | null>(null)
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, retry] = useRetry(`${type}:${id}`)
   // Forgotten on leaving the page - the panel is the record of what queued.
   const [requests, setRequests] = useState<Record<string, RequestState>>({})
   // What the live region reads out. Text, not an icon: the check alone says nothing to a reader.
@@ -185,7 +186,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
               <p role="status">Couldn't load the songs.</p>
               <button
                 type="button"
-                onClick={() => setAttempt(a => a + 1)}
+                onClick={retry}
                 className="mt-3 rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
               >
                 Try again

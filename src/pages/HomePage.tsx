@@ -11,6 +11,7 @@ import { AlbumCard } from '../components/AlbumCard'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
 import { SuggestedPlaylistsShelf } from '../components/SuggestedPlaylistsShelf'
 import { search, searchSongs, searchAlbums, searchArtists, searchPlaylists } from '../api/endpoints'
+import { useRetry } from '../hooks/useRetry'
 import { DownloadType, SearchResponse } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 
@@ -51,8 +52,9 @@ export function HomePage({ onNavigateToDownloads, onDownload, onInfo }: HomePage
   const selectedPill = parseFilter(searchParams.get('type'))
   // Keyed by what was fetched: a result for another query or pill (or an earlier attempt) is not
   // ours yet, which is what "loading" means. No state reset needed when the key changes.
-  const [attempt, setAttempt] = useState(0)
-  const key = `${selectedPill}:${query}:${attempt}`
+  const subject = `${selectedPill}:${query}`
+  const [attempt, retry] = useRetry(subject)
+  const key = `${subject}:${attempt}`
   const [fetched, setFetched] = useState<Fetched | null>(null)
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export function HomePage({ onNavigateToDownloads, onDownload, onInfo }: HomePage
     // Same search again (the way to retry after a failure): the address would not change, so
     // nothing would re-run. Fetch again in place, past the kept answer, rather than pushing a
     // duplicate history entry.
-    if (q === query && filter === selectedPill) { setAttempt(a => a + 1); return }
+    if (q === query && filter === selectedPill) { retry(); return }
     const params: Record<string, string> = {}
     if (q) params.q = q
     if (filter !== 'all') params.type = filter
