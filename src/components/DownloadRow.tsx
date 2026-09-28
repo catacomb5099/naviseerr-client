@@ -39,6 +39,30 @@ const WAITING_COPY: Partial<Record<DownloadStage, string>> = {
   READY_TO_DOWNLOAD: 'Ready to download',
 }
 
+const ARTIST_LINK = 'hover:underline hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded'
+
+/** The artist line: a link to the artist's page for each name the server has an id for, plain text
+ *  otherwise. Inline content only, so the parent's `truncate` still clips the whole line. */
+function ArtistNames({ names, ids }: { names: string[]; ids: (string | null)[] }) {
+  if (names.length === 0) return <>Unknown Artist</>
+  return (
+    <>
+      {names.map((name, i) => {
+        const id = ids[i]
+        return (
+          <span key={i}>
+            {i > 0 && ', '}
+            {/* A collection row toggles on click; following a link must not also toggle it. */}
+            {id
+              ? <Link to={`/artist/${encodeURIComponent(id)}`} onClick={e => e.stopPropagation()} className={ARTIST_LINK}>{name}</Link>
+              : name}
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
 function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; color: string } {
   switch (song.stage) {
     case 'SUCCEEDED':
@@ -79,7 +103,9 @@ function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm text-white truncate">{song.title ?? 'Untitled'}</p>
-        <p className="text-xs text-zinc-400 truncate">{song.artists.join(', ') || 'Unknown Artist'}</p>
+        <p className="text-xs text-zinc-400 truncate">
+          <ArtistNames names={song.artists} ids={song.artistIds ?? []} />
+        </p>
       </div>
       <span className={`flex items-center gap-1.5 text-xs ${status.color}`}>
         {status.glyph}
@@ -164,9 +190,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
     return () => cancelAnimationFrame(frame)
   }, [animating, item.progressPercent, pollIntervalMs])
 
-  const secondaryLine = [item.artistNames.join(', ') || 'Unknown Artist', kindLine(item)]
-    .filter(Boolean)
-    .join(' · ')
+  const kind = kindLine(item)
   const summaryId = `download-row-summary-${item.downloadId}`
   const songsId = `download-songs-${item.downloadId}`
   const openPath = collectionPath(item)
@@ -223,7 +247,10 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
             <TypeBadge type={item.downloadType} className="mr-2 align-middle" />
             {item.title}
           </h3>
-          <p className="text-sm text-zinc-400 leading-5 truncate">{secondaryLine}</p>
+          <p className="text-sm text-zinc-400 leading-5 truncate">
+            <ArtistNames names={item.artistNames} ids={item.artistIds} />
+            {kind && ` · ${kind}`}
+          </p>
           {collection ? (
             <>
               <CollectionSummary id={summaryId} tokens={collectionSummary(item)} className="text-xs leading-4" />

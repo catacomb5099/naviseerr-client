@@ -348,6 +348,11 @@ export function getMockArtist(id: string): ArtistDetail {
   }
 }
 
+/** The mock artist's id for a display name; null for anyone else, which is the server's "no page". */
+function mockArtistId(name: string): string | null {
+  return mockArtists.find(a => a.name === name)?.id ?? null
+}
+
 /** Any mock track id resolves; the first one carries credits, the rest show the empty-credits copy. */
 export function getMockSongInfo(id: string): SongInfo {
   const track = mockTracks.find(t => t.id === id)
@@ -356,7 +361,7 @@ export function getMockSongInfo(id: string): SongInfo {
   return {
     id,
     name: track.name,
-    artists: track.artists.map(name => ({ id: mockArtists.find(a => a.name === name)?.id ?? null, name })),
+    artists: track.artists.map(name => ({ id: mockArtistId(name), name })),
     album: album ? { id: album.id, name: album.name } : null,
     durationSeconds: 212,
     year: track.year,
@@ -559,6 +564,7 @@ function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
     downloadType: entry.downloadType,
     title: resolved ? entry.title : null,
     artists: resolved ? entry.artists : [],
+    artistIds: resolved ? entry.artists.map(mockArtistId) : [],
     imageUrl: resolved ? entry.imageUrl : null,
     stage,
     progressPercent,
@@ -593,6 +599,7 @@ const fixtureAlbum: ActiveDownloadView = {
   downloadType: 'ALBUM',
   title: 'All or Nothing',
   artists: ['Jay Sean'],
+  artistIds: ['artist-1'],
   imageUrl: FIXTURE_IMAGE,
   stage: 'DOWNLOADING',
   progressPercent: 62,
@@ -613,6 +620,8 @@ const fixturePartial: ActiveDownloadView = {
   downloadType: 'PLAYLIST',
   title: 'Jay Sean Essentials',
   artists: ['YouTube Music'],
+  // A playlist's author has no artist page, so this stays plain text.
+  artistIds: [null],
   imageUrl: FIXTURE_IMAGE,
   stage: 'PARTIAL_SUCCESS',
   progressPercent: 100,
@@ -645,6 +654,7 @@ const fixtureAlbumDetail: DownloadDetailView = {
       position: i + 1,
       title: t.name,
       artists: t.artists,
+      artistIds: t.artists.map(mockArtistId),
       imageUrl: t.iconURL,
       durationSeconds: 180 + i * 17,
       stage,

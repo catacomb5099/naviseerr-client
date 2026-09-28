@@ -176,6 +176,10 @@ export interface ActiveDownloadView {
    *  title the client already has - see mergeCard. Same for `imageUrl` and an empty `artists`. */
   title: string | null
   artists: string[]
+  /** YouTube Music channel ids, index-aligned with `artists`; null where the server has no page to
+   *  link to. Absent, empty or shorter than `artists` on rows written before the server kept ids,
+   *  so a missing entry reads as null. */
+  artistIds?: (string | null)[]
   imageUrl: string | null
   stage: DownloadStage
   /** 0-100, meaningful only while stage is DOWNLOADING. Null must never overwrite a
@@ -206,6 +210,8 @@ export interface DownloadSongView {
   position: number | null
   title: string | null
   artists: string[]
+  /** Index-aligned with `artists`, like ActiveDownloadView.artistIds; absent on older rows. */
+  artistIds?: (string | null)[]
   imageUrl: string | null
   durationSeconds: number | null
   stage: DownloadStage
