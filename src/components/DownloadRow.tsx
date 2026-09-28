@@ -13,7 +13,7 @@ import { TypeBadge } from './TypeBadge'
 interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
-  onCancel: (id: string, taskId?: string) => void
+  onCancel: (id: string, taskId?: string) => void | Promise<void>
   onRetry: (id: string) => void
   inFlight: Set<string>
 }
@@ -59,7 +59,15 @@ function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; c
   }
 }
 
-function SongRow({ song }: { song: DownloadSongView }) {
+interface SongRowProps {
+  song: DownloadSongView
+  downloadId: string
+  onCancel: (id: string, taskId?: string) => void | Promise<void>
+  inFlight: boolean
+  onActed: () => void
+}
+
+function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps) {
   const status = songStatus(song)
   return (
     <li className="flex items-center gap-3 h-12">
@@ -77,6 +85,19 @@ function SongRow({ song }: { song: DownloadSongView }) {
         {status.glyph}
         {status.word}
       </span>
+      {!isTerminal(song.stage) && (
+        <button
+          type="button"
+          className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+          aria-label={`Cancel ${song.title ?? 'song'}`}
+          disabled={inFlight}
+          // Reload the song list only once the cancel has been answered: a reload fired alongside the
+          // POST reads the song still live and the row keeps its stage until the next refresh.
+          onClick={async () => { await onCancel(downloadId, song.taskId); onActed() }}
+        >
+          <Square className="w-3.5 h-3.5" aria-hidden="true" />
+        </button>
+      )}
       <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
         {song.durationSeconds !== null && formatDuration(song.durationSeconds)}
       </span>
@@ -307,7 +328,16 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
             </p>
           ) : (
             <ul className="pr-3">
-              {songs.map(song => <SongRow key={song.taskId} song={song} />)}
+              {songs.map(song => (
+                <SongRow
+                  key={song.taskId}
+                  song={song}
+                  downloadId={item.downloadId}
+                  onCancel={onCancel}
+                  inFlight={inFlight.has(song.taskId)}
+                  onActed={() => setAttempt(a => a + 1)}
+                />
+              ))}
             </ul>
           )}
         </div>
