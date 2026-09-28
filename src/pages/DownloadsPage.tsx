@@ -5,6 +5,7 @@ import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { DownloadRow } from '../components/DownloadRow'
 import { DownloadFilter, DownloadFilterPills } from '../components/DownloadFilterPills'
+import { DownloadType } from '../api/types'
 import { Button } from '../components/ui/button'
 import { useAllDownloads } from '../hooks/useAllDownloads'
 import { DownloadMeta, pageItems } from '../lib/downloadLibrary'
@@ -30,12 +31,18 @@ const PAGE_BUTTON_CLASS =
   'border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white'
 
 /** "on this page", because the pills only ever see the page the server sent (see the filter below). */
+/** Whether a download belongs under a pill; Playlists takes the curator's playlists too. */
+function matchesFilter(type: DownloadType, filter: DownloadFilter): boolean {
+  if (filter === 'all') return true
+  if (filter === 'PLAYLIST') return type === 'PLAYLIST' || type === 'CURATED'
+  return type === filter
+}
+
 const EMPTY_BY_FILTER: Record<DownloadFilter, string> = {
   all: 'Nothing downloaded yet — search for a song and hit the download button',
   SONG: 'No songs on this page',
   ALBUM: 'No albums on this page',
   PLAYLIST: 'No playlists on this page',
-  CURATED: 'No suggested playlists on this page',
 }
 
 export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: DownloadsPageProps) {
@@ -50,7 +57,7 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onNavigateHome }: 
   const items = pageItems(rows, metas, cards)
   // Client-side, over the CURRENT PAGE only: server pagination does not know types yet. Follow-up:
   // a type= query param on /downloads/all, and this becomes a fetch key like `page`.
-  const visibleItems = filter === 'all' ? items : items.filter(item => item.downloadType === filter)
+  const visibleItems = items.filter(item => matchesFilter(item.downloadType, filter))
 
   // Keyed on `loadedPage` rather than a bare "no rows" check: `rows` also reads empty on the very
   // first render, before any fetch has resolved, and a bare check would redirect a legitimate deep

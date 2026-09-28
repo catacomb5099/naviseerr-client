@@ -1,13 +1,13 @@
 import { DownloadType } from '../api/types'
 
-export type DownloadFilter = 'all' | DownloadType
+/** No pill for CURATED: a suggested playlist is a playlist, so it counts under Playlists (DownloadsPage). */
+export type DownloadFilter = 'all' | Exclude<DownloadType, 'CURATED'>
 
 const PILLS: { label: string; value: DownloadFilter }[] = [
   { label: 'All', value: 'all' },
   { label: 'Songs', value: 'SONG' },
   { label: 'Albums', value: 'ALBUM' },
   { label: 'Playlists', value: 'PLAYLIST' },
-  { label: 'Suggested', value: 'CURATED' },
 ]
 
 interface DownloadFilterPillsProps {
