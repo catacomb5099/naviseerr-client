@@ -238,10 +238,18 @@ function daysAgo(days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const MOCK_SUGGESTED: SuggestedPlaylistSummary[] = [
-  { category: '80s-indie-pop', title: '80s indie pop', editionDate: daysAgo(0), trackCount: mockTracks.length },
-  { category: 'current-pop', title: 'Current pop', editionDate: daysAgo(3), trackCount: mockTracks.length },
-]
+/** A few of the curator's categories, one or two per era, so the shelf's sections show in mock mode. */
+const MOCK_CATEGORIES: Record<string, { title: string; filters: Record<string, string> }> = {
+  'rock-hits': { title: 'Rock hits', filters: { year: '1950-2026', genre: 'Rock' } },
+  'current-pop': { title: 'Current pop', filters: { year: '2024-2026', genre: 'Pop' } },
+  '2010s-hits': { title: '2010s hits', filters: { year: '2010-2019' } },
+  '90s-dance': { title: '90s dance', filters: { year: '1990-1999', style: 'Eurodance' } },
+  '80s-indie-pop': { title: '80s indie pop', filters: { year: '1980-1989', style: 'Indie Pop' } },
+  '70s-party': { title: '70s party', filters: { year: '1970-1979', style: 'Disco' } },
+}
+const MOCK_SUGGESTED: SuggestedPlaylistSummary[] = Object.entries(MOCK_CATEGORIES).map(([category, c], i) => ({
+  category, title: c.title, year: c.filters.year, editionDate: daysAgo(i % 4), trackCount: mockTracks.length,
+}))
 
 /** Mirrors GET /suggested-playlists. */
 export function getMockSuggestedPlaylists(): SuggestedPlaylistsResponse {
@@ -257,7 +265,7 @@ export function getMockSuggestedPlaylist(category: string): SuggestedPlaylist {
   return {
     category,
     title: summary.title,
-    filters: category === '80s-indie-pop' ? { year: '1980-1989', style: 'Indie Pop' } : { year: '2024-2026', genre: 'Pop' },
+    filters: MOCK_CATEGORIES[category].filters,
     editionDate: summary.editionDate,
     trackCount: mockTracks.length,
     tracks: mockTracks.map((t, i) => {
