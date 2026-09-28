@@ -1,7 +1,7 @@
 import { apiClient } from './client'
 import {
   SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
-  ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse,
+  ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun,
 } from './types'
@@ -255,20 +255,22 @@ export const FIRST_DOWNLOADS_PAGE = 1
 /**
  * Every download the server knows about, newest first, ignoring both the terminal filter and the
  * retention window - the Downloads page's seed, as opposed to /downloads/active's live window.
- * GET /downloads/all?pageSize=&pageNumber=
+ * GET /downloads/all?pageSize=&pageNumber=&type=
  *
- * Both query params are required server-side, so they are always sent, even when the caller wants
- * the server's own defaults - `pageNumber` is 1-based.
+ * Both paging params are required server-side, so they are always sent, even when the caller wants
+ * the server's own defaults - `pageNumber` is 1-based. `type` narrows to one kind of download and
+ * pages within it; left out, the server answers with every kind.
  */
 export async function getAllDownloads(
-  page?: { pageSize?: number; pageNumber?: number },
+  page?: { pageSize?: number; pageNumber?: number; type?: DownloadTypeFilter },
   signal?: AbortSignal,
 ): Promise<AllDownloadsResponse> {
   const pageSize = page?.pageSize ?? DEFAULT_DOWNLOADS_PAGE_SIZE
   const pageNumber = page?.pageNumber ?? FIRST_DOWNLOADS_PAGE
-  if (USE_MOCK_DATA) return getMockAllDownloads(pageSize, pageNumber)
+  if (USE_MOCK_DATA) return getMockAllDownloads(pageSize, pageNumber, page?.type)
+  const type = page?.type ? `&type=${page.type}` : ''
   const data = await apiClient<AllDownloadsResponse>(
-    `/downloads/all?pageSize=${pageSize}&pageNumber=${pageNumber}`, { signal })
+    `/downloads/all?pageSize=${pageSize}&pageNumber=${pageNumber}${type}`, { signal })
   // apiClient returns `undefined` for a non-JSON (e.g. empty) response body.
   return data ?? { downloads: [], totalPages: 0 }
 }
