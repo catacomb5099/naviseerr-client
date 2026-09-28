@@ -3,11 +3,12 @@ import {
   SearchResponse, Track, Album, Artist, Playlist, Download, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
+  CuratorRun,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
-  getMockSuggestedPlaylists, getMockSuggestedPlaylist,
+  getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -125,7 +126,7 @@ export async function getSuggestedPlaylists(signal?: AbortSignal): Promise<Sugge
   if (USE_MOCK_DATA) return Promise.resolve(getMockSuggestedPlaylists())
   const data = await apiClient<SuggestedPlaylistsResponse>('/suggested-playlists', { signal })
   // apiClient returns `undefined` for a non-JSON (e.g. empty) response body.
-  return data ?? { enabled: false, playlists: [] }
+  return data ?? { enabled: false, refreshDay: null, playlists: [] }
 }
 
 /**
@@ -135,6 +136,25 @@ export async function getSuggestedPlaylists(signal?: AbortSignal): Promise<Sugge
 export async function getSuggestedPlaylist(category: string): Promise<SuggestedPlaylist> {
   if (USE_MOCK_DATA) return Promise.resolve(getMockSuggestedPlaylist(category))
   return apiClient<SuggestedPlaylist>(`/suggested-playlists/${encodeURIComponent(category)}`)
+}
+
+/**
+ * "Make this week's playlists now": asks the server to run the curator. Answers at once with the run;
+ * asking during a run returns that run.
+ * POST /suggested-playlists/refresh  (503 on a server with no curator)
+ */
+export async function requestSuggestedRefresh(): Promise<CuratorRun> {
+  if (USE_MOCK_DATA) return Promise.resolve(requestMockSuggestedRefresh())
+  return apiClient<CuratorRun>('/suggested-playlists/refresh', { method: 'POST' })
+}
+
+/**
+ * The most recent curator run, to follow one in progress
+ * GET /suggested-playlists/refresh  (404 when the curator never ran)
+ */
+export async function getSuggestedRefresh(signal?: AbortSignal): Promise<CuratorRun> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockSuggestedRefresh())
+  return apiClient<CuratorRun>('/suggested-playlists/refresh', { signal })
 }
 
 /**

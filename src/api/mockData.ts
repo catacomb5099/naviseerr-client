@@ -1,6 +1,6 @@
 import {
   Track, Album, Artist, Playlist, SearchResponse, CollectionDetail, CollectionType, ArtistDetail,
-  SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse, SuggestedPlaylistSummary,
+  SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse, SuggestedPlaylistSummary, CuratorRun,
 } from './types'
 import { ApiError } from './client'
 
@@ -245,7 +245,7 @@ const MOCK_SUGGESTED: SuggestedPlaylistSummary[] = [
 
 /** Mirrors GET /suggested-playlists. */
 export function getMockSuggestedPlaylists(): SuggestedPlaylistsResponse {
-  return { enabled: true, playlists: MOCK_SUGGESTED }
+  return { enabled: true, refreshDay: 'MONDAY', playlists: MOCK_SUGGESTED }
 }
 
 /** Mirrors GET /suggested-playlists/{category}: the ten mock tracks with the three tiers cycled through
@@ -277,6 +277,44 @@ export function getMockSuggestedPlaylist(category: string): SuggestedPlaylist {
         position: i + 1,
       }
     }),
+  }
+}
+
+/** The mock curator run: each GET moves it one step, so a page that polls sees queued, running with one
+ *  category done, then partial (one written, one nothing found). */
+let mockRunStep = -1
+
+export function requestMockSuggestedRefresh(): CuratorRun {
+  if (mockRunStep < 0 || mockRunStep >= 3) mockRunStep = 0
+  return getMockSuggestedRefresh(false)
+}
+
+export function getMockSuggestedRefresh(advance = true): CuratorRun {
+  if (mockRunStep < 0) throw new ApiError('API request failed: Not Found', 404, 'Not Found')
+  if (advance && mockRunStep < 3) mockRunStep += 1
+  const step = mockRunStep
+  const cat = (key: string, index: number) => {
+    const done = step > index + 1
+    const running = step === index + 1
+    const nothing = key === '90s-grime'
+    return {
+      key,
+      status: done ? (nothing ? 'no_albums' : 'written') : running ? 'running' : 'queued',
+      editionDate: done && !nothing ? MOCK_SUGGESTED[0].editionDate : null,
+      trackCount: done && !nothing ? 40 : null,
+      message: done ? (nothing ? "Discogs returned no albums for {'year': '1990-1999', 'style': 'Grime'}" : 'wrote 40 tracks') : null,
+    }
+  }
+  const categories = [cat('80s-indie-pop', 0), cat('90s-grime', 1)]
+  const final = step >= 3
+  return {
+    runId: 'mock-run',
+    status: step === 0 ? 'queued' : final ? 'partial' : 'running',
+    requestedAt: '2026-09-28T10:14:39Z',
+    startedAt: step > 0 ? '2026-09-28T10:14:40Z' : null,
+    finishedAt: final ? '2026-09-28T10:17:28Z' : null,
+    final,
+    categories,
   }
 }
 

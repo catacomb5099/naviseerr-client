@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2, Sparkles } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getSuggestedPlaylist } from '../api/endpoints'
 import { ApiError } from '../api/client'
 import { DownloadType, SuggestedPlaylist, SuggestedTrack } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
-import { editionDateLong, filtersCopy, tierCopy } from '../lib/suggested'
+import { categoryName, editionDateLong, filtersCopy, tierCopy } from '../lib/suggested'
+import { useSuggestedRefresh } from '../hooks/useSuggestedRefresh'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { SuggestedPlaylistCover } from '../components/SuggestedPlaylistCover'
+import { SuggestedRefreshPanel } from '../components/SuggestedRefreshPanel'
 import { REQUEST_FAILED_COPY, RequestState } from './CollectionPage'
 
 interface SuggestedPlaylistPageProps {
@@ -54,6 +56,9 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
   // Forgotten on leaving the page - the downloads panel is the record of what queued.
   const [requests, setRequests] = useState<Record<string, RequestState>>({})
   const [announcement, setAnnouncement] = useState('')
+  // Owned here, not by the panel, so a run's outcome survives the re-fetch it triggers.
+  const refetch = useCallback(() => setAttempt(a => a + 1), [])
+  const refresh = useSuggestedRefresh(refetch)
 
   const key = `${category}:${attempt}`
   useEffect(() => {
@@ -70,7 +75,8 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
 
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const playlist = load.status === 'ready' ? load.playlist : null
-  const title = playlist?.title ?? ''
+  // Before the edition exists the page is still about a category; its key reads well enough as a title.
+  const title = playlist?.title ?? (load.status === 'loading' ? '' : categoryName(category))
   useEffect(() => {
     document.title = title ? `${title} - Naviseerr` : 'Naviseerr'
     return () => { document.title = 'Naviseerr' }
@@ -134,7 +140,9 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                 <div className={`h-9 w-64 max-w-full rounded ${PULSE}`} />
                 <div className={`h-5 w-40 rounded ${PULSE}`} />
               </>
-            ) : null}
+            ) : (
+              <h2 className="text-3xl font-bold line-clamp-2">{title}</h2>
+            )}
           </div>
         </div>
 
@@ -148,8 +156,11 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
             </ul>
           )}
           {load.status === 'notBuilt' && (
-            <div className="py-8 text-center text-zinc-400">
-              <p role="status">This playlist hasn't been built yet. Playlists are made once a week.</p>
+            <div className="py-8 max-w-prose">
+              <SuggestedRefreshPanel
+                message="This playlist hasn't been built yet. Playlists are made once a week."
+                refresh={refresh}
+              />
             </div>
           )}
           {load.status === 'off' && (

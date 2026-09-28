@@ -1,5 +1,8 @@
 /** Self-check for the suggested playlists' copy helpers; pulled in by check-download-state.ts. */
-import { coverGradient, editionDateLong, editionLabel, filtersCopy, tierCopy } from '../src/lib/suggested'
+import {
+  cadenceCopy, categoryStatusCopy, coverGradient, editionDateLong, editionLabel, filtersCopy, runSummary, tierCopy,
+} from '../src/lib/suggested'
+import { CuratorRun } from '../src/api/types'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -30,5 +33,20 @@ assert(tierCopy('new-tier') === 'new-tier', 'an unknown tier shows its raw word'
 
 assert(coverGradient('80s-indie-pop') === coverGradient('80s-indie-pop'), 'a category keeps its cover')
 assert(coverGradient('80s-indie-pop') !== coverGradient('current-pop'), 'two categories differ')
+
+assert(cadenceCopy('MONDAY') === 'New edition every Monday.', 'the server\'s weekday becomes a sentence')
+assert(cadenceCopy(null) === 'A new edition every week.', 'no weekday, no false promise')
+
+assert(categoryStatusCopy('written') === 'ready' && categoryStatusCopy('no_albums') === 'nothing found on Discogs', 'statuses have plain words')
+assert(categoryStatusCopy('later') === 'later', 'an unknown status shows its raw word')
+
+const run = (final: boolean, statuses: string[]): CuratorRun => ({
+  runId: 'r', status: final ? 'partial' : 'running', requestedAt: '', startedAt: null, finishedAt: null, final,
+  categories: statuses.map((status, i) => ({ key: `c${i}`, status, editionDate: null, trackCount: null, message: null })),
+})
+assert(runSummary(run(false, ['written', 'running', 'queued'])) === "Making this week's playlists… 1 of 3 done. This usually takes a few minutes.", 'progress counts finished categories')
+assert(runSummary(run(true, ['written', 'exists'])) === "This week's playlists are ready.", 'written or already there both count as ready')
+assert(runSummary(run(true, ['written', 'no_albums', 'error'])) === '1 of 3 playlists are ready.', 'a partial run says how many')
+assert(runSummary(run(true, ['no_albums'])) === "Couldn't make this week's playlists.", 'nothing ready is a failure')
 
 console.log('check-suggested: ok')
