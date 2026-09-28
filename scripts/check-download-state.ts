@@ -6,9 +6,11 @@
 import './check-collection-progress'
 import './check-download-polling'
 import './check-suggested'
+import './check-request-cache'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard, replaceCard } from '../src/lib/downloadPanel'
-import { DownloadMeta, evictToCap, pageItems } from '../src/lib/downloadLibrary'
+import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
+import { formatPlays } from '../src/lib/utils'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -131,5 +133,22 @@ for (let i = 0; i < 5; i++) {
 const kept = evictToCap(many, 2)
 assert(Object.keys(kept).length === 2 && 'm4' in kept && 'm3' in kept, 'evictToCap keeps the newest entries')
 assert(evictToCap(many, 10) === many, 'under the cap, evictToCap returns the same object')
+
+// The downloads row's "Open" link: each collection kind has its own page, a song has none.
+assert(collectionPath({ downloadType: 'ALBUM', youtubeId: 'MPREb_1' }) === '/album/MPREb_1', 'an album opens /album')
+assert(collectionPath({ downloadType: 'PLAYLIST', youtubeId: 'PL1' }) === '/playlist/PL1', 'a playlist opens /playlist')
+assert(collectionPath({ downloadType: 'CURATED', youtubeId: '80s indie/pop' }) === '/suggested/80s%20indie%2Fpop',
+  'a suggested playlist opens /suggested by its encoded category key')
+assert(collectionPath({ downloadType: 'SONG', youtubeId: 'v1' }) === null, 'a song has no page to open')
+// The Downloads page's `?type=`: the three pills round-trip, everything else reads as All.
+assert(parseTypeFilter('SONG') === 'SONG' && parseTypeFilter('ALBUM') === 'ALBUM' && parseTypeFilter('PLAYLIST') === 'PLAYLIST',
+  'a pill value in the URL is that pill')
+assert(parseTypeFilter(null) === undefined, 'no ?type= is every kind')
+assert(parseTypeFilter('CURATED') === undefined && parseTypeFilter('song') === undefined && parseTypeFilter('') === undefined,
+  'a word that is not a pill (even one the server accepts) falls back to every kind')
+// Play counts read the way YouTube writes them; an unknown count stays unknown, never "0 plays".
+assert(formatPlays(null) === null && formatPlays(undefined) === null, 'formatPlays: unknown count is null')
+assert(formatPlays(998) === '998 plays', 'formatPlays: small counts are written in full')
+assert(formatPlays(1_234_567) === '1.2M plays', 'formatPlays: millions are abbreviated to one decimal')
 
 console.log('check-download-state: ok')

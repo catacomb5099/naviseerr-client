@@ -56,10 +56,10 @@ dismissed id still stays skipped, matching the design.
 ## What the buttons will do (next PRs)
 
 This PR only teaches the panel to render whatever the server reports; nothing yet calls
-`POST /downloads/{id}/retry` or `/cancel`. PR 9 adds `retry`/`cancel` to the hook and a Cancel
-button; PR 10 adds a Retry button; PR 11 adds cancelling one song inside a collection. Until then a
-retry can only come from another client (the Downloads page in a different tab, or a future CLI) -
-this PR makes sure the panel doesn't lie about it when it happens.
+`POST /downloads/{id}/retry` or `/cancel`. PR #45 (cancel button) adds `retry`/`cancel` to the hook
+and a Cancel button; #46 (retry button) adds a Retry button; #47 (cancel one song) adds cancelling one
+song inside a collection. Until then a retry can only come from another client (the Downloads page in
+a different tab, or a future CLI) - this PR makes sure the panel doesn't lie about it when it happens.
 
 ## When to revisit
 

@@ -226,6 +226,8 @@ export function getMockCollection(id: string, type: CollectionType): CollectionD
       artists: t.artists,
       iconURL: t.iconURL,
       durationSeconds: 180 + i * 17,
+      // Like the real server: YouTube's wording for album tracks, nothing for playlist tracks.
+      plays: type === 'ALBUM' ? `${28 - i * 7}M plays` : null,
       position: i + 1,
     })),
   }
@@ -381,7 +383,7 @@ export function getMockSongInfo(id: string): SongInfo {
 
 import type {
   ActiveDownloadsResponse, ActiveDownloadView, AllDownloadsResponse, Download, DownloadDetailView,
-  DownloadFailureCode, DownloadStage, DownloadType,
+  DownloadFailureCode, DownloadStage, DownloadType, DownloadTypeFilter,
 } from './types'
 
 interface MockDownloadEntry {
@@ -743,11 +745,17 @@ export function getMockDownloadsByIds(ids: string[]): ActiveDownloadView[] {
 }
 
 /** Ignores the retention window too, like the real GET /downloads/all - every download the server
- *  has ever seen is a candidate row, not just the currently-active ones. */
-export function getMockAllDownloads(pageSize: number, pageNumber: number): AllDownloadsResponse {
+ *  has ever seen is a candidate row, not just the currently-active ones. Filters before paging, like
+ *  the server, so `totalPages` counts pages of the type asked for; PLAYLIST takes CURATED too. */
+export function getMockAllDownloads(
+  pageSize: number, pageNumber: number, type?: DownloadTypeFilter,
+): AllDownloadsResponse {
   const now = Date.now()
-  const downloads = Array.from(mockDownloads.values()).map(entry => toView(entry, now))
-  downloads.push(...Object.values(FIXTURES))
+  const all = Array.from(mockDownloads.values()).map(entry => toView(entry, now))
+  all.push(...Object.values(FIXTURES))
+  const downloads = type
+    ? all.filter(d => d.downloadType === type || (type === 'PLAYLIST' && d.downloadType === 'CURATED'))
+    : all
   downloads.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
   const start = (pageNumber - 1) * pageSize
   const page = downloads.slice(start, start + pageSize)
