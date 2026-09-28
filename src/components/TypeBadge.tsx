@@ -1,9 +1,11 @@
-import { Disc3, ListMusic, Music, Sparkles } from 'lucide-react'
+import { Disc3, ListMusic, Music } from 'lucide-react'
 import { DownloadType } from '../api/types'
 import { cn } from '../lib/utils'
 
-const LABEL: Record<DownloadType, string> = { SONG: 'Song', ALBUM: 'Album', PLAYLIST: 'Playlist', CURATED: 'Suggested' }
-const ICON = { SONG: Music, ALBUM: Disc3, PLAYLIST: ListMusic, CURATED: Sparkles } as const
+// A suggested playlist is a playlist to the user: same word, same icon. Its author line already
+// says "Naviseerr", which is all that sets it apart.
+const LABEL: Record<DownloadType, string> = { SONG: 'Song', ALBUM: 'Album', PLAYLIST: 'Playlist', CURATED: 'Playlist' }
+const ICON = { SONG: Music, ALBUM: Disc3, PLAYLIST: ListMusic, CURATED: ListMusic } as const
 
 interface TypeBadgeProps {
   type: DownloadType

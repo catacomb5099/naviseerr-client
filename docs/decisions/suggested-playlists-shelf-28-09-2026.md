@@ -52,7 +52,7 @@ it the same way. We copied the pattern rather than invent one; the research file
 8. **Download all.** The playlist page's header has the same green "Download all" button the album and
    playlist pages have. It requests the edition as ONE download of the server's `CURATED` type, keyed by
    the category, so the downloads panel shows one card ("80s indie pop · 40 songs") with the usual
-   split progress, and the library gets one playlist file. The card wears a "Suggested" badge. Copies
+   split progress, and the library gets one playlist file. The card wears the same "Playlist" badge as any playlist; its author line, "Naviseerr", is what sets it apart. (It said "Suggested" at first; the owner asked for "Playlist": it is a playlist type, and the owner is already implied.) Copies
    YouTube Music's Discover Mix, which can be saved and downloaded whole.
 
 9. **One row per era.** With fifty categories one row is a wall. The shelf is split the way the owner
