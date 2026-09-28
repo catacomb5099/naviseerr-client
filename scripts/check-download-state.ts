@@ -85,9 +85,23 @@ assert(fromServer.title === 'Server Title' && fromServer.artistNames[0] === 'Ser
 assert(fromServer.stage === 'SEARCHING', 'stage still follows the live card when there is one')
 assert(fromServer.songsSucceeded === 0, 'tallies follow the live card too')
 
+// Artist ids ride along with the server's names only, padded with null where the server sent fewer
+// ids than names (older rows) or none at all.
+const [linked] = pageItems([{ ...serverRow, artists: ['A', 'B'], artistIds: ['id-a'] }], {}, [])
+assert(linked.artistIds.length === 2 && linked.artistIds[0] === 'id-a' && linked.artistIds[1] === null,
+  'artistIds is padded to the names with null')
+const [unlinked] = pageItems([serverRow], {}, [])
+assert(unlinked.artistIds.length === 1 && unlinked.artistIds[0] === null, 'a row without artistIds reads as no links')
+assert(fromCard.artistIds.length === 1 && fromCard.artistIds[0] === null, 'names from the live card carry no ids')
+assert(fromMeta.artistIds.length === 1 && fromMeta.artistIds[0] === null, 'names from the cached meta carry no ids')
+const [strayIds] = pageItems([{ ...row, artistIds: ['id-x'] }], {}, [card])
+assert(strayIds.artistNames[0] === 'Jay Sean' && strayIds.artistIds[0] === null,
+  'ids on a row whose names lost to the card are not applied to the card names')
+
 const [bare] = pageItems([row], {}, [])
 assert(bare.title === 'Untitled download' && bare.artistNames.length === 0 && bare.albumName === null && bare.iconURL === null,
   'no metadata anywhere reads as untitled rather than hiding the row')
+assert(bare.artistIds.length === 0, 'no names means no ids either')
 
 // Rows are the server's, in its order; a live card with no row adds nothing.
 const ordered = pageItems([{ ...row, downloadId: 'b' }, { ...row, downloadId: 'a' }], {}, [{ ...card, downloadId: 'zzz' }])

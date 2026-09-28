@@ -28,6 +28,9 @@ export interface DownloadItem {
   downloadType: DownloadType
   title: string
   artistNames: string[]
+  /** Index-aligned with `artistNames`; null means "no page to link to". Only the server row carries
+   *  ids, so names taken from the live card or the cached meta come with all-null ids. */
+  artistIds: (string | null)[]
   albumName: string | null
   iconURL: string | null
   stage: DownloadStage
@@ -65,14 +68,19 @@ export function pageItems(
     const card = byId.get(row.downloadId)
     const meta = metas[row.downloadId]
     const source = card ?? row
+    const artistNames = row.artists.length > 0 ? row.artists
+      : card && card.artists.length > 0 ? card.artists
+      : meta?.artistNames ?? []
+    // Ids exist only on the server row, and only for downloads made after the server kept them, so
+    // the array may be missing or shorter than the names: pad to the names with null.
+    const ids = row.artists.length > 0 ? row.artistIds ?? [] : []
     return {
       downloadId: row.downloadId,
       youtubeId: row.youtubeId,
       downloadType: row.downloadType,
       title: displayTitle({ title: row.title ?? card?.title ?? meta?.title ?? null }),
-      artistNames: row.artists.length > 0 ? row.artists
-        : card && card.artists.length > 0 ? card.artists
-        : meta?.artistNames ?? [],
+      artistNames,
+      artistIds: artistNames.map((_, i) => ids[i] ?? null),
       albumName: meta?.albumName ?? null,
       iconURL: row.imageUrl ?? card?.imageUrl ?? meta?.iconURL ?? null,
       stage: source.stage,
