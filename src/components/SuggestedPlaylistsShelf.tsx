@@ -6,7 +6,7 @@ import { CAROUSEL_CONTAINER } from './cardLayout'
 import { SuggestedPlaylistCard } from './SuggestedPlaylistCard'
 import { SuggestedRefreshPanel } from './SuggestedRefreshPanel'
 import { useSuggestedRefresh } from '../hooks/useSuggestedRefresh'
-import { cadenceCopy } from '../lib/suggested'
+import { cadenceCopy, sectionsOf } from '../lib/suggested'
 
 type Load =
   /** No curator on this server, or a server that predates the feature: the shelf does not exist. */
@@ -19,7 +19,8 @@ const PULSE = 'rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
 
 /**
  * The "Made for you" shelf on the Home page: one card per category, the way the streaming services put
- * their weekly playlists first on Home. Fetched once per visit; hidden entirely when the server has no
+ * their weekly playlists first on Home, in one row per era (all-time hits first, then each decade, newest
+ * first) so fifty playlists stay browsable. Fetched once per visit; hidden entirely when the server has no
  * curator, so an install that never set one up does not see an empty promise.
  */
 export function SuggestedPlaylistsShelf() {
@@ -77,13 +78,16 @@ export function SuggestedPlaylistsShelf() {
         <SuggestedRefreshPanel message="This week's playlists aren't ready yet." refresh={refresh} />
       )}
 
-      {load.status === 'ready' && load.playlists.length > 0 && (
-        <div className={CAROUSEL_CONTAINER}>
-          {load.playlists.map(playlist => (
-            <SuggestedPlaylistCard key={playlist.category} playlist={playlist} />
-          ))}
+      {load.status === 'ready' && load.playlists.length > 0 && sectionsOf(load.playlists).map(section => (
+        <div key={section.era ?? ''} className="mb-6">
+          {section.era && <h3 className="text-xl font-semibold text-white mb-4">{section.era}</h3>}
+          <div className={CAROUSEL_CONTAINER}>
+            {section.playlists.map(playlist => (
+              <SuggestedPlaylistCard key={playlist.category} playlist={playlist} />
+            ))}
+          </div>
         </div>
-      )}
+      ))}
     </section>
   )
 }

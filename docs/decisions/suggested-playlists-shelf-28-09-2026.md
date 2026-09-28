@@ -55,6 +55,13 @@ it the same way. We copied the pattern rather than invent one; the research file
    split progress, and the library gets one playlist file. The card wears a "Suggested" badge. Copies
    YouTube Music's Discover Mix, which can be saved and downloaded whole.
 
+9. **One row per era.** With fifty categories one row is a wall. The shelf is split the way the owner
+   asked: "All-time hits" first, then 2020s, 2010s, 2000s and so on down to the 1950s, each a heading over
+   its own scrolling row. The era is read off the category's year range, which naviseerr passes through
+   from the curator ("1980-1989" is the 1980s; a range that spans decades, "1950-2026", is all-time), so
+   the client never keeps a list of categories. A server that sends no range (older naviseerr) gets one
+   unlabelled row, as before.
+
 ## Not in these PRs
 
 - **Last week's edition.** The curator keeps every edition (`?date=`), naviseerr does not expose it yet.

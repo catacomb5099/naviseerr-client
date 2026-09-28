@@ -1,5 +1,40 @@
 /** Words and looks for the suggested playlists: pure functions, checked by scripts/check-suggested.ts. */
-import { CuratorRun } from '../api/types'
+import { CuratorRun, SuggestedPlaylistSummary } from '../api/types'
+
+export const ALL_TIME = 'All-time hits'
+
+/**
+ * The shelf a playlist belongs on, from its category's year range: "1980-1989" is the 1980s, "2024-2026"
+ * the 2020s, and a range that spans decades ("1950-2026") is all-time. Null when the server did not say
+ * (an older naviseerr) or the range cannot be read, so nothing is filed under a wrong decade.
+ */
+export function eraOf(year: string | null | undefined): string | null {
+  const m = /^(\d{4})-(\d{4})$/.exec(year ?? '')
+  if (!m) return null
+  const from = Math.floor(Number(m[1]) / 10) * 10
+  const to = Math.floor(Number(m[2]) / 10) * 10
+  return from === to ? `${from}s` : ALL_TIME
+}
+
+export interface SuggestedSection {
+  /** The heading; null for playlists with no readable era, shown last with no heading. */
+  era: string | null
+  playlists: SuggestedPlaylistSummary[]
+}
+
+/** The shelf's sections in display order: all-time first, then the decades newest first, then anything
+ *  without an era. Playlists keep the server's order inside a section; empty sections do not exist. */
+export function sectionsOf(playlists: SuggestedPlaylistSummary[]): SuggestedSection[] {
+  const byEra = new Map<string | null, SuggestedPlaylistSummary[]>()
+  for (const playlist of playlists) {
+    const era = eraOf(playlist.year)
+    byEra.set(era, [...(byEra.get(era) ?? []), playlist])
+  }
+  const rank = (era: string | null) => era === ALL_TIME ? Infinity : era === null ? -Infinity : Number(era.slice(0, 4))
+  return [...byEra.entries()]
+    .sort(([a], [b]) => rank(b) - rank(a))
+    .map(([era, playlists]) => ({ era, playlists }))
+}
 
 /** Plain words for the curator's tiers. An unknown tier (a future curator) shows its raw word. */
 export function tierCopy(tier: string): string {

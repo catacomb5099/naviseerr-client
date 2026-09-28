@@ -1,8 +1,9 @@
 /** Self-check for the suggested playlists' copy helpers; pulled in by check-download-state.ts. */
 import {
-  cadenceCopy, categoryStatusCopy, coverGradient, editionDateLong, editionLabel, filtersCopy, runSummary, tierCopy,
+  ALL_TIME, cadenceCopy, categoryStatusCopy, coverGradient, editionDateLong, editionLabel, eraOf, filtersCopy,
+  runSummary, sectionsOf, tierCopy,
 } from '../src/lib/suggested'
-import { CuratorRun } from '../src/api/types'
+import { CuratorRun, SuggestedPlaylistSummary } from '../src/api/types'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -48,5 +49,20 @@ assert(runSummary(run(false, ['written', 'running', 'queued'])) === "Making this
 assert(runSummary(run(true, ['written', 'exists'])) === "This week's playlists are ready.", 'written or already there both count as ready')
 assert(runSummary(run(true, ['written', 'no_albums', 'error'])) === '1 of 3 playlists are ready.', 'a partial run says how many')
 assert(runSummary(run(true, ['no_albums'])) === "Couldn't make this week's playlists.", 'nothing ready is a failure')
+
+assert(eraOf('1980-1989') === '1980s' && eraOf('2010-2019') === '2010s', 'a range inside one decade is that decade')
+assert(eraOf('2024-2026') === '2020s', 'the current range is the 2020s')
+assert(eraOf('1950-2026') === ALL_TIME && eraOf('2008-2026') === ALL_TIME, 'a range across decades is all-time')
+assert(eraOf(null) === null && eraOf(undefined) === null && eraOf('1980s') === null, 'no range, no era')
+
+const summary = (category: string, year: string | null): SuggestedPlaylistSummary =>
+  ({ category, title: category, year, editionDate: '2026-09-28', trackCount: 40 })
+const sections = sectionsOf([
+  summary('70s-party', '1970-1979'), summary('old', null), summary('2010s-hits', '2010-2019'),
+  summary('rock-hits', '1950-2026'), summary('current-pop', '2024-2026'), summary('70s-rock', '1970-1979'),
+])
+assert(sections.map(s => s.era).join('|') === `${ALL_TIME}|2020s|2010s|1970s|`, 'all-time first, decades newest first, unknown last')
+assert(sections[3].playlists.map(p => p.category).join(',') === '70s-party,70s-rock', 'a section keeps the server\'s order')
+assert(sectionsOf([]).length === 0, 'nothing makes no sections')
 
 console.log('check-suggested: ok')

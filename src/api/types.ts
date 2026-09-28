@@ -273,6 +273,9 @@ export interface SuggestedPlaylistSummary {
   /** The curator's category key, e.g. "80s-indie-pop"; the id for GET /suggested-playlists/{category}. */
   category: string
   title: string
+  /** The category's Discogs year range as the curator has it: "1980-1989", or "1950-2026" for an all-time
+   *  list. Null (or absent, from an older server) when unknown; see eraOf. */
+  year: string | null
   /** YYYY-MM-DD, the day this edition was built. */
   editionDate: string
   trackCount: number
