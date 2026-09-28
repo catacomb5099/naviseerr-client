@@ -230,3 +230,53 @@ export interface ActiveDownloadsResponse {
 export interface DownloadsByIdResponse {
   downloads: ActiveDownloadView[]
 }
+
+/** GET /suggested-playlists - the playlist curator's latest edition per category. `enabled` is false on an
+ *  install with no curator configured, so the section is hidden rather than shown empty; with a curator
+ *  and nothing built yet the list is empty and `enabled` is true. */
+export interface SuggestedPlaylistsResponse {
+  enabled: boolean
+  playlists: SuggestedPlaylistSummary[]
+}
+
+export interface SuggestedPlaylistSummary {
+  /** The curator's category key, e.g. "80s-indie-pop"; the id for GET /suggested-playlists/{category}. */
+  category: string
+  title: string
+  /** YYYY-MM-DD, the day this edition was built. */
+  editionDate: string
+  trackCount: number
+}
+
+/** One song of a suggested playlist. `id` is the YouTube videoId, the same id Track carries, so the info
+ *  pop-up and POST /download/song work on it unchanged. `iconURL` is YouTube's predictable thumbnail:
+ *  the curator stores no artwork. */
+export interface SuggestedTrack {
+  id: string
+  name: string
+  artists: string[]
+  album: string | null
+  albumYear: number | null
+  /** The YouTube Music play count the pick was based on; null when unknown. */
+  popularity: number | null
+  /** Why it is in: 'top' (one of the most played in the pool), 'mid' (middle of the pack, one per artist
+   *  and album) or 'random' (a discovery). Widened to string: the curator may add tiers; see tierCopy. */
+  tier: string
+  /** The curator's one-line explanation, e.g. "#23 of 1036 by plays". */
+  reason: string | null
+  iconURL: string
+  /** 1-based, the curator's order. */
+  position: number
+}
+
+/** GET /suggested-playlists/{category} - one edition with every song. `filters` are the Discogs filters
+ *  behind the category (year, style, genre) for a one-line description. 404 when there is no edition yet,
+ *  503 when this server has no curator, 502 when the curator is unreachable. */
+export interface SuggestedPlaylist {
+  category: string
+  title: string
+  filters: Record<string, string>
+  editionDate: string
+  trackCount: number
+  tracks: SuggestedTrack[]
+}

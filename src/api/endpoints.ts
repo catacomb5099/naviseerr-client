@@ -2,11 +2,12 @@ import { apiClient } from './client'
 import {
   SearchResponse, Track, Album, Artist, Playlist, Download, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse,
-  CollectionDetail, CollectionType, ArtistDetail, SongInfo,
+  CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
+  getMockSuggestedPlaylists, getMockSuggestedPlaylist,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -114,6 +115,26 @@ export async function getSongInfo(id: string): Promise<SongInfo> {
     return Promise.resolve(getMockSongInfo(id))
   }
   return apiClient<SongInfo>(`/songs/${encodeURIComponent(id)}`)
+}
+
+/**
+ * The playlist curator's latest edition per category - what the "Made for you" shelf shows
+ * GET /suggested-playlists
+ */
+export async function getSuggestedPlaylists(signal?: AbortSignal): Promise<SuggestedPlaylistsResponse> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockSuggestedPlaylists())
+  const data = await apiClient<SuggestedPlaylistsResponse>('/suggested-playlists', { signal })
+  // apiClient returns `undefined` for a non-JSON (e.g. empty) response body.
+  return data ?? { enabled: false, playlists: [] }
+}
+
+/**
+ * One suggested playlist with every song
+ * GET /suggested-playlists/{category}  (404 before the first edition; 503 on a server with no curator)
+ */
+export async function getSuggestedPlaylist(category: string): Promise<SuggestedPlaylist> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockSuggestedPlaylist(category))
+  return apiClient<SuggestedPlaylist>(`/suggested-playlists/${encodeURIComponent(category)}`)
 }
 
 /**

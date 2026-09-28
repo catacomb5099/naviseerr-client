@@ -1,6 +1,6 @@
 import {
   Track, Album, Artist, Playlist, SearchResponse, CollectionDetail, CollectionType, ArtistDetail,
-  SongInfo,
+  SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse, SuggestedPlaylistSummary,
 } from './types'
 import { ApiError } from './client'
 
@@ -228,6 +228,55 @@ export function getMockCollection(id: string, type: CollectionType): CollectionD
       durationSeconds: 180 + i * 17,
       position: i + 1,
     })),
+  }
+}
+
+/** Two categories, one built today and one a few days old, so the shelf shows both freshness labels. */
+function daysAgo(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const MOCK_SUGGESTED: SuggestedPlaylistSummary[] = [
+  { category: '80s-indie-pop', title: '80s indie pop', editionDate: daysAgo(0), trackCount: mockTracks.length },
+  { category: 'current-pop', title: 'Current pop', editionDate: daysAgo(3), trackCount: mockTracks.length },
+]
+
+/** Mirrors GET /suggested-playlists. */
+export function getMockSuggestedPlaylists(): SuggestedPlaylistsResponse {
+  return { enabled: true, playlists: MOCK_SUGGESTED }
+}
+
+/** Mirrors GET /suggested-playlists/{category}: the ten mock tracks with the three tiers cycled through
+ *  them. An unknown category is the server's 404. */
+export function getMockSuggestedPlaylist(category: string): SuggestedPlaylist {
+  const summary = MOCK_SUGGESTED.find(p => p.category === category)
+  if (!summary) throw new ApiError('API request failed: Not Found', 404, 'Not Found')
+  const tiers = ['top', 'top', 'mid', 'random'] as const
+  return {
+    category,
+    title: summary.title,
+    filters: category === '80s-indie-pop' ? { year: '1980-1989', style: 'Indie Pop' } : { year: '2024-2026', genre: 'Pop' },
+    editionDate: summary.editionDate,
+    trackCount: mockTracks.length,
+    tracks: mockTracks.map((t, i) => {
+      const tier = tiers[i % tiers.length]
+      return {
+        id: t.id,
+        name: t.name,
+        artists: t.artists,
+        album: mockAlbums.find(a => a.id === t.albumId)?.name ?? null,
+        albumYear: t.year,
+        popularity: (mockTracks.length - i) * 1_250_000,
+        tier,
+        reason: tier === 'top' ? `#${i + 1} of 1036 by plays`
+          : tier === 'mid' ? `#${100 + i * 7} of 1036, middle band, one per artist/album`
+          : 'random pick (seed 1738171583) from 1006 remaining',
+        iconURL: t.iconURL,
+        position: i + 1,
+      }
+    }),
   }
 }
 

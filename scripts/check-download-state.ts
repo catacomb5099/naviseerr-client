@@ -5,6 +5,7 @@
  */
 import './check-collection-progress'
 import './check-download-polling'
+import './check-suggested'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
 import { DownloadMeta, evictToCap, pageItems } from '../src/lib/downloadLibrary'
