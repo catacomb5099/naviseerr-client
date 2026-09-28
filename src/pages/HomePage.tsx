@@ -9,6 +9,7 @@ import { SongCard } from '../components/SongCard'
 import { ArtistCard } from '../components/ArtistCard'
 import { AlbumCard } from '../components/AlbumCard'
 import { CAROUSEL_CONTAINER, GRID_CONTAINER } from '../components/cardLayout'
+import { SuggestedPlaylistsShelf } from '../components/SuggestedPlaylistsShelf'
 import { search, searchSongs, searchAlbums, searchArtists, searchPlaylists } from '../api/endpoints'
 import { DownloadType, SearchResponse } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
@@ -124,12 +125,14 @@ export function HomePage({ onNavigateToDownloads, onDownload, onInfo }: HomePage
         </div>
       )}
 
-      {/* Empty State (no search yet) */}
+      {/* Empty State (no search yet): the search hint, then this week's suggested playlists - the
+          shelf the streaming services lead their Home with. Hidden on a server with no curator. */}
       {!loading && !results && !error && (
-        <div className="text-center py-20">
-          <p className="text-zinc-500 text-lg">
+        <div>
+          <p className="text-center py-12 text-zinc-500 text-lg">
             Search for your favorite songs, albums, artists, and playlists
           </p>
+          <SuggestedPlaylistsShelf />
         </div>
       )}
 

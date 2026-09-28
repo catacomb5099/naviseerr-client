@@ -4,6 +4,7 @@ import { HomePage } from './pages/HomePage'
 import { DownloadsPage } from './pages/DownloadsPage'
 import { CollectionPage } from './pages/CollectionPage'
 import { ArtistPage } from './pages/ArtistPage'
+import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
 import { DownloadPanel } from './components/DownloadPanel'
 import { SongInfoDialog } from './components/SongInfoDialog'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
@@ -71,6 +72,7 @@ function App() {
         <Route path="/album/:id" element={<CollectionPage type="ALBUM" onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/playlist/:id" element={<CollectionPage type="PLAYLIST" onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/artist/:id" element={<ArtistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
+        <Route path="/suggested/:category" element={<SuggestedPlaylistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
