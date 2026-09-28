@@ -7,6 +7,7 @@ import {
   DownloadCardState, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, sortCards,
 } from '../lib/downloadPanel'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
+import { ACTIVE_POLL_MS, nextPollDelayMs } from '../lib/downloadPolling'
 
 // v3: songName became title/artists/imageUrl plus a download type and song tallies. An older
 // snapshot is discarded rather than migrated - it is at most a few minutes of download cards, and
@@ -14,7 +15,6 @@ import { DownloadMetaInput } from '../lib/downloadLibrary'
 const STORAGE_KEY = 'naviseerr.downloads.v3'
 const STORAGE_VERSION = 3
 const EXIT_ANIMATION_MS = 360
-const DEFAULT_POLL_MS = 5000
 const DEFAULT_RETENTION_MS = 600000
 
 interface DismissedEntry {
@@ -78,9 +78,13 @@ export function useActiveDownloads(playSwoosh: () => void) {
   const [minimized, setMinimized] = useState<boolean>(initial?.minimized ?? false)
   const dismissedRef = useRef<Map<string, number>>(
     new Map((initial?.dismissed ?? []).map(d => [d.id, d.at])))
-  const pollIntervalRef = useRef<number>(DEFAULT_POLL_MS)
+  const pollIntervalRef = useRef<number>(ACTIVE_POLL_MS)
   const retentionRef = useRef<number>(DEFAULT_RETENTION_MS)
-  const [pollIntervalMs, setPollIntervalMs] = useState<number>(DEFAULT_POLL_MS)
+  const [pollIntervalMs, setPollIntervalMs] = useState<number>(ACTIVE_POLL_MS)
+  // The two inputs that pick the polling speed (see lib/downloadPolling): did the server's last
+  // answer list anything still running, and when did the user last click download here.
+  const serverHasLiveRef = useRef(false)
+  const lastRequestedAtRef = useRef<number | null>(null)
   const [terminalRetentionMs, setTerminalRetentionMs] = useState<number>(DEFAULT_RETENTION_MS)
 
   const timeoutRef = useRef<number | null>(null)
@@ -209,6 +213,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
       retentionRef.current = response.terminalRetentionMs
       setPollIntervalMs(response.pollIntervalMs)
       setTerminalRetentionMs(response.terminalRetentionMs)
+      serverHasLiveRef.current = response.downloads.some(row => !isTerminal(row.stage))
 
       // Computed BEFORE applying, so it reads the state the response is about to overwrite.
       const stale = staleIds(response)
@@ -223,17 +228,33 @@ export function useActiveDownloads(playSwoosh: () => void) {
     }
   }, [applyRows, staleIds, reconcile])
 
-  const scheduleNext = useCallback((delayMs: number) => {
+  /**
+   * Books the next poll at whichever speed fits right now: fast while something is downloading or
+   * was just requested, slow when there is nothing to show. A hidden tab books nothing at all - the
+   * visibilitychange listener polls and restarts the loop when the tab comes back.
+   */
+  const scheduleNext = useCallback(() => {
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    if (document.hidden) return
+    const delayMs = nextPollDelayMs({
+      serverHasLive: serverHasLiveRef.current,
+      lastRequestedAt: lastRequestedAtRef.current,
+      now: Date.now(),
+      serverPollIntervalMs: pollIntervalRef.current,
+    })
     timeoutRef.current = window.setTimeout(async () => {
-      if (document.hidden) {
-        scheduleNext(pollIntervalRef.current)
-        return
-      }
+      // Went hidden since this was booked: stop here, the listener restarts us on return.
+      if (document.hidden) return
       await poll()
-      scheduleNext(pollIntervalRef.current)
+      scheduleNext()
     }, delayMs)
   }, [poll])
+
+  /** One request now, then carry on at whatever speed the answer calls for. */
+  const pollNow = useCallback(async () => {
+    await poll()
+    scheduleNext()
+  }, [poll, scheduleNext])
 
   useEffect(() => {
     if (startedRef.current) return
@@ -252,18 +273,11 @@ export function useActiveDownloads(playSwoosh: () => void) {
       await reconcile(restored
         .filter(card => !isTerminal(card.stage))
         .map(card => card.downloadId))
-      await poll()
-      scheduleNext(pollIntervalRef.current)
+      await pollNow()
     }
     void boot()
 
-    const onVisibilityChange = () => {
-      if (!document.hidden) poll()
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange)
-
     return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
       abortRef.current?.abort()
     }
@@ -271,6 +285,17 @@ export function useActiveDownloads(playSwoosh: () => void) {
     // React StrictMode's double-invoked effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Its own effect, NOT inside the run-once one above: StrictMode runs that effect's cleanup and
+  // then skips the re-run, which used to leave this listener removed for good in development.
+  // A hidden tab books no timer, so this listener is the only thing that restarts polling.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (!document.hidden) void pollNow()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [pollNow])
 
   useEffect(() => {
     const handle = window.setInterval(() => {
@@ -320,13 +345,16 @@ export function useActiveDownloads(playSwoosh: () => void) {
           lastSeenAt: Date.now(),
         },
       }))
-      poll()
+      // Ask straight away, and stay on the fast speed for a while even if the server has not
+      // listed the download yet - see FAST_WINDOW_AFTER_REQUEST_MS.
+      lastRequestedAtRef.current = Date.now()
+      void pollNow()
       return result
     } catch (err) {
       console.error('Download request failed:', err)
       return null
     }
-  }, [poll])
+  }, [pollNow])
 
   return {
     cards: sortCards(Object.values(cards)),

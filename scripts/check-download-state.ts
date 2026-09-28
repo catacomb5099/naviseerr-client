@@ -4,6 +4,7 @@
  * throws and exits non-zero.
  */
 import './check-collection-progress'
+import './check-download-polling'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, isTerminal, mergeCard } from '../src/lib/downloadPanel'
 import { DownloadMeta, evictToCap, pageItems } from '../src/lib/downloadLibrary'
