@@ -37,7 +37,9 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
     const response = await fetch(url, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        // Only with a body: on a GET this header is not on the CORS safe list, so the browser would
+        // send an OPTIONS preflight first - the second row per request in the Network tab.
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
         ...init.headers,
       },
     })
