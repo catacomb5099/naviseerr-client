@@ -1,3 +1,5 @@
+import { share } from '../lib/requestCache'
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 export class ApiError extends Error {
@@ -13,18 +15,34 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiClient<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`
+export interface ApiOptions extends RequestInit {
+  /** GET only: how long a successful answer is reused for the same URL. 0 (the default) shares only
+   *  a request already in flight, for data that must stay live. */
+  cacheMs?: number
+  /** GET only: forget a reused answer and ask again. Still joins a request already in flight. */
+  fresh?: boolean
+}
 
+/**
+ * GETs to the same URL share one request and, if asked, one answer for a while; everything else goes
+ * straight to fetch. The caller's `signal` still detaches that caller alone.
+ */
+export function apiClient<T>(endpoint: string, options?: ApiOptions): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`
+  const { cacheMs, fresh, signal, ...init } = options ?? {}
+  if (init.method && init.method.toUpperCase() !== 'GET') return request<T>(url, { ...init, signal })
+  return share(url, s => request<T>(url, { ...init, signal: s }), { signal: signal ?? undefined, cacheMs, fresh })
+}
+
+async function request<T>(url: string, init: RequestInit): Promise<T> {
   try {
     const response = await fetch(url, {
-      ...options,
+      ...init,
       headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
+        // Only with a body: on a GET this header is not on the CORS safe list, so the browser would
+        // send an OPTIONS preflight first - the second row per request in the Network tab.
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...init.headers,
       },
     })
 

@@ -35,7 +35,7 @@ export function SuggestedPlaylistsShelf() {
 
   useEffect(() => {
     const controller = new AbortController()
-    getSuggestedPlaylists(controller.signal)
+    getSuggestedPlaylists(controller.signal, { fresh: attempt > 0 })
       .then(res => setFetched({ key: attempt, ...(res.enabled ? { status: 'ready', refreshDay: res.refreshDay, playlists: res.playlists } : { status: 'hidden' }) }))
       .catch(err => {
         if (err instanceof Error && err.name === 'AbortError') return

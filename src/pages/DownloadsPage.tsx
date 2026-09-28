@@ -1,14 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { DownloadRow } from '../components/DownloadRow'
 import { DownloadFilter, DownloadFilterPills } from '../components/DownloadFilterPills'
-import { DownloadType } from '../api/types'
 import { Button } from '../components/ui/button'
 import { useAllDownloads } from '../hooks/useAllDownloads'
-import { DownloadMeta, pageItems } from '../lib/downloadLibrary'
+import { DownloadMeta, pageItems, parseTypeFilter } from '../lib/downloadLibrary'
 import { DownloadCardState } from '../lib/downloadPanel'
 
 interface DownloadsPageProps {
@@ -32,48 +31,48 @@ function parsePageNumber(raw: string | null): number {
 const PAGE_BUTTON_CLASS =
   'border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white'
 
-/** "on this page", because the pills only ever see the page the server sent (see the filter below). */
-/** Whether a download belongs under a pill; Playlists takes the curator's playlists too. */
-function matchesFilter(type: DownloadType, filter: DownloadFilter): boolean {
-  if (filter === 'all') return true
-  if (filter === 'PLAYLIST') return type === 'PLAYLIST' || type === 'CURATED'
-  return type === filter
+/** All is the absence of `type`, the way page 1 is what a missing `page` means; `page` is written
+ *  every time so the pills, the paging buttons and the redirect all produce the same URL shape. */
+function paramsFor(filter: DownloadFilter, page: number): Record<string, string> {
+  return filter === 'all' ? { page: String(page) } : { type: filter, page: String(page) }
 }
 
 const EMPTY_BY_FILTER: Record<DownloadFilter, string> = {
   all: 'Nothing downloaded yet — search for a song and hit the download button',
-  SONG: 'No songs on this page',
-  ALBUM: 'No albums on this page',
-  PLAYLIST: 'No playlists on this page',
+  SONG: 'No songs downloaded yet',
+  ALBUM: 'No albums downloaded yet',
+  PLAYLIST: 'No playlists downloaded yet',
 }
 
 export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, inFlight, onNavigateHome }: DownloadsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageNumber = parsePageNumber(searchParams.get('page'))
+  // The pill lives in the URL next to the page, so a filtered page can be linked to and comes back
+  // on Back; the server pages within the type, so the two travel together as one fetch key.
+  const type = parseTypeFilter(searchParams.get('type'))
+  const filter: DownloadFilter = type ?? 'all'
   // A download requested from the search page reaches `cards` first; refetching when the SET of
   // live ids changes brings it onto this page without a reload. Sorted, because the cards reorder
   // on every progress tick and that is not a change worth a request.
   const liveIds = cards.map(card => card.downloadId).sort().join(',')
-  const { rows, totalPages, loadedPage, error, refresh } = useAllDownloads(pageNumber, { refreshKey: liveIds })
-  const [filter, setFilter] = useState<DownloadFilter>('all')
+  const { rows, totalPages, loaded, error, refresh } = useAllDownloads(pageNumber, { type, refreshKey: liveIds })
   const items = pageItems(rows, metas, cards)
-  // Client-side, over the CURRENT PAGE only: server pagination does not know types yet. Follow-up:
-  // a type= query param on /downloads/all, and this becomes a fetch key like `page`.
-  const visibleItems = items.filter(item => matchesFilter(item.downloadType, filter))
+  // Whether `rows` are the ones the URL asks for - same page AND same pill.
+  const isCurrent = loaded?.pageNumber === pageNumber && loaded?.type === type
 
-  // Keyed on `loadedPage` rather than a bare "no rows" check: `rows` also reads empty on the very
+  // Keyed on `loaded` rather than a bare "no rows" check: `rows` also reads empty on the very
   // first render, before any fetch has resolved, and a bare check would redirect a legitimate deep
   // link to page 2 straight back to page 1 before it ever got a chance to load. Requiring the
-  // fetch that resolved to be for THIS page is what lets "no rows yet" and "this page really is
-  // empty" be told apart. Uses `replace` so the bogus page doesn't linger in history - otherwise
-  // the back button would land back on it and clamp forward again.
+  // fetch that resolved to be for THIS page and pill is what lets "no rows yet" and "this page
+  // really is empty" be told apart. Uses `replace` so the bogus page doesn't linger in history -
+  // otherwise the back button would land back on it and clamp forward again.
   useEffect(() => {
-    if (loadedPage === pageNumber && rows.length === 0 && pageNumber > 1) {
-      setSearchParams({ page: '1' }, { replace: true })
+    if (isCurrent && rows.length === 0 && pageNumber > 1) {
+      setSearchParams(paramsFor(filter, 1), { replace: true })
     }
-  }, [loadedPage, rows.length, pageNumber, setSearchParams])
+  }, [isCurrent, rows.length, pageNumber, filter, setSearchParams])
 
-  const goToPage = (page: number) => setSearchParams({ page: String(page) })
+  const goToPage = (page: number) => setSearchParams(paramsFor(filter, page))
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
@@ -86,10 +85,15 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, inFlight
           <h2 className="text-3xl font-bold text-white mb-6">Downloads</h2>
 
           <div className="mb-4">
-            <DownloadFilterPills selected={filter} onSelect={setFilter} />
+            {/* A new pill starts at its own page 1: page 3 of albums is nowhere in particular among songs.
+                The active pill is left alone, or every re-click would push a duplicate history entry. */}
+            <DownloadFilterPills
+              selected={filter}
+              onSelect={next => { if (next !== filter) setSearchParams(paramsFor(next, 1)) }}
+            />
           </div>
 
-          {/* `rows` belong to `loadedPage`; until that matches the page in the URL, what's on
+          {/* `rows` belong to `loaded`; until that matches the page and pill in the URL, what's on
               screen is another page's rows (or none yet), so it reads as loading. Error goes first
               so a failed page fetch can't leave that state spinning forever - the hook keeps the
               old rows on failure, so a `rows.length === 0` guard would never let the error show. */}
@@ -100,17 +104,17 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, inFlight
                 Retry
               </Button>
             </div>
-          ) : loadedPage !== pageNumber ? (
+          ) : !isCurrent ? (
             <div className="text-center py-20">
               <p className="text-zinc-500 text-lg">Loading downloads…</p>
             </div>
-          ) : visibleItems.length === 0 ? (
+          ) : items.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-zinc-500 text-lg">{EMPTY_BY_FILTER[filter]}</p>
             </div>
           ) : (
             <div className="divide-y divide-zinc-800">
-              {visibleItems.map(item => (
+              {items.map(item => (
                 <DownloadRow
                   key={item.downloadId}
                   item={item}
