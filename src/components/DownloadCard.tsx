@@ -98,8 +98,11 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
   const title = displayTitle(card)
   const summaryId = `download-card-summary-${card.downloadId}`
 
+  // flex-none: the panel list is a flex column with a max height, and a flex item with overflow
+  // hidden may shrink below its content. Without it a full panel squashes every card into the
+  // space instead of scrolling.
   return (
-    <div className={`overflow-hidden transition-[max-height] duration-150 ${exiting ? 'max-h-0' : 'max-h-16'}`}>
+    <div className={`flex-none overflow-hidden transition-[max-height] duration-150 ${exiting ? 'max-h-0' : 'max-h-16'}`}>
       <div
         className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-800 ${exiting ? 'animate-download-card-exit' : 'animate-download-card-enter'}`}
       >
