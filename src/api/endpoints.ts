@@ -9,7 +9,7 @@ import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
-  cancelMockDownload,
+  cancelMockDownload, retryMockDownload,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -205,6 +205,15 @@ export async function cancelDownload(id: string, taskId?: string): Promise<Activ
   if (USE_MOCK_DATA) return Promise.resolve(cancelMockDownload(id))
   const query = taskId ? `?taskId=${encodeURIComponent(taskId)}` : ''
   return apiClient<ActiveDownloadView>(`/downloads/${encodeURIComponent(id)}/cancel${query}`, { method: 'POST' })
+}
+
+/**
+ * Retry a finished download: every song without a file starts again
+ * POST /downloads/{id}/retry  (202 with the fresh card; 409 with the current card when there is nothing to retry; 404 unknown)
+ */
+export async function retryDownload(id: string): Promise<ActiveDownloadView> {
+  if (USE_MOCK_DATA) return Promise.resolve(retryMockDownload(id))
+  return apiClient<ActiveDownloadView>(`/downloads/${encodeURIComponent(id)}/retry`, { method: 'POST' })
 }
 
 /**

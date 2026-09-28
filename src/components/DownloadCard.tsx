@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CircleCheck, AlertCircle, Ban, Search, ArrowDown, Clock, Square, X } from 'lucide-react'
+import { CircleCheck, AlertCircle, Ban, Search, ArrowDown, Clock, RotateCcw, Square, X } from 'lucide-react'
 import {
   DownloadCardState, displayTitle, isCancelled, isIndeterminate, isTerminal, showsElapsed, stageLabel,
 } from '../lib/downloadPanel'
@@ -12,6 +12,7 @@ interface DownloadCardProps {
   pollIntervalMs: number
   onDismiss: () => void
   onCancel: () => void
+  onRetry: () => void
   inFlight: boolean
 }
 
@@ -33,7 +34,7 @@ function useNow(active: boolean): number {
   return now
 }
 
-export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCancel, inFlight }: DownloadCardProps) {
+export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCancel, onRetry, inFlight }: DownloadCardProps) {
   const fillRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef(0)
 
@@ -166,13 +167,26 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCance
           </button>
         )}
         {terminal && (
-          <button
-            className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
-            aria-label={`Dismiss ${title}`}
-            onClick={onDismiss}
-          >
-            <X className="w-3.5 h-3.5" aria-hidden="true" />
-          </button>
+          <>
+            {(card.stage === 'FAILED' || card.stage === 'PARTIAL_SUCCESS') && (
+              <button
+                type="button"
+                className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+                aria-label={`Retry ${title}`}
+                disabled={inFlight}
+                onClick={onRetry}
+              >
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            )}
+            <button
+              className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+              aria-label={`Dismiss ${title}`}
+              onClick={onDismiss}
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          </>
         )}
       </div>
     </div>

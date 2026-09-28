@@ -711,6 +711,26 @@ export function cancelMockDownload(id: string): ActiveDownloadView {
   return toView(entry, Date.now())
 }
 
+/** Mirrors POST /downloads/{id}/retry. The simulator has no per-song state, so a retry starts the
+ *  whole download over, exactly like a fresh request: the clock resets and a new outcome is picked.
+ *  409 with the current card when the download is still running (and for the fixtures, which stay
+ *  put); 404 for an unknown id. */
+export function retryMockDownload(id: string): ActiveDownloadView {
+  const fixture = FIXTURES[id]
+  if (fixture) throw new ApiError('conflict', 409, 'Conflict', fixture)
+  const entry = mockDownloads.get(id)
+  if (!entry) throw new ApiError('not found', 404, 'Not Found')
+  const { stage } = stageAt(entry, Date.now())
+  if (stage !== 'SUCCEEDED' && stage !== 'FAILED') {
+    throw new ApiError('conflict', 409, 'Conflict', toView(entry, Date.now()))
+  }
+  entry.createdAt = Date.now()
+  entry.outcome = Math.random() < 0.8 ? 'SUCCEEDED' : 'FAILED'
+  entry.failureCode = FAILURE_CODES[Math.floor(Math.random() * FAILURE_CODES.length)]
+  persistMockDownloads()
+  return toView(entry, Date.now())
+}
+
 /** Ignores the retention window, like the real GET /downloads?ids=. Unknown ids are omitted. */
 export function getMockDownloadsByIds(ids: string[]): ActiveDownloadView[] {
   const now = Date.now()

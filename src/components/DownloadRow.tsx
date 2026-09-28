@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, Ban, ChevronRight, CircleCheck, Clock, Loader2, Square } from 'lucide-react'
+import { AlertCircle, Ban, ChevronRight, CircleCheck, Clock, Loader2, RotateCcw, Square } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
 import { DownloadItem, itemStageLabel } from '../lib/downloadLibrary'
@@ -13,6 +13,7 @@ interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void
+  onRetry: (id: string) => void
   inFlight: Set<string>
 }
 
@@ -82,7 +83,7 @@ function SongRow({ song }: { song: DownloadSongView }) {
   )
 }
 
-export function DownloadRow({ item, pollIntervalMs, onCancel, inFlight }: DownloadRowProps) {
+export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight }: DownloadRowProps) {
   const [iconFailed, setIconFailed] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [songs, setSongs] = useState<DownloadSongView[] | null>(null)
@@ -251,6 +252,17 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, inFlight }: Downlo
               onClick={e => { e.stopPropagation(); onCancel(item.downloadId) }}
             >
               <Square className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          {terminal && (item.stage === 'FAILED' || item.stage === 'PARTIAL_SUCCESS') && (
+            <button
+              type="button"
+              className="p-2 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              aria-label={`Retry ${item.title}`}
+              disabled={inFlight.has(item.downloadId)}
+              onClick={e => { e.stopPropagation(); onRetry(item.downloadId) }}
+            >
+              <RotateCcw className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
         </div>
