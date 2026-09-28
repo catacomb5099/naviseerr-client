@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getAllDownloads } from '../api/endpoints'
-import { ActiveDownloadView } from '../api/types'
+import { ActiveDownloadView, DownloadTypeFilter } from '../api/types'
 
 export interface AllDownloads {
   rows: ActiveDownloadView[]
   totalPages: number
-  /** The page `rows` describes, or null before the first response ever lands. Lets a caller tell
-   *  "no rows yet" apart from "this page really is empty" - `rows.length === 0` is true in both
-   *  cases on the very first render, before any fetch has resolved. */
-  loadedPage: number | null
+  /** Which page, of which type, `rows` describes - or null before the first response ever lands.
+   *  Lets a caller tell "no rows yet" apart from "this page really is empty" - `rows.length === 0`
+   *  is true in both cases on the very first render, before any fetch has resolved - and keeps the
+   *  last filter's rows from showing under a freshly clicked pill while the new page loads. */
+  loaded: { pageNumber: number; type: DownloadTypeFilter | undefined } | null
   loading: boolean
   error: string | null
   refresh: () => void
@@ -21,19 +22,19 @@ export interface AllDownloads {
  * visit would pop the panel open with every finished download the server remembers and start
  * terminal TTL timers on all of them.
  *
- * Fetches on mount and again whenever `pageNumber`, `pageSize` or `refreshKey` changes, so arriving
- * at the route and paging within it both trigger a request without the caller having to ask.
- * `refreshKey` is the caller's "something you don't know about changed" signal - the page passes
- * the set of live card ids, so a download requested from the search page shows up here without a
- * manual reload.
+ * Fetches on mount and again whenever `pageNumber`, `type`, `pageSize` or `refreshKey` changes, so
+ * arriving at the route, paging within it and switching pill all trigger a request without the
+ * caller having to ask. `refreshKey` is the caller's "something you don't know about changed"
+ * signal - the page passes the set of live card ids, so a download requested from the search page
+ * shows up here without a manual reload.
  */
 export function useAllDownloads(
   pageNumber: number,
-  { pageSize, refreshKey }: { pageSize?: number; refreshKey?: string } = {},
+  { pageSize, type, refreshKey }: { pageSize?: number; type?: DownloadTypeFilter; refreshKey?: string } = {},
 ): AllDownloads {
   const [rows, setRows] = useState<ActiveDownloadView[]>([])
   const [totalPages, setTotalPages] = useState(0)
-  const [loadedPage, setLoadedPage] = useState<number | null>(null)
+  const [loaded, setLoaded] = useState<AllDownloads['loaded']>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -46,13 +47,13 @@ export function useAllDownloads(
     setError(null)
     void (async () => {
       try {
-        const result = await getAllDownloads({ pageSize, pageNumber }, controller.signal)
+        const result = await getAllDownloads({ pageSize, pageNumber, type }, controller.signal)
         // Replaces wholesale, not merged: this endpoint is the server's complete answer for the
         // requested page, so folding it into the previous response would keep rows the server has
         // since dropped.
         setRows(result.downloads)
         setTotalPages(result.totalPages)
-        setLoadedPage(pageNumber)
+        setLoaded({ pageNumber, type })
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return
         // Same posture as reconcile() in useActiveDownloads: a failed fetch is not evidence about
@@ -63,15 +64,16 @@ export function useAllDownloads(
         if (abortRef.current === controller) setLoading(false)
       }
     })()
-  }, [pageSize, pageNumber])
+  }, [pageSize, pageNumber, type])
 
-  // Keyed on `refresh`, which is itself keyed on [pageSize, pageNumber], plus the caller's key:
-  // mounting (which is what arriving at the route now means), changing page and a new live download
-  // all get a fresh fetch this way, with no separate dependency list to keep in sync with refresh's.
+  // Keyed on `refresh`, which is itself keyed on [pageSize, pageNumber, type], plus the caller's
+  // key: mounting (which is what arriving at the route now means), changing page or pill and a new
+  // live download all get a fresh fetch this way, with no separate dependency list to keep in sync
+  // with refresh's.
   useEffect(() => {
     refresh()
     return () => abortRef.current?.abort()
   }, [refresh, refreshKey])
 
-  return { rows, totalPages, loadedPage, loading, error, refresh }
+  return { rows, totalPages, loaded, loading, error, refresh }
 }

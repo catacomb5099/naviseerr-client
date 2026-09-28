@@ -9,3 +9,11 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
 }
+
+/** "1.2M", "998K" - how YouTube itself abbreviates a play count. */
+const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+
+/** "1.2M plays"; null when the count is unknown, so callers render nothing rather than "0 plays". */
+export function formatPlays(count: number | null | undefined): string | null {
+  return count == null ? null : `${COMPACT.format(count)} plays`
+}
