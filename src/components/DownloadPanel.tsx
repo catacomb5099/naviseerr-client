@@ -93,7 +93,7 @@ export function DownloadPanel({
         <ChevronDown className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
       </button>
 
-      <div className="flex flex-col p-1.5" style={{ maxHeight: 'min(60vh, 236px)', overflowY: 'auto' }}>
+      <div className="flex flex-col p-1.5 overscroll-contain" style={{ maxHeight: 'min(60vh, 236px)', overflowY: 'auto' }}>
         {cards.map(card => (
           <DownloadCard
             key={card.downloadId}
