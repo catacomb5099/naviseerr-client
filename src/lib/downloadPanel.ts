@@ -116,8 +116,14 @@ export function stageLabel(card: DownloadCardState, elapsedSeconds: number): str
  * Folds one feed row into the card the client is already showing. Every rule here exists because
  * the server is allowed to know less than the client does at any given moment.
  *
- * - **A terminal stage is final.** Once the user has been told a download succeeded or failed, no
- *   later response walks it back to an active stage.
+ * - **Crossing between finished and live is decided by the server's `updatedAt`**, which is
+ *   monotonic per download (every write stamps it; concluding does not). Finished -> live only if
+ *   strictly newer (a retry stamps now(); the two-second row where every song is finished but the
+ *   download has not yet concluded shares the finished card's timestamp and must not reopen it).
+ *   Live -> finished only if not strictly older (a stale poll answer from before a retry must not
+ *   close the reopened card; a fail-before-admission row shares the optimistic card's timestamp
+ *   and must land). Live -> live is unaffected: the optimistic card's clock is the server's JVM,
+ *   the rows' is Postgres.
  * - **Null never overwrites.** An absent `progressPercent` means "no observation", not zero. The
  *   server refuses to write one over a real value for exactly this reason, and a bar that jumps
  *   backwards on a healthy download is the most trust-destroying thing this feature can do.
@@ -133,12 +139,25 @@ export function mergeCard(
   existing: DownloadCardState | undefined,
   row: ActiveDownloadView,
 ): DownloadCardState {
-  if (existing && isTerminal(existing.stage) && !isTerminal(row.stage)) {
-    return existing
+  // Crossing between finished and live is decided by the server's updatedAt, which is monotonic per
+  // download (every write stamps it; concluding does not).
+  //   finished -> live: only if strictly newer. A retry stamps now(); the two-second row in which
+  //     every song is finished but the download is not yet concluded has the SAME timestamp as the
+  //     finished card and must not reopen it.
+  //   live -> finished: only if not strictly older. A stale poll answer from before a retry must not
+  //     close the reopened card; but a fail-before-admission row carries the download's created_at,
+  //     equal to the optimistic card's, and must land.
+  // Live -> live is merged as before: the optimistic card's clock is the JVM's, the rows' is Postgres.
+  const crossing = !!existing && isTerminal(existing.stage) !== isTerminal(row.stage)
+  if (existing && crossing) {
+    const rowAt = Date.parse(row.updatedAt), knownAt = Date.parse(existing.updatedAt)
+    if (isTerminal(existing.stage) ? rowAt <= knownAt : rowAt < knownAt) return existing
   }
+  const reopened = !!existing && crossing && isTerminal(existing.stage)
 
-  const progressPercent = row.progressPercent ?? existing?.progressPercent ?? null
-  const failureCode = row.failureCode ?? existing?.failureCode ?? null
+  // A reopened card's old outcome is not an observation about the new attempt.
+  const progressPercent = row.progressPercent ?? (reopened ? null : existing?.progressPercent ?? null)
+  const failureCode = reopened ? row.failureCode ?? null : row.failureCode ?? existing?.failureCode ?? null
   const songsCancelled = row.songsCancelled ?? 0
 
   // Compared against the coalesced value, not the raw row: a null sample after a real reading is

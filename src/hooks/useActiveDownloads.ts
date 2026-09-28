@@ -146,7 +146,12 @@ export function useActiveDownloads(playSwoosh: () => void) {
     setCards(prev => {
       const next = { ...prev }
       for (const row of rows) {
-        if (dismissedRef.current.has(row.downloadId)) continue
+        if (dismissedRef.current.has(row.downloadId)) {
+          // A finished row for a dismissed card stays dismissed. A LIVE row for one can only mean the
+          // download was retried (from this tab or another), and a retried download gets its card back.
+          if (isTerminal(row.stage)) continue
+          dismissedRef.current.delete(row.downloadId)
+        }
         next[row.downloadId] = mergeCard(prev[row.downloadId], row)
       }
       // Anything not in `rows` is left exactly as it was. A download the runner has not admitted

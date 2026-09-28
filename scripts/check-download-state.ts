@@ -52,10 +52,27 @@ assert(mergeCard(card, { ...row, songsFailed: 1 }).lastChangedAt > 1, 'songsFail
 assert(mergeCard(card, { ...row, songsCancelled: 1 }).lastChangedAt > 1, 'songsCancelled change must bump lastChangedAt')
 assert(mergeCard(card, { ...row, songsCancelled: undefined }).songsCancelled === 0, 'an older server with no songsCancelled reads as 0')
 
-// A terminal card ignores a later non-terminal row.
+// A terminal card ignores a later non-terminal row at the SAME timestamp: the two-second window in
+// which every song is finished but the download has not yet concluded must not reopen the card.
 const done: DownloadCardState = { ...card, stage: 'SUCCEEDED' }
 assert(mergeCard(done, { ...row, stage: 'DOWNLOADING', progressPercent: 50 }) === done,
-  'terminal card must not walk back to an active stage')
+  'terminal card must not walk back to an active stage at the same timestamp')
+
+const T1 = '2026-01-01T00:00:10.000Z', T2 = '2026-01-01T00:00:20.000Z'
+const failedCard: DownloadCardState = { ...card, stage: 'FAILED', failureCode: 'TIMED_OUT', progressPercent: 40, updatedAt: T1 }
+// A strictly newer live row reopens a finished card, and the old outcome does not leak into the new attempt.
+const reopened = mergeCard(failedCard, { ...row, stage: 'STARTING', progressPercent: null, failureCode: null, updatedAt: T2 })
+assert(reopened.stage === 'STARTING', 'a newer live row reopens a finished card')
+assert(reopened.failureCode === null, 'the old failure code does not survive a retry')
+assert(reopened.progressPercent === null, 'the old progress does not survive a retry')
+assert(reopened.lastChangedAt > failedCard.lastChangedAt, 'reopening is a change')
+assert(mergeCard(failedCard, { ...row, stage: 'STARTING', updatedAt: T1 }) === failedCard, 'an equal-timestamp live row is the two-second quirk, not a retry')
+// A stale finished row must not close a card that has since been reopened.
+const liveCard: DownloadCardState = { ...card, stage: 'STARTING', updatedAt: T2 }
+assert(mergeCard(liveCard, { ...row, stage: 'FAILED', failureCode: 'TIMED_OUT', updatedAt: T1 }) === liveCard, 'an older finished row is dropped')
+assert(mergeCard(liveCard, { ...row, stage: 'FAILED', failureCode: 'TIMED_OUT', updatedAt: T2 }).stage === 'FAILED', 'an equal-timestamp finished row lands (fail-before-admission)')
+// Live to live is untouched by the timestamp rule: the optimistic card's clock is the server's JVM, the rows' is Postgres.
+assert(mergeCard(liveCard, { ...row, stage: 'SEARCHING', updatedAt: T1 }).stage === 'SEARCHING', 'live rows merge regardless of timestamp')
 
 assert(isTerminal('PARTIAL_SUCCESS') && isTerminal('SUCCEEDED') && isTerminal('FAILED'), 'terminal stages')
 assert(!isTerminal('DOWNLOADING') && !isTerminal('QUEUED'), 'non-terminal stages')
