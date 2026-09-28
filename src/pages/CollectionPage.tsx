@@ -221,6 +221,12 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                         </p>
                       )}
                     </div>
+                    {/* Hidden on phones, where the row has no room for it. */}
+                    {track.plays && (
+                      <span className="hidden sm:inline w-20 text-right text-xs text-zinc-400 tabular-nums whitespace-nowrap">
+                        {track.plays}
+                      </span>
+                    )}
                     <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
                       {track.durationSeconds != null && formatDuration(track.durationSeconds)}
                     </span>

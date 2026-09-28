@@ -7,7 +7,7 @@ import { ApiError } from '../api/client'
 import { DownloadType, SongInfo } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { REQUEST_FAILED_COPY, RequestState } from '../pages/CollectionPage'
-import { formatDuration } from '../lib/utils'
+import { formatDuration, formatPlays } from '../lib/utils'
 
 interface SongInfoDialogProps {
   /** The YouTube videoId to show, or null while closed. */
@@ -23,9 +23,6 @@ type Load =
   | { status: 'error' }
   | { status: 'notFound' }
   | { status: 'ready'; info: SongInfo }
-
-/** "1.2M", "998K" - how YouTube itself abbreviates a play count. */
-const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 
 const PULSE = 'rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
 const BUTTON = 'rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
@@ -88,7 +85,8 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
   const facts: string[] = []
   if (info?.durationSeconds != null) facts.push(formatDuration(info.durationSeconds))
   if (info?.year) facts.push(String(info.year))
-  if (info?.viewCount != null) facts.push(`${COMPACT.format(info.viewCount)} plays`)
+  const plays = formatPlays(info?.viewCount)
+  if (plays) facts.push(plays)
 
   return (
     <dialog

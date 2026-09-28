@@ -226,6 +226,8 @@ export function getMockCollection(id: string, type: CollectionType): CollectionD
       artists: t.artists,
       iconURL: t.iconURL,
       durationSeconds: 180 + i * 17,
+      // Like the real server: YouTube's wording for album tracks, nothing for playlist tracks.
+      plays: type === 'ALBUM' ? `${28 - i * 7}M plays` : null,
       position: i + 1,
     })),
   }
