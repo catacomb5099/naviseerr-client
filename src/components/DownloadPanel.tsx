@@ -12,6 +12,7 @@ interface DownloadPanelProps {
   onToggleMinimized: () => void
   onDismiss: (id: string) => void
   onCancel: (id: string) => void
+  onRetry: (id: string) => void
   inFlight: Set<string>
   muted: boolean
   onToggleMuted: () => void
@@ -25,6 +26,7 @@ export function DownloadPanel({
   onToggleMinimized,
   onDismiss,
   onCancel,
+  onRetry,
   inFlight,
   muted,
   onToggleMuted,
@@ -114,6 +116,7 @@ export function DownloadPanel({
             pollIntervalMs={pollIntervalMs}
             onDismiss={() => onDismiss(card.downloadId)}
             onCancel={() => onCancel(card.downloadId)}
+            onRetry={() => onRetry(card.downloadId)}
             inFlight={inFlight.has(card.downloadId)}
           />
         ))}

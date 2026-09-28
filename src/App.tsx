@@ -28,6 +28,7 @@ function App() {
     dismiss: dismissDownload,
     requestDownload,
     cancel: cancelDownload,
+    retry: retryDownload,
     inFlight: downloadsInFlight,
   } = useActiveDownloads(playSwoosh)
   const library = useDownloadLibrary()
@@ -69,6 +70,7 @@ function App() {
             cards={downloadCards}
             pollIntervalMs={pollIntervalMs}
             onCancel={cancelDownload}
+            onRetry={retryDownload}
             inFlight={downloadsInFlight}
             onNavigateHome={() => navigate('/')}
           />
@@ -94,6 +96,7 @@ function App() {
         onToggleMinimized={() => setDownloadsMinimized(m => !m)}
         onDismiss={dismissDownload}
         onCancel={cancelDownload}
+        onRetry={retryDownload}
         inFlight={downloadsInFlight}
         muted={muted}
         onToggleMuted={toggleMuted}

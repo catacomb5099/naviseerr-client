@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import {
-  getActiveDownloads, resolveDownloads, downloadSong, downloadCollection, cancelDownload,
+  getActiveDownloads, resolveDownloads, downloadSong, downloadCollection, cancelDownload, retryDownload,
 } from '../api/endpoints'
 import { ActiveDownloadsResponse, ActiveDownloadView, Download, DownloadType } from '../api/types'
 import {
@@ -401,6 +401,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
   const cancel = useCallback((id: string, taskId?: string) =>
     act(id, taskId ?? id, () => cancelDownload(id, taskId)), [act])
 
+  const retry = useCallback((id: string) => act(id, id, () => retryDownload(id)), [act])
+
   return {
     cards: sortCards(Object.values(cards)),
     exiting,
@@ -411,6 +413,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
     dismiss,
     requestDownload,
     cancel,
+    retry,
     inFlight,
   }
 }
