@@ -35,9 +35,10 @@ function App() {
   // Which song's info pop-up is open, and on which page. One dialog for the whole app: every song row
   // opens it by id. Leaving that page (a link, Back, Forward) closes it: the pop-up belongs to the row
   // it was opened from. The dialog's own close event then clears the record.
-  const [songInfo, setSongInfo] = useState<{ id: string; pathname: string } | null>(null)
+  // `plays` is the count the row showed, so the pop-up repeats it rather than a different number.
+  const [songInfo, setSongInfo] = useState<{ id: string; pathname: string; plays: string | null } | null>(null)
   const songInfoId = songInfo?.pathname === pathname ? songInfo.id : null
-  const openSongInfo = (id: string) => setSongInfo({ id, pathname })
+  const openSongInfo = (id: string, plays?: string | null) => setSongInfo({ id, pathname, plays: plays ?? null })
   const closeSongInfo = () => setSongInfo(null)
 
   /** True once the server accepted the request - what a button that asked for it shows. */
@@ -84,6 +85,7 @@ function App() {
 
       <SongInfoDialog
         videoId={songInfoId}
+        rowPlays={songInfo?.plays ?? null}
         onClose={closeSongInfo}
         onDownload={handleDownload}
       />

@@ -12,6 +12,10 @@ import { formatDuration, formatViews } from '../lib/utils'
 interface SongInfoDialogProps {
   /** The YouTube videoId to show, or null while closed. */
   videoId: string | null
+  /** The count the row that opened this showed ("1.7B plays", "19.3M views"), or null. It wins over
+   *  the server's: an album lists its songs under their music-video ids, whose own details carry only
+   *  that video's smaller views, so the pop-up would otherwise contradict the row it came from. */
+  rowPlays: string | null
   onClose: () => void
   /** Same plumbing as the song rows: App requests the download and records its metadata. Resolves
    *  true once the server accepted it - the page behind the backdrop is inert, so the button in the
@@ -31,7 +35,7 @@ const LINK = 'hover:underline focus-visible:outline-none focus-visible:ring-2 fo
 /** One song's details and credits as a pop-up over whatever page asked for it. The native dialog
  *  owns open/close, Esc and focus: showModal() moves focus inside and close() hands it back to the
  *  info button that opened it. One instance lives in App; every song row opens it with a videoId. */
-export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogProps) {
+export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongInfoDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   // Keyed by what was fetched: a result for another song (or an earlier attempt) is simply not ours
   // yet, which is what "loading" means; a result for this exact key is ours and is not fetched again.
@@ -85,9 +89,9 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
   const facts: string[] = []
   if (info?.durationSeconds != null) facts.push(formatDuration(info.durationSeconds))
   if (info?.year) facts.push(String(info.year))
-  // The combined count, as the lists show it; only without one does this video's own count stand in,
-  // labelled views, since it is the smaller number.
-  const plays = info?.plays ?? formatViews(info?.viewCount)
+  // What the row showed first; then the combined count; only without one does this video's own count
+  // stand in, labelled views, since it is the smaller number.
+  const plays = info && (rowPlays ?? info.plays ?? formatViews(info.viewCount))
   if (plays) facts.push(plays)
 
   return (
