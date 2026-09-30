@@ -68,21 +68,18 @@ Output: `dist/`
 
 ### Docker
 
-Build and run:
+The web app is part of naviseerr's all-in-one install: follow the
+[Install](https://github.com/catacomb5099/naviseerr/tree/move-fast-break-things#install) section of the naviseerr README.
+
+To build this image on its own:
 
 ```bash
-docker-compose up --build
+docker build -t naviseerr-client .
 ```
 
-Access: http://localhost:3000
-
-### Environment Configuration
-
-Override API URL:
-
-```bash
-API_URL=http://your-backend:8080 docker-compose up
-```
+It serves the app on port 80 and forwards `/api/*` to the server, which it expects to reach as
+`naviseerr:8080` (the service name in naviseerr's compose file). `VITE_API_URL` is baked in when the
+image is built (`/api`), so it cannot be changed when the container starts.
 
 ## Project Structure
 

@@ -24,3 +24,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Extra root CAs for Docker builds behind a TLS proxy (see certs/README.md)
+certs/*.pem
