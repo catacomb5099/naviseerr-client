@@ -23,6 +23,15 @@ const BROWSE_CACHE_MS = 5 * 60 * 1000
 /** `fresh` asks the server again instead of reusing a kept answer: "Try again" and a repeated search. */
 type Freshness = { fresh?: boolean }
 
+/** `limit`: how many a category search returns. The server gives 20 unasked and at most 100; "Show more"
+ *  asks again for more. */
+type SearchOpts = Freshness & { limit?: number }
+
+function categorySearch(query: string, category: 'tracks' | 'albums' | 'artists' | 'playlists', { limit, ...opts }: SearchOpts = {}) {
+  const path = `/search/${encodeURIComponent(query)}/${category}${limit ? `?limit=${limit}` : ''}`
+  return apiClient<SearchResponse>(path, { ...opts, cacheMs: BROWSE_CACHE_MS })
+}
+
 
 /**
  * Search all (songs, albums, artists, playlists)
@@ -42,51 +51,50 @@ export async function search(query: string, opts?: Freshness): Promise<SearchRes
  * Search songs only
  * GET /search/{query}/tracks
  */
-export async function searchSongs(query: string, opts?: Freshness): Promise<Track[]> {
+export async function searchSongs(query: string, opts?: SearchOpts): Promise<Track[]> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] searchSongs called with query: ${query}`)
     const results = getMockSearchResults(query)
     return Promise.resolve(results.tracks)
   }
-  return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/tracks`, { ...opts, cacheMs: BROWSE_CACHE_MS })).tracks
+  return (await categorySearch(query, 'tracks', opts)).tracks
 }
 
 /**
  * Search albums only
  * GET /search/{query}/albums
  */
-export async function searchAlbums(query: string, opts?: Freshness): Promise<Album[]> {
+export async function searchAlbums(query: string, opts?: SearchOpts): Promise<Album[]> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] searchAlbums called with query: ${query}`)
     return Promise.resolve(getMockSearchResults(query).albums)
   }
-  return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/albums`, { ...opts, cacheMs: BROWSE_CACHE_MS })).albums
+  return (await categorySearch(query, 'albums', opts)).albums
 }
 
 /**
  * Search artists only
  * GET /search/{query}/artists
  */
-export async function searchArtists(query: string, opts?: Freshness): Promise<Artist[]> {
+export async function searchArtists(query: string, opts?: SearchOpts): Promise<Artist[]> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] searchArtists called with query: ${query}`)
     const results = getMockSearchResults(query)
     return Promise.resolve(results.artists)
   }
-  return (await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/artists`, { ...opts, cacheMs: BROWSE_CACHE_MS })).artists
+  return (await categorySearch(query, 'artists', opts)).artists
 }
 
 /**
  * Search playlists only
  * GET /search/{query}/playlists
  */
-export async function searchPlaylists(query: string, opts?: Freshness): Promise<Playlist[]> {
+export async function searchPlaylists(query: string, opts?: SearchOpts): Promise<Playlist[]> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] searchPlaylists called with query: ${query}`)
     return Promise.resolve(getMockSearchResults(query).playlists)
   }
-  const data = await apiClient<SearchResponse>(`/search/${encodeURIComponent(query)}/playlists`, { ...opts, cacheMs: BROWSE_CACHE_MS })
-  return data.playlists ?? []
+  return (await categorySearch(query, 'playlists', opts)).playlists ?? []
 }
 
 /**
