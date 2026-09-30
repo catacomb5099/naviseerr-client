@@ -401,9 +401,8 @@ interface MockDownloadEntry {
   songCount: number
   /** The simulator's clock: every stage is measured from it, so a retry or cancel moves it. */
   createdAt: number
-  /** When the user asked, which a retry leaves alone, like the server's created_at. Absent from an
-   *  entry saved before it existed; createdAt stands in. */
-  requestedAt?: number
+  /** When the user asked, which a retry leaves alone, like the server's created_at. */
+  requestedAt: number
   outcome: 'SUCCEEDED' | 'FAILED'
   failureCode: DownloadFailureCode
 }
@@ -418,7 +417,11 @@ function loadMockDownloads(): Map<string, MockDownloadEntry> {
   try {
     const raw = localStorage.getItem(MOCK_STORAGE_KEY)
     if (!raw) return new Map()
-    return new Map(JSON.parse(raw) as [string, MockDownloadEntry][])
+    const entries = JSON.parse(raw) as [string, MockDownloadEntry][]
+    // An entry saved before requestedAt existed takes its request time from createdAt now, before a
+    // retry or cancel moves that clock and the download jumps to the top.
+    for (const [, entry] of entries) entry.requestedAt ??= entry.createdAt
+    return new Map(entries)
   } catch {
     return new Map()
   }
@@ -577,7 +580,7 @@ function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
     songsSucceeded: stage === 'SUCCEEDED' ? entry.songCount : 0,
     songsFailed: stage === 'FAILED' && !cancelled ? entry.songCount : 0,
     songsCancelled: cancelled ? entry.songCount : 0,
-    requestedAt: iso(entry.requestedAt ?? entry.createdAt),
+    requestedAt: iso(entry.requestedAt),
     stageEnteredAt: iso(stageEnteredAt),
     // Progress moves every poll even when the stage does not, which is exactly why the real server
     // needs a separate updated_at rather than sorting on the stage timestamp.
