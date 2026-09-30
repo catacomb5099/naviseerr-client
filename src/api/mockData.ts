@@ -58,6 +58,7 @@ export const mockAlbums: Album[] = [
   }
 ]
 
+/** `plays` is null on the first, like the real search's Top result row, and on one more. */
 export const mockTracks: Track[] = [
   {
     id: 'song-1',
@@ -66,7 +67,8 @@ export const mockTracks: Track[] = [
     name: 'Down',
     artists: ['Jay Sean', 'Lil Wayne'],
     albumId: 'album-1',
-    year: 2009
+    year: 2009,
+    plays: null
   },
   {
     id: 'song-2',
@@ -75,7 +77,8 @@ export const mockTracks: Track[] = [
     name: 'Ride It',
     artists: ['Jay Sean'],
     albumId: 'album-2',
-    year: 2008
+    year: 2008,
+    plays: '96M plays'
   },
   {
     id: 'song-3',
@@ -84,7 +87,8 @@ export const mockTracks: Track[] = [
     name: 'Do You Remember',
     artists: ['Jay Sean', 'Sean Paul'],
     albumId: 'album-1',
-    year: 2009
+    year: 2009,
+    plays: '41M plays'
   },
   {
     id: 'song-4',
@@ -93,7 +97,8 @@ export const mockTracks: Track[] = [
     name: 'Maybe',
     artists: ['Jay Sean'],
     albumId: 'album-4',
-    year: 2004
+    year: 2004,
+    plays: '7.2M plays'
   },
   {
     id: 'song-5',
@@ -102,7 +107,8 @@ export const mockTracks: Track[] = [
     name: 'Stay',
     artists: ['Jay Sean'],
     albumId: 'album-4',
-    year: 2004
+    year: 2004,
+    plays: '3.9M plays'
   },
   {
     id: 'song-6',
@@ -111,7 +117,8 @@ export const mockTracks: Track[] = [
     name: 'Tonight',
     artists: ['Jay Sean'],
     albumId: 'album-1',
-    year: 2009
+    year: 2009,
+    plays: '18M plays'
   },
   {
     id: 'song-7',
@@ -120,7 +127,8 @@ export const mockTracks: Track[] = [
     name: 'Cry',
     artists: ['Jay Sean'],
     albumId: 'album-1',
-    year: 2009
+    year: 2009,
+    plays: '880K plays'
   },
   {
     id: 'song-8',
@@ -129,7 +137,8 @@ export const mockTracks: Track[] = [
     name: 'War',
     artists: ['Jay Sean'],
     albumId: 'album-3',
-    year: 2013
+    year: 2013,
+    plays: '2.1M plays'
   },
   {
     id: 'song-9',
@@ -138,7 +147,8 @@ export const mockTracks: Track[] = [
     name: 'Fire',
     artists: ['Jay Sean'],
     albumId: 'album-3',
-    year: 2013
+    year: 2013,
+    plays: null
   },
   {
     id: 'song-10',
@@ -147,7 +157,8 @@ export const mockTracks: Track[] = [
     name: "2012 (It Ain't the End)",
     artists: ['Jay Sean'],
     albumId: 'album-3',
-    year: 2013
+    year: 2013,
+    plays: '12M plays'
   }
 ]
 
