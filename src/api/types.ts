@@ -194,7 +194,8 @@ export interface ActiveDownloadView {
   songsCancelled?: number
   requestedAt: string
   stageEnteredAt: string
-  /** Recency sort key, and the only field that moves when nothing but progress changes. */
+  /** Moves on every write, progress included; mergeCard reads it to tell a retry from a stale row.
+   *  Not the order key: lists order by requestedAt, so a retry does not move a download. */
   updatedAt: string
   finishedAt: string | null
   /** A DownloadFailureCode, or null. Deliberately widened to string: rows the server wrote

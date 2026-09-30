@@ -19,8 +19,9 @@ export interface DownloadCardState {
   requestedAt: string
   stageEnteredAt: string
   updatedAt: string
-  /** Sort key. Seeded from the server's `updatedAt` on first sight so a cold load restores the
-   *  real order, then bumped to now() on every observed change so live updates float to the top. */
+  /** When the card last changed, for the auto-dismiss clock only (the panel orders by requestedAt).
+   *  Seeded from the server's `updatedAt` on first sight, then bumped to now() on every observed change
+   *  so a finished card lingers for its full TTL after its last change. */
   lastChangedAt: number
   lastSeenAt: number
 }
@@ -39,10 +40,13 @@ export function displayTitle(card: Pick<DownloadCardState, 'title'>): string {
   return card.title ?? 'Untitled download'
 }
 
-/** Most-recently-changed first: a newly requested download appears at the top, and anything that
- *  moves is pushed back to the top as it moves. The list sorts itself with no explicit grouping. */
+/** Newest request first, and nothing else moves a card: a retry or a progress tick used to lift it to
+ *  the top, reshuffling the list under the user's pointer. Equal request times fall back to the id, so
+ *  two cards never swap between polls. An unreadable time counts as 0 (last): a NaN in a comparator
+ *  leaves the whole sort order undefined. */
 export function sortCards(cards: DownloadCardState[]): DownloadCardState[] {
-  return [...cards].sort((a, b) => b.lastChangedAt - a.lastChangedAt)
+  const requested = (card: DownloadCardState) => Date.parse(card.requestedAt) || 0
+  return [...cards].sort((a, b) => requested(b) - requested(a) || b.downloadId.localeCompare(a.downloadId))
 }
 
 /**
@@ -161,8 +165,8 @@ export function mergeCard(
   const songsCancelled = row.songsCancelled ?? 0
 
   // Compared against the coalesced value, not the raw row: a null sample after a real reading is
-  // not a change, and treating it as one reorders the list for nothing. Stage is included so a
-  // phase transition pushes the card to the top even when the percentage is unchanged.
+  // not a change, and treating it as one restarts the dismiss clock for nothing. Stage is included so
+  // a phase transition counts even when the percentage is unchanged.
   const changed = !existing
     || existing.stage !== row.stage
     || existing.progressPercent !== progressPercent

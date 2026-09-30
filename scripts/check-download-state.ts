@@ -8,7 +8,7 @@ import './check-download-polling'
 import './check-suggested'
 import './check-request-cache'
 import { ActiveDownloadView } from '../src/api/types'
-import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard, replaceCard } from '../src/lib/downloadPanel'
+import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
 import { formatPlays } from '../src/lib/utils'
 
@@ -47,7 +47,7 @@ const resolved = mergeCard(card, { ...row, title: 'Down (Remix)', artists: ['A',
 assert(resolved.title === 'Down (Remix)' && resolved.artists.length === 2 && resolved.imageUrl === 'x',
   'server metadata must replace the client guess')
 
-// A tallies-only change is a change: the card floats to the top.
+// A tallies-only change is a change: it restarts the card's dismiss clock.
 const tallied = mergeCard(card, { ...row, songsSucceeded: 1 })
 assert(tallied.lastChangedAt > 1, 'songsSucceeded change must bump lastChangedAt')
 assert(mergeCard(card, { ...row, songsFailed: 1 }).lastChangedAt > 1, 'songsFailed change must bump lastChangedAt')
@@ -81,6 +81,29 @@ const fromBody = replaceCard(card, { ...row, stage: 'FAILED', failureCode: 'CANC
 assert(fromBody.stage === 'FAILED' && fromBody.failureCode === 'CANCELLED', 'the body wins on stage and outcome')
 assert(fromBody.title === 'Down' && fromBody.imageUrl === 'https://img/1.png', 'a null title in the body does not blank the card')
 assert(fromBody.lastChangedAt > card.lastChangedAt, 'an action restarts the dismiss clock')
+
+// The panel lists the newest REQUEST first. A retry, a stage change or progress restarts the dismiss
+// clock (lastChangedAt) but must not move a card: a list that reshuffles under the pointer is how the
+// user ends up retrying or cancelling the wrong download.
+const panelOrder = (cards: DownloadCardState[]) => sortCards(cards).map(c => c.downloadId).join(',')
+const earlier: DownloadCardState = { ...card, downloadId: 'earlier', stage: 'FAILED', failureCode: 'TIMED_OUT', requestedAt: T0, lastChangedAt: 1 }
+const later: DownloadCardState = { ...card, downloadId: 'later', requestedAt: T1, lastChangedAt: 2 }
+assert(panelOrder([earlier, later]) === 'later,earlier', 'the newest request is on top')
+const retriedEarlier = replaceCard(earlier, { ...row, downloadId: 'earlier', stage: 'QUEUED', requestedAt: T0, updatedAt: T2 })
+assert(panelOrder([retriedEarlier, later]) === 'later,earlier', 'a retry does not lift an earlier request above a later one')
+const progressedEarlier = mergeCard({ ...earlier, stage: 'SEARCHING', failureCode: null },
+  { ...row, downloadId: 'earlier', stage: 'DOWNLOADING', progressPercent: 10, requestedAt: T0, updatedAt: T2 })
+assert(panelOrder([progressedEarlier, later]) === 'later,earlier', 'progress does not lift an earlier request above a later one')
+// Equal request times fall back to the id, so two cards never swap places from one poll to the next.
+const twinA: DownloadCardState = { ...card, downloadId: 'a', lastChangedAt: 5 }
+const twinB: DownloadCardState = { ...card, downloadId: 'b', lastChangedAt: 1 }
+assert(panelOrder([twinA, twinB]) === 'b,a' && panelOrder([twinB, twinA]) === 'b,a',
+  'equal request times are ordered by id, whatever order the cards arrive in')
+// A card with no readable request time goes last rather than scrambling the whole list.
+const unreadable: DownloadCardState = { ...card, downloadId: 'unreadable', requestedAt: '' }
+assert(panelOrder([unreadable, earlier, later]) === 'later,earlier,unreadable'
+  && panelOrder([earlier, unreadable, later]) === 'later,earlier,unreadable',
+  'an unreadable request time sorts last')
 
 assert(isTerminal('PARTIAL_SUCCESS') && isTerminal('SUCCEEDED') && isTerminal('FAILED'), 'terminal stages')
 assert(!isTerminal('DOWNLOADING') && !isTerminal('QUEUED'), 'non-terminal stages')

@@ -399,7 +399,11 @@ interface MockDownloadEntry {
   artists: string[]
   imageUrl: string
   songCount: number
+  /** The simulator's clock: every stage is measured from it, so a retry or cancel moves it. */
   createdAt: number
+  /** When the user asked, which a retry leaves alone, like the server's created_at. Absent from an
+   *  entry saved before it existed; createdAt stands in. */
+  requestedAt?: number
   outcome: 'SUCCEEDED' | 'FAILED'
   failureCode: DownloadFailureCode
 }
@@ -482,6 +486,7 @@ export function getMockDownload(youtubeId: string, downloadType: DownloadType): 
     imageUrl: suggested?.tracks[0]?.iconURL ?? collection?.iconURL ?? track?.iconURL ?? mockArtists[0].iconUrl,
     songCount: suggested?.trackCount ?? collection?.trackCount ?? 1,
     createdAt,
+    requestedAt: createdAt,
     // ~80% succeed, so failures are visible but not the common case
     outcome: Math.random() < 0.8 ? 'SUCCEEDED' : 'FAILED',
     failureCode: FAILURE_CODES[Math.floor(Math.random() * FAILURE_CODES.length)],
@@ -572,7 +577,7 @@ function toView(entry: MockDownloadEntry, now: number): ActiveDownloadView {
     songsSucceeded: stage === 'SUCCEEDED' ? entry.songCount : 0,
     songsFailed: stage === 'FAILED' && !cancelled ? entry.songCount : 0,
     songsCancelled: cancelled ? entry.songCount : 0,
-    requestedAt: iso(entry.createdAt),
+    requestedAt: iso(entry.requestedAt ?? entry.createdAt),
     stageEnteredAt: iso(stageEnteredAt),
     // Progress moves every poll even when the stage does not, which is exactly why the real server
     // needs a separate updated_at rather than sorting on the stage timestamp.
@@ -766,7 +771,7 @@ export function getMockAllDownloads(
   const downloads = type
     ? all.filter(d => d.downloadType === type || (type === 'PLAYLIST' && d.downloadType === 'CURATED'))
     : all
-  downloads.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+  downloads.sort((a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt))
   const start = (pageNumber - 1) * pageSize
   const page = downloads.slice(start, start + pageSize)
   return { downloads: page, totalPages: Math.ceil(downloads.length / pageSize) }
