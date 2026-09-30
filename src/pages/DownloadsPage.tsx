@@ -53,8 +53,8 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
   const type = parseTypeFilter(searchParams.get('type'))
   const filter: DownloadFilter = type ?? 'all'
   // A download requested from the search page reaches `cards` first; refetching when the SET of
-  // live ids changes brings it onto this page without a reload. Sorted, because the cards reorder
-  // on every progress tick and that is not a change worth a request.
+  // live ids changes brings it onto this page without a reload. Sorted, so a change in the cards'
+  // order alone is not a change worth a request.
   const liveIds = cards.map(card => card.downloadId).sort().join(',')
   const { rows, totalPages, loaded, error, refresh } = useAllDownloads(pageNumber, { type, refreshKey: liveIds })
   const items = pageItems(rows, metas, cards)
