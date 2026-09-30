@@ -6,6 +6,9 @@ export interface Track {
   artists: string[]  // Artist display names, as the server sends them
   albumId: string
   year: number
+  /** YouTube Music's combined play count in its own wording, e.g. "7.2M plays"; null when YouTube gave
+   *  none (the search's Top result row never has one). */
+  plays: string | null
 }
 
 export interface Album {

@@ -45,6 +45,14 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
           </p>
         </div>
 
+        {/* YouTube Music's combined count, already in its wording ("7.2M plays"), like the album rows.
+            Hidden on phones, where the card has no room for it. */}
+        {track.plays && (
+          <span className="hidden sm:inline text-xs text-zinc-400 tabular-nums whitespace-nowrap">
+            {track.plays}
+          </span>
+        )}
+
         <Button
           onClick={() => onInfo(track.id)}
           variant="ghost"
