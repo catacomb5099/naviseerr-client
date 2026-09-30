@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2 } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { getCollection } from '../api/endpoints'
+import { getCollection, getSongViews } from '../api/endpoints'
 import { useRetry } from '../hooks/useRetry'
 import { CollectionDetail, CollectionTrack, CollectionType, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
-import { formatDuration } from '../lib/utils'
+import { formatDuration, formatViews } from '../lib/utils'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { TypeBadge } from '../components/TypeBadge'
@@ -29,6 +29,9 @@ type Load =
 export type RequestState = 'pending' | 'sent' | 'failed'
 
 export const REQUEST_FAILED_COPY = "Couldn't request this — try again"
+
+/** Ids per GET /songs/views. The server takes 50; half that fills the first rows sooner. */
+const VIEWS_CHUNK = 25
 
 /** "52 min" / "5 hr 34 min"; null when no track carried a duration. */
 function formatTotal(tracks: CollectionTrack[]): string | null {
@@ -57,6 +60,8 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   const [requests, setRequests] = useState<Record<string, RequestState>>({})
   // What the live region reads out. Text, not an icon: the check alone says nothing to a reader.
   const [announcement, setAnnouncement] = useState('')
+  // How many times each video was viewed, by id, for the songs that came without plays.
+  const [views, setViews] = useState<Record<string, number>>({})
 
   const key = `${type}:${id}:${attempt}`
   useEffect(() => {
@@ -69,6 +74,24 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
 
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const detail = load.status === 'ready' ? load.detail : null
+  // Only songs YouTube Music gave no play count are asked about: playlist songs. An album's tracks all
+  // carry plays, so an album asks nothing.
+  useEffect(() => {
+    if (!detail) return
+    const ids = Array.from(new Set(detail.tracks.filter(t => t.plays == null).map(t => t.id)))
+    let cancelled = false
+    void (async () => {
+      // One chunk after another on purpose: the first rows fill first, and the server (one YouTube
+      // call per id) is not handed a whole playlist at once. A StrictMode remount stops the first run
+      // after its first chunk, which the request cache shares with the second, so nothing is asked twice.
+      for (let i = 0; i < ids.length && !cancelled; i += VIEWS_CHUNK) {
+        // A failed chunk is skipped: those rows just show no number.
+        const counts = await getSongViews(ids.slice(i, i + VIEWS_CHUNK)).catch(() => ({}))
+        if (!cancelled) setViews(prev => ({ ...prev, ...counts }))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [detail])
   const name = detail?.name ?? ''
   // The tab, bookmark and history entry are labelled by the page, not just "Naviseerr".
   useEffect(() => {
@@ -201,6 +224,10 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                 const thumb = track.iconURL || iconURL
                 const state = requests[track.id]
                 const inert = state === 'pending' || state === 'sent'
+                // "plays" is YouTube Music's combined count, which album tracks carry. A playlist song
+                // (mostly music videos and fan uploads) has only its own video's count, a smaller
+                // number, so it reads "views": a views number is never labelled as plays.
+                const plays = track.plays ?? formatViews(views[track.id])
                 return (
                   <li key={track.position} className="h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
                     {isAlbum ? (
@@ -222,9 +249,9 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                       )}
                     </div>
                     {/* Hidden on phones, where the row has no room for it. */}
-                    {track.plays && (
+                    {plays && (
                       <span className="hidden sm:inline w-20 text-right text-xs text-zinc-400 tabular-nums whitespace-nowrap">
-                        {track.plays}
+                        {plays}
                       </span>
                     )}
                     <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">

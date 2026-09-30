@@ -17,3 +17,9 @@ const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFracti
 export function formatPlays(count: number | null | undefined): string | null {
   return count == null ? null : `${COMPACT.format(count)} plays`
 }
+
+/** "19.3M views": how often one video or upload was watched, a smaller number than YouTube Music's
+ *  combined plays, so it is never labelled as plays. Null when unknown, like formatPlays. */
+export function formatViews(count: number | null | undefined): string | null {
+  return count == null ? null : `${COMPACT.format(count)} views`
+}

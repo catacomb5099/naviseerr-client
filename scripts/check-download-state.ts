@@ -10,7 +10,7 @@ import './check-request-cache'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
-import { formatPlays } from '../src/lib/utils'
+import { formatPlays, formatViews } from '../src/lib/utils'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -187,5 +187,6 @@ assert(parseTypeFilter('CURATED') === undefined && parseTypeFilter('song') === u
 assert(formatPlays(null) === null && formatPlays(undefined) === null, 'formatPlays: unknown count is null')
 assert(formatPlays(998) === '998 plays', 'formatPlays: small counts are written in full')
 assert(formatPlays(1_234_567) === '1.2M plays', 'formatPlays: millions are abbreviated to one decimal')
+assert(formatViews(19_334_421) === '19.3M views' && formatViews(null) === null, 'formatViews: one video\'s count says views, never plays')
 
 console.log('check-download-state: ok')
