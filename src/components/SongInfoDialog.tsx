@@ -7,7 +7,7 @@ import { ApiError } from '../api/client'
 import { DownloadType, SongInfo } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { REQUEST_FAILED_COPY, RequestState } from '../pages/CollectionPage'
-import { formatDuration, formatPlays } from '../lib/utils'
+import { formatDuration, formatViews } from '../lib/utils'
 
 interface SongInfoDialogProps {
   /** The YouTube videoId to show, or null while closed. */
@@ -85,7 +85,9 @@ export function SongInfoDialog({ videoId, onClose, onDownload }: SongInfoDialogP
   const facts: string[] = []
   if (info?.durationSeconds != null) facts.push(formatDuration(info.durationSeconds))
   if (info?.year) facts.push(String(info.year))
-  const plays = formatPlays(info?.viewCount)
+  // The combined count, as the lists show it; only without one does this video's own count stand in,
+  // labelled views, since it is the smaller number.
+  const plays = info?.plays ?? formatViews(info?.viewCount)
   if (plays) facts.push(plays)
 
   return (

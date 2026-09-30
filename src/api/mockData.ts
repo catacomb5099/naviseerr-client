@@ -376,6 +376,8 @@ export function getMockSongInfo(id: string): SongInfo {
     album: album ? { id: album.id, name: album.name } : null,
     durationSeconds: 212,
     year: track.year,
+    // The lists' count; song-1 has none (like the Top result), so its pop-up falls back to views.
+    plays: track.plays,
     viewCount: 1_234_567,
     iconURL: track.iconURL,
     explicit: track.id === 'song-1',

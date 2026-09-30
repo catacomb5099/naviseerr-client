@@ -118,6 +118,11 @@ export interface SongInfo {
   album: SongRef | null
   durationSeconds: number | null
   year: number | null
+  /** YouTube Music's combined play count in its wording, e.g. "1.7B plays": the same number the song lists
+   *  show. Null when YouTube gave none. */
+  plays: string | null
+  /** How many times this one video or upload was played, a smaller number than `plays` (Wonderwall:
+   *  "1.7B plays", viewCount 97,645,262), so it is shown as views, never as plays. */
   viewCount: number | null
   /** "" when none. */
   iconURL: string
