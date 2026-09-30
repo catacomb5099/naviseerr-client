@@ -17,7 +17,7 @@ interface ArtistPageProps {
   /** Same plumbing as HomePage's song rows: App requests the download and records its metadata. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
   /** Opens the song info pop-up App owns. */
-  onInfo: (videoId: string) => void
+  onInfo: (videoId: string, plays?: string | null) => void
 }
 
 type Load =

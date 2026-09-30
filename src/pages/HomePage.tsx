@@ -22,7 +22,7 @@ interface HomePageProps {
    *  accepted the request. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
   /** Opens the song info pop-up App owns. */
-  onInfo: (videoId: string) => void
+  onInfo: (videoId: string, plays?: string | null) => void
 }
 
 const FILTERS: FilterType[] = ['all', 'songs', 'albums', 'artists', 'playlists']

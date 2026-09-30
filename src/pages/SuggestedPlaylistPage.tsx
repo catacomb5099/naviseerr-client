@@ -19,7 +19,7 @@ interface SuggestedPlaylistPageProps {
   /** Same plumbing as the collection page: App requests the download and records its metadata. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
   /** Opens the song info pop-up App owns. */
-  onInfo: (videoId: string) => void
+  onInfo: (videoId: string, plays?: string | null) => void
 }
 
 type Load =
@@ -244,7 +244,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                       {tierCopy(track.tier)}
                       {track.reason && <span className="sr-only">: {track.reason}</span>}
                     </span>
-                    <button type="button" onClick={() => onInfo(track.id)} aria-label={`Details for ${track.name}`} className={ICON_BUTTON}>
+                    <button type="button" onClick={() => onInfo(track.id, plays)} aria-label={`Details for ${track.name}`} className={ICON_BUTTON}>
                       <Info className="w-4 h-4" aria-hidden="true" />
                     </button>
                     <button

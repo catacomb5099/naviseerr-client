@@ -17,7 +17,7 @@ interface CollectionPageProps {
    *  downloads panel stays the source of truth for what actually queued. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
   /** Opens the song info pop-up App owns. */
-  onInfo: (videoId: string) => void
+  onInfo: (videoId: string, plays?: string | null) => void
 }
 
 type Load =
@@ -259,7 +259,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                     </span>
                     <button
                       type="button"
-                      onClick={() => onInfo(track.id)}
+                      onClick={() => onInfo(track.id, plays)}
                       aria-label={`Details for ${track.name}`}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                     >

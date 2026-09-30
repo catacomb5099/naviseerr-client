@@ -11,7 +11,7 @@ interface SongCardProps {
    *  resolved names come back with the track so the caller can record what was requested. */
   onDownload: (track: Track, artistNames: string[]) => void
   /** Opens the song info pop-up for `track.id`. */
-  onInfo: (videoId: string) => void
+  onInfo: (videoId: string, plays?: string | null) => void
 }
 
 export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardProps) {
@@ -54,7 +54,7 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
         )}
 
         <Button
-          onClick={() => onInfo(track.id)}
+          onClick={() => onInfo(track.id, track.plays)}
           variant="ghost"
           size="sm"
           aria-label={`Details for ${track.name}`}
