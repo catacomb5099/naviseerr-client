@@ -73,6 +73,26 @@ export function HomePage({ onNavigateToDownloads, onDownload, onInfo }: HomePage
   const results = current && 'results' in current ? current.results : null
   const error = current && 'error' in current ? current.error : null
 
+  // YouTube gives the song on the All tab's Top result card no play count, but the songs-only search
+  // for the same words lists that song with one (15 of 15 searches checked on 30-09-2026). So once the
+  // results are showing, ask for that search and copy counts across by id. Afterwards, not alongside:
+  // YouTube fails more often when the two run at once. It is the Songs tab's own request, so that tab
+  // then opens from the kept answer. Keyed by song id, which gives the same count on any page.
+  const [songPlays, setSongPlays] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!results || results.tracks.every(t => t.plays != null)) return
+    let cancelled = false
+    searchSongs(query)
+      .then(tracks => {
+        if (cancelled) return
+        const found = Object.fromEntries(tracks.flatMap(t => t.plays ? [[t.id, t.plays]] : []))
+        setSongPlays(prev => ({ ...prev, ...found }))
+      })
+      // Nothing to show for a failure: the row just keeps no number, as before.
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [results, query])
+
   const setSearch = (q: string, filter: FilterType) => {
     // Same search again (the way to retry after a failure): the address would not change, so
     // nothing would re-run. Fetch again in place, past the kept answer, rather than pushing a
@@ -159,7 +179,7 @@ export function HomePage({ onNavigateToDownloads, onDownload, onInfo }: HomePage
                 {results.tracks.map((track, index) => (
                   <SongCard
                     key={track.id || `song-${index}`}
-                    track={track}
+                    track={track.plays ? track : { ...track, plays: songPlays[track.id] ?? null }}
                     artistNames={track.artists}
                     onInfo={onInfo}
                     onDownload={(downloadedTrack, artistNames) => void onDownload(downloadedTrack.id, 'SONG', {
