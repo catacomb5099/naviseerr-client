@@ -9,7 +9,7 @@ import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
-  cancelMockDownload, retryMockDownload,
+  cancelMockDownload, retryMockDownload, getMockSongViews,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -125,6 +125,20 @@ export async function getSongInfo(id: string, opts?: Freshness): Promise<SongInf
     return Promise.resolve(getMockSongInfo(id))
   }
   return apiClient<SongInfo>(`/songs/${encodeURIComponent(id)}`, { ...opts, cacheMs: BROWSE_CACHE_MS })
+}
+
+/**
+ * How many times each video was viewed, for songs YouTube Music gives no play count (playlist songs)
+ * GET /songs/views?ids=a,b,c  (at most 50 ids; an id with no answer is absent from the map)
+ *
+ * The server asks YouTube once per id, so a big list takes seconds: callers send it in chunks.
+ */
+export async function getSongViews(ids: string[], opts?: Freshness): Promise<Record<string, number>> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockSongViews(ids))
+  const data = await apiClient<Record<string, number>>(
+    `/songs/views?ids=${ids.map(encodeURIComponent).join(',')}`, { ...opts, cacheMs: BROWSE_CACHE_MS })
+  // apiClient returns `undefined` for a non-JSON (e.g. empty) response body.
+  return data ?? {}
 }
 
 /**

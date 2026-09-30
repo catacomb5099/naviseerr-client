@@ -387,6 +387,17 @@ export function getMockSongInfo(id: string): SongInfo {
   }
 }
 
+/** Mirrors GET /songs/views?ids=: a made-up but stable count for every mock track except song-7, which
+ *  stays absent like a video YouTube gave no count for. Other ids are absent too. */
+export function getMockSongViews(ids: string[]): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const id of ids) {
+    const i = mockTracks.findIndex(t => t.id === id)
+    if (i >= 0 && id !== 'song-7') counts[id] = (mockTracks.length - i) * 1_933_442
+  }
+  return counts
+}
+
 // --- Mock active-downloads simulator -----------------------------------
 // State is derived purely from elapsed time since the mock download was requested, so repeated
 // polls see a believable progression rather than jumping straight from 0 to 100. It walks every

@@ -9,7 +9,7 @@ React-based music search and download client with Spotify-inspired UI.
 - Open an album or playlist and download one song or all of them
 - Open an artist to see their top songs, albums, singles, the playlists they are featured on, and similar artists
 - Press "i" on any song to see its details and credits before downloading
-- Songs in search results, on artist pages, in albums and in suggested playlists show their YouTube Music play count
+- Songs in search results, on artist pages, in albums and in suggested playlists show their YouTube Music play count; playlist songs, which YouTube gives no play count, show how many times their video was viewed
 - A "Made for you" shelf shows the weekly suggested playlists the server's curator built, one row per era (all-time hits, then each decade); open one to see why each song is in, download a song, or download the whole playlist as one download
 - Download a song by its YouTube id; the server works out what to fetch
 - Downloads panel and history show server-resolved artwork and titles as they arrive
@@ -108,6 +108,7 @@ Expected endpoints:
 - `GET /search/{query}/playlists` - Search playlists only
 - `GET /collections/{id}?type=ALBUM|PLAYLIST` - Expand a collection to its tracks
 - `GET /songs/{videoId}` - Details and credits for one song
+- `GET /songs/views?ids=` - How many times each video was viewed (at most 50 ids)
 - `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
 - `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
 - `GET /downloads/all?pageSize=&pageNumber=&type=SONG|ALBUM|PLAYLIST` - Every download, paged, for the Downloads page; `type` is optional and narrows to one kind (PLAYLIST includes suggested playlists), with page counts per kind
