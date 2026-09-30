@@ -42,6 +42,9 @@ export interface SearchResponse {
   albums: Album[]
   artists: Artist[]
   playlists: Playlist[]
+  /** All only: the parts the server could not load ('mixed', 'albums', 'artists', 'playlists');
+   *  absent from an older server and from the category searches. */
+  unavailable?: string[] | null
 }
 
 export type CollectionType = 'ALBUM' | 'PLAYLIST'
