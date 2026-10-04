@@ -8,6 +8,7 @@ import { DownloadType, SongInfo } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { REQUEST_FAILED_COPY, RequestState } from '../pages/CollectionPage'
 import { formatDuration, formatViews } from '../lib/utils'
+import { PlayOnYouTubeMusic } from './PlayOnYouTubeMusic'
 
 interface SongInfoDialogProps {
   /** The YouTube videoId to show, or null while closed. */
@@ -138,7 +139,10 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
               <div className="min-w-0 flex flex-col gap-1.5">
                 {info ? (
                   <>
-                    <h2 className="text-xl font-bold line-clamp-2">{info.name}</h2>
+                    <div className="flex items-start gap-1">
+                      <h2 className="text-xl font-bold line-clamp-2">{info.name}</h2>
+                      <PlayOnYouTubeMusic videoId={info.id} title={info.name} artists={info.artists.map(a => a.name)} />
+                    </div>
                     <p className="text-sm text-zinc-300">
                       {info.artists.length === 0 && 'Unknown Artist'}
                       {info.artists.map((artist, i) => (
