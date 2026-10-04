@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Naviseerr for YouTube Music",
-  "description": "See what your Naviseerr server is downloading, and everything it has downloaded.",
+  "description": "Download songs, albums and playlists from YouTube Music with your Naviseerr server, and watch them arrive.",
   "version": "0.1.0",
   "icons": {
     "16": "icon-16.png",
@@ -12,6 +12,24 @@
     "default_popup": "popup.html",
     "default_title": "Naviseerr downloads"
   },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://music.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
   "permissions": [
     "storage"
   ],

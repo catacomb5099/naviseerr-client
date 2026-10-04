@@ -1,0 +1,49 @@
+/* Naviseerr's buttons on music.youtube.com. Everything is under .nvs-dl so nothing of YouTube's changes. */
+.nvs-dl {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10; /* above the link YouTube lays over each row */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  font: 500 14px/1 Roboto, Arial, sans-serif;
+  transition: background-color 120ms, opacity 120ms, color 120ms;
+}
+.nvs-dl svg { width: 20px; height: 20px; flex: none; }
+.nvs-dl:hover { background: rgba(255, 255, 255, 0.12); }
+.nvs-dl:focus-visible { outline: 2px solid #22c55e; outline-offset: 2px; }
+.nvs-dl[data-state="busy"] { cursor: progress; opacity: 0.7; }
+.nvs-dl[data-state="done"] { color: #22c55e; }
+.nvs-dl[data-state="error"] { color: #f87171; }
+
+/* Rows: quiet until you point at the row, like YouTube's own row buttons. */
+.nvs-dl--row { opacity: 0.55; margin-right: 4px; }
+ytmusic-responsive-list-item-renderer:hover .nvs-dl--row,
+.nvs-dl--row:focus-visible,
+.nvs-dl--row:not([data-state="idle"]) { opacity: 1; }
+
+/* Cards: a round badge in the artwork's top-right corner. */
+.nvs-dl--card { position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, 0.65); }
+.nvs-dl--card:hover { background: rgba(0, 0, 0, 0.85); }
+
+/* The album or playlist page: a labelled pill in Naviseerr green, first among the page's buttons. */
+.nvs-dl--header {
+  width: auto;
+  height: 36px;
+  padding: 0 16px 0 12px;
+  margin-right: 8px;
+  background: #16a34a;
+}
+.nvs-dl--header:hover { background: #15803d; }
+.nvs-dl--header[data-state="done"] { background: #14532d; color: #bbf7d0; }
+.nvs-dl--header[data-state="error"] { background: #7f1d1d; color: #fecaca; }
+
+.nvs-dl--bar { margin-left: 4px; }
