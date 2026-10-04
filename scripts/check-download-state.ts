@@ -12,7 +12,7 @@ import './check-youtube-music'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
-import { formatPlays, formatViews } from '../src/lib/utils'
+import { apiErrorMessage, formatPlays, formatViews } from '../src/lib/utils'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -110,6 +110,14 @@ assert(panelOrder([unreadable, earlier, later]) === 'later,earlier,unreadable'
 assert(isTerminal('PARTIAL_SUCCESS') && isTerminal('SUCCEEDED') && isTerminal('FAILED'), 'terminal stages')
 assert(!isTerminal('DOWNLOADING') && !isTerminal('QUEUED'), 'non-terminal stages')
 assert(failureCopy('CANCELLED') === 'Cancelled', 'cancelled wording')
+assert(failureCopy('SOULSEEK_OFFLINE') === 'Not connected to Soulseek', 'Soulseek offline wording')
+assert(failureCopy('SOMETHING_NEW') === 'Download failed', 'an unknown code falls back')
+
+// A 502 or 503 reads as plain words; search gets its own sentence; other statuses are unchanged.
+assert(apiErrorMessage('http://x/search/daft%20punk', 502, 'Bad Gateway') === 'Search is not available right now. Try again in a minute.', 'search 502')
+assert(apiErrorMessage('/api/search/daft/tracks?limit=40', 503, '') === 'Search is not available right now. Try again in a minute.', 'category search 503')
+assert(apiErrorMessage('/api/downloads/active', 502, 'Bad Gateway') === 'The server is not available right now. Try again in a minute.', 'other call 502')
+assert(apiErrorMessage('/api/search/x', 404, 'Not Found') === 'API request failed: Not Found', 'other statuses unchanged')
 assert(isCancelled({ stage: 'FAILED', failureCode: 'CANCELLED' }), 'a failed card with the cancelled code is cancelled')
 assert(!isCancelled({ stage: 'DOWNLOADING', failureCode: 'CANCELLED' }), 'a live album with one cancelled song is not itself cancelled')
 assert(!isCancelled({ stage: 'PARTIAL_SUCCESS', failureCode: 'CANCELLED' }), 'a partly downloaded album is not cancelled')

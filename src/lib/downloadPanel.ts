@@ -81,6 +81,7 @@ const FAILURE_COPY: Record<string, string> = {
   SEARCH_FAILED: 'Search failed',
   TRANSFER_NOT_FOUND: 'Source dropped the transfer',
   METADATA_UNAVAILABLE: "Couldn't find this on YouTube Music",
+  SOULSEEK_OFFLINE: 'Not connected to Soulseek',
   CANCELLED: 'Cancelled',
 }
 

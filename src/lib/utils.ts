@@ -5,6 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * What a failed API call says on the page. A 502 or 503 means something behind the server is down for
+ * now (the YouTube Music helper, or the server itself behind the web app's proxy), so it says that in
+ * plain words instead of "Bad Gateway". Other statuses keep the status text.
+ */
+export function apiErrorMessage(url: string, status: number, statusText: string): string {
+  if (status !== 502 && status !== 503) return `API request failed: ${statusText}`
+  return url.includes('/search/')
+    ? 'Search is not available right now. Try again in a minute.'
+    : 'The server is not available right now. Try again in a minute.'
+}
+
 /** "3:05" - a track length. Floors the seconds too: the server can send fractional durations. */
 export function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
