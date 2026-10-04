@@ -111,6 +111,37 @@ export async function getCollection(id: string, type: CollectionType, opts?: Fre
   return apiClient<CollectionDetail>(`/collections/${encodeURIComponent(id)}?type=${type}`, { ...opts, cacheMs: BROWSE_CACHE_MS })
 }
 
+/** A radio as the server sends it: a collection without the album-only year. */
+type RadioView = Omit<CollectionDetail, 'type' | 'year'>
+
+const asRadio = (radio: RadioView): CollectionDetail => ({ ...radio, type: 'RADIO', year: null })
+
+/**
+ * Start a radio: songs YouTube Music picks as like this song, album or playlist, saved by the server
+ * under the radio's own id (YouTube makes a different list every time, so the saved one is what the
+ * page shows and what a download gets). A new radio on every call.
+ * POST /radios?seed={song, album or playlist id}  (404 when YouTube has no radio for it)
+ */
+export async function startRadio(seedId: string): Promise<CollectionDetail> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] startRadio called with seed: ${seedId}`)
+    return Promise.resolve({ ...getMockCollection(seedId, 'PLAYLIST'), id: `radio-${seedId}`, type: 'RADIO', year: null })
+  }
+  return asRadio(await apiClient<RadioView>(`/radios?seed=${encodeURIComponent(seedId)}`, { method: 'POST' }))
+}
+
+/**
+ * A radio started earlier, exactly as it was saved. It never changes, so it is kept like any page.
+ * GET /radios/{id}  (404 for an id never started)
+ */
+export async function getRadio(id: string, opts?: Freshness): Promise<CollectionDetail> {
+  if (USE_MOCK_DATA) {
+    console.log(`[Mock] getRadio called with id: ${id}`)
+    return Promise.resolve({ ...getMockCollection(id, 'PLAYLIST'), id, type: 'RADIO', year: null })
+  }
+  return asRadio(await apiClient<RadioView>(`/radios/${encodeURIComponent(id)}`, { ...opts, cacheMs: BROWSE_CACHE_MS }))
+}
+
 /**
  * An artist's page: header, top songs, albums, singles, playlists, similar artists
  * GET /artists/{channelId}  (404 for an id the adapter does not know)

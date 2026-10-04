@@ -9,6 +9,7 @@ import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { REQUEST_FAILED_COPY, RequestState } from '../pages/CollectionPage'
 import { formatDuration, formatViews } from '../lib/utils'
 import { PlayOnYouTubeMusic } from './PlayOnYouTubeMusic'
+import { StartRadioButton } from './StartRadioButton'
 
 interface SongInfoDialogProps {
   /** The YouTube videoId to show, or null while closed. */
@@ -207,20 +208,24 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
             </section>
 
             {/* Footer */}
-            <div className="mt-6 flex flex-col items-start gap-1.5">
-              {/* Inert (not `disabled`) while the details load and once asked, so focus stays on it. */}
-              <button
-                type="button"
-                onClick={() => { if (info && !inert) void download(info) }}
-                aria-disabled={!info || inert}
-                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              >
-                {state === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
-                {state === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-                {!state || state === 'failed' ? <ArrowDownToLine className="w-4 h-4" aria-hidden="true" /> : null}
-                {state === 'sent' ? 'Requested' : state === 'pending' ? 'Requesting…' : 'Download'}
-              </button>
-              {state === 'failed' && <p role="status" className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
+            <div className="mt-6 flex flex-wrap items-start gap-3">
+              <div className="flex flex-col items-start gap-1.5">
+                {/* Inert (not `disabled`) while the details load and once asked, so focus stays on it. */}
+                <button
+                  type="button"
+                  onClick={() => { if (info && !inert) void download(info) }}
+                  aria-disabled={!info || inert}
+                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  {state === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
+                  {state === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                  {!state || state === 'failed' ? <ArrowDownToLine className="w-4 h-4" aria-hidden="true" /> : null}
+                  {state === 'sent' ? 'Requested' : state === 'pending' ? 'Requesting…' : 'Download'}
+                </button>
+                {state === 'failed' && <p role="status" className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
+              </div>
+              {/* Keyed by song: a message about one song's radio must not stay up for the next. */}
+              <StartRadioButton key={videoId} seedId={videoId} />
             </div>
           </>
         )}

@@ -48,6 +48,8 @@ export interface SearchResponse {
 }
 
 export type CollectionType = 'ALBUM' | 'PLAYLIST'
+/** What the collection page can show: an album, a playlist, or a saved radio (GET /radios/{id}). */
+export type CollectionPageType = CollectionType | 'RADIO'
 /** 'CURATED' is one edition of a suggested playlist, downloaded as ONE download: the id is the curator's
  *  category key (e.g. "80s-indie-pop"), not a YouTube id. It is not a CollectionType because
  *  GET /collections rejects it: a suggested playlist is read on GET /suggested-playlists/{category}. */
@@ -73,7 +75,7 @@ export interface CollectionTrack {
  *  `artists` are display names. Tracks the adapter marks unavailable are already filtered out. */
 export interface CollectionDetail {
   id: string
-  type: CollectionType
+  type: CollectionPageType
   name: string
   artists: string[]
   iconURL: string | null
