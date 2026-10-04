@@ -3,6 +3,7 @@ import { Card } from './ui/card'
 import { Button } from './ui/button'
 import { Track } from '../api/types'
 import { Download, Info } from 'lucide-react'
+import { PlayOnYouTubeMusic } from './PlayOnYouTubeMusic'
 
 interface SongCardProps {
   track: Track
@@ -52,6 +53,8 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
             {track.plays}
           </span>
         )}
+
+        <PlayOnYouTubeMusic videoId={track.id} title={track.name} artists={artistNames} />
 
         <Button
           onClick={() => onInfo(track.id, track.plays)}

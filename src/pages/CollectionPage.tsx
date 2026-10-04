@@ -9,6 +9,7 @@ import { formatDuration, formatViews } from '../lib/utils'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { TypeBadge } from '../components/TypeBadge'
+import { PlayOnYouTubeMusic } from '../components/PlayOnYouTubeMusic'
 
 interface CollectionPageProps {
   /** From the route: /album/:id or /playlist/:id. The id is read from the URL. */
@@ -257,6 +258,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                     <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
                       {track.durationSeconds != null && formatDuration(track.durationSeconds)}
                     </span>
+                    <PlayOnYouTubeMusic videoId={track.id} title={track.name} artists={track.artists} />
                     <button
                       type="button"
                       onClick={() => onInfo(track.id, plays)}

@@ -13,6 +13,7 @@ import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { SuggestedPlaylistCover } from '../components/SuggestedPlaylistCover'
 import { SuggestedRefreshPanel } from '../components/SuggestedRefreshPanel'
+import { PlayOnYouTubeMusic } from '../components/PlayOnYouTubeMusic'
 import { REQUEST_FAILED_COPY, RequestState } from './CollectionPage'
 
 interface SuggestedPlaylistPageProps {
@@ -244,6 +245,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                       {tierCopy(track.tier)}
                       {track.reason && <span className="sr-only">: {track.reason}</span>}
                     </span>
+                    <PlayOnYouTubeMusic videoId={track.id} title={track.name} artists={track.artists} />
                     <button type="button" onClick={() => onInfo(track.id, plays)} aria-label={`Details for ${track.name}`} className={ICON_BUTTON}>
                       <Info className="w-4 h-4" aria-hidden="true" />
                     </button>
