@@ -81,6 +81,9 @@ export interface CollectionDetail {
   /** Equals tracks.length. */
   trackCount: number
   tracks: CollectionTrack[]
+  /** What YouTube Music plays this as: an album's OLAK5uy_ id, a playlist's bare id. Absent from an
+   *  older server; null when YouTube gave none. */
+  playlistId?: string | null
 }
 
 /** GET /artists/{id} - an artist's page: header plus the shelves YouTube Music shows. Every list is
