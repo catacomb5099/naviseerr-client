@@ -8,10 +8,12 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "check": "tsc --outDir .check --module commonjs --target es2020 --strict scripts/check-download-state.ts && echo '{\"type\":\"commonjs\"}' > .check/package.json && node .check/scripts/check-download-state.js"
+    "check": "tsc --outDir .check --module commonjs --target es2020 --strict scripts/check-download-state.ts && echo '{\"type\":\"commonjs\"}' > .check/package.json && node .check/scripts/check-download-state.js",
+    "build:extension": "tsc && vite build -c extension/vite.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@types/chrome": "^0.3.4",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "^8.58.0",

@@ -1,7 +1,13 @@
 import { share } from '../lib/requestCache'
 import { apiErrorMessage } from '../lib/utils'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
+/** The Chrome extension's popup reads the server address from its settings at startup; the web app
+ *  never calls this. Call it before the first request. */
+export function setApiBaseUrl(url: string) {
+  API_BASE_URL = url.replace(/\/+$/, '')
+}
 
 export class ApiError extends Error {
   constructor(

@@ -7,7 +7,7 @@ import tsParser from '@typescript-eslint/parser'
 
 export default [
   {
-    ignores: ['dist'],
+    ignores: ['dist', 'dist-extension'],
   },
   {
     files: ['**/*.{ts,tsx}'],
@@ -30,5 +30,9 @@ export default [
         { allowConstantExport: true, allowExportNames: ['badgeVariants', 'buttonVariants'] },
       ],
     },
+  },
+  {
+    files: ['extension/**/*.{ts,tsx}'],
+    languageOptions: { globals: { ...globals.webextensions } },
   },
 ]
