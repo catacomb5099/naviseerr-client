@@ -176,6 +176,8 @@ export type DownloadFailureCode =
   | 'TIMED_OUT'
   | 'TRANSFER_NOT_FOUND'
   | 'METADATA_UNAVAILABLE'
+  /** naviseerr's Soulseek client (slskd) is not logged in, so nothing could be searched. */
+  | 'SOULSEEK_OFFLINE'
   /** The user stopped it. Comes with stage FAILED; shown in grey, not red. */
   | 'CANCELLED'
 
