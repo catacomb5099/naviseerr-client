@@ -12,3 +12,19 @@ export function songLink(videoId: string | null | undefined, title: string | nul
   const query = [title?.trim(), artists[0]].filter(Boolean).join(' ')
   return query ? `${YTM}/search?q=${encodeURIComponent(query)}` : null
 }
+
+/** An album or playlist on YouTube Music. With its playlist id and a first track, the player starts
+ *  on that track with the rest queued (`watch?list=` alone gives YouTube's generic page, so the track
+ *  is needed). Otherwise its page, one press of Play short: an album by browseId, which YouTube
+ *  redirects to the album playlist; a playlist by its own id, `VL` prefix dropped. `plays` says which. */
+export function collectionLink(type: 'ALBUM' | 'PLAYLIST', id: string, playlistId: string | null | undefined,
+                               firstTrackId: string | undefined): { href: string; plays: boolean } {
+  const list = playlistId || (type === 'PLAYLIST' ? id.replace(/^VL/, '') : null)
+  if (list && firstTrackId) {
+    return { href: `${YTM}/watch?v=${encodeURIComponent(firstTrackId)}&list=${encodeURIComponent(list)}`, plays: true }
+  }
+  return {
+    href: type === 'ALBUM' ? `${YTM}/browse/${encodeURIComponent(id)}` : `${YTM}/playlist?list=${encodeURIComponent(list ?? id)}`,
+    plays: false,
+  }
+}
