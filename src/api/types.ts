@@ -48,16 +48,18 @@ export interface SearchResponse {
 }
 
 export type CollectionType = 'ALBUM' | 'PLAYLIST'
-/** What the collection page can show: an album, a playlist, or a saved radio (GET /radios/{id}). */
+/** What the collection page can show: an album, a playlist, or a saved radio (GET /radios/{id}). A
+ *  'RADIO' download is that saved radio, keyed by the radio's own id; the server downloads exactly the
+ *  saved songs. */
 export type CollectionPageType = CollectionType | 'RADIO'
 /** 'CURATED' is one edition of a suggested playlist, downloaded as ONE download: the id is the curator's
  *  category key (e.g. "80s-indie-pop"), not a YouTube id. It is not a CollectionType because
  *  GET /collections rejects it: a suggested playlist is read on GET /suggested-playlists/{category}. */
-export type DownloadType = 'SONG' | CollectionType | 'CURATED'
-/** `GET /downloads/all?type=`: the Downloads page's pills as the server takes them. No CURATED: the
- *  server does accept it (curated editions only) but there is no pill for it, and PLAYLIST already
- *  counts suggested playlists in. A word the server has never heard of is a 400. */
-export type DownloadTypeFilter = Exclude<DownloadType, 'CURATED'>
+export type DownloadType = 'SONG' | CollectionType | 'CURATED' | 'RADIO'
+/** `GET /downloads/all?type=`: the Downloads page's pills as the server takes them. No CURATED or
+ *  RADIO: the server does accept them but there is no pill for either, and PLAYLIST already counts
+ *  suggested playlists and radios in. A word the server has never heard of is a 400. */
+export type DownloadTypeFilter = Exclude<DownloadType, 'CURATED' | 'RADIO'>
 
 /** One track inside a collection view. `id` is the YouTube videoId, `position` is 1-based. */
 export interface CollectionTrack {

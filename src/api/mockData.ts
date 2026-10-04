@@ -502,7 +502,7 @@ export function getMockDownload(youtubeId: string, downloadType: DownloadType): 
   const suggested = downloadType === 'CURATED' ? getMockSuggestedPlaylist(youtubeId) : null
   const collection = downloadType === 'SONG' || downloadType === 'CURATED'
     ? null
-    : getMockCollection(youtubeId, downloadType)
+    : getMockCollection(youtubeId, downloadType === 'RADIO' ? 'PLAYLIST' : downloadType)
   const createdAt = Date.now()
   mockDownloads.set(downloadId, {
     downloadId,
@@ -796,7 +796,7 @@ export function getMockAllDownloads(
   const all = Array.from(mockDownloads.values()).map(entry => toView(entry, now))
   all.push(...Object.values(FIXTURES))
   const downloads = type
-    ? all.filter(d => d.downloadType === type || (type === 'PLAYLIST' && d.downloadType === 'CURATED'))
+    ? all.filter(d => d.downloadType === type || (type === 'PLAYLIST' && (d.downloadType === 'CURATED' || d.downloadType === 'RADIO')))
     : all
   downloads.sort((a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt))
   const start = (pageNumber - 1) * pageSize
