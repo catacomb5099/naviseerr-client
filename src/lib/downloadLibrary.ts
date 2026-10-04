@@ -48,12 +48,13 @@ export interface DownloadItem {
 }
 
 /** Where a downloads row's "Open" link goes, by kind. A CURATED id is the curator's category key,
- *  so it opens the suggested-playlist page, not /playlist. A song has no page: the info pop-up
+ *  so it opens the suggested-playlist page, not /playlist; a RADIO id is the saved radio's. A song has no page: the info pop-up
  *  covers it, so it gets no link. */
 const COLLECTION_ROUTE: Record<Exclude<DownloadType, 'SONG'>, string> = {
   ALBUM: 'album',
   PLAYLIST: 'playlist',
   CURATED: 'suggested',
+  RADIO: 'radio',
 }
 
 export function collectionPath(item: Pick<DownloadItem, 'youtubeId' | 'downloadType'>): string | null {

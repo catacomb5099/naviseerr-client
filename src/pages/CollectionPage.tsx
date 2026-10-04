@@ -129,17 +129,16 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
     setAnnouncement(accepted ? `Requested ${title}` : `Couldn't request ${title}`)
   }
 
-  const downloadAll = async () => {
-    if (type === 'RADIO') return
-    await send(id, type, name, {
-      youtubeId: id,
-      downloadType: type,
-      title: name,
-      artistNames: artists,
-      albumName: null,
-      iconURL: iconURL || null,
-    })
-  }
+  // A radio downloads as ONE download keyed by the radio's id: the server reads the saved songs, so
+  // what queues is exactly this list.
+  const downloadAll = () => send(id, type, name, {
+    youtubeId: id,
+    downloadType: type,
+    title: name,
+    artistNames: artists,
+    albumName: null,
+    iconURL: iconURL || null,
+  })
 
   const downloadTrack = (track: CollectionTrack) => send(track.id, 'SONG', track.name, {
     youtubeId: track.id,
@@ -194,22 +193,19 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
               </>
             )}
             <div className="mt-auto pt-2 flex flex-wrap items-start gap-3">
-              {/* ponytail: no "Download all" on a radio until the server takes RADIO downloads (next PR). */}
-              {!isRadio && (
-                <div className="flex flex-col items-start gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => { if (!allInert) void downloadAll() }}
-                    aria-disabled={allInert}
-                    className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                  >
-                    {allState === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
-                    {allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-                    {allState === 'sent' ? 'Requested' : allState === 'pending' ? 'Requesting…' : 'Download all'}
-                  </button>
-                  {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
-                </div>
-              )}
+              <div className="flex flex-col items-start gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => { if (!allInert) void downloadAll() }}
+                  aria-disabled={allInert}
+                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  {allState === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
+                  {allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                  {allState === 'sent' ? 'Requested' : allState === 'pending' ? 'Requesting…' : 'Download all'}
+                </button>
+                {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
+              </div>
               {!isRadio && <StartRadioButton seedId={id} />}
             </div>
           </div>
