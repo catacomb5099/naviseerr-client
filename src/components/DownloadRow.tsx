@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Loader2, RotateCcw, Square } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Info, Loader2, RotateCcw, Square } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
 import { DownloadItem, collectionPath, itemStageLabel } from '../lib/downloadLibrary'
@@ -17,6 +17,10 @@ interface DownloadRowProps {
   onCancel: (id: string, taskId?: string) => void | Promise<void>
   onRetry: (id: string) => void
   inFlight: Set<string>
+  /** Each song of a collection gets an (i) button that reveals where its file came from: the sharer,
+   *  the file, which source and retry it is on, the last error. The extension turns it on; the web
+   *  app does not (yet). */
+  songDetails?: boolean
 }
 
 function stageColor(item: DownloadItem): string {
@@ -90,50 +94,100 @@ interface SongRowProps {
   onCancel: (id: string, taskId?: string) => void | Promise<void>
   inFlight: boolean
   onActed: () => void
+  details: boolean
 }
 
-function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps) {
-  const status = songStatus(song)
+/** The file's last folder and name: the sharer's full path is mostly their own disk layout. */
+function shortFile(path: string): string {
+  return path.split(/[\\/]/).slice(-2).join(' / ')
+}
+
+function when(iso: string | null): string | null {
+  return iso ? new Date(iso).toLocaleString() : null
+}
+
+/** Where a song's file comes from, in the words the pipeline keeps: what the (i) on a song reveals. */
+function SongSource({ song }: { song: DownloadSongView }) {
+  const facts: [string, string | null][] = [
+    ['From', song.slskdUsername],
+    ['File', song.slskdFilename && shortFile(song.slskdFilename)],
+    ['Source', song.candidateCount > 0 ? `${song.candidateIndex + 1} of ${song.candidateCount} found` : null],
+    ['Retries', song.retryIndex > 0 ? String(song.retryIndex) : null],
+    ['Since', when(song.stageEnteredAt)],
+    ['Finished', when(song.finishedAt)],
+    ['Last error', song.lastError],
+  ]
+  const shown = facts.filter((f): f is [string, string] => !!f[1])
   return (
-    <li className="flex items-center gap-3 h-12">
-      {song.imageUrl ? (
-        <img src={song.imageUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"
-          className="w-8 h-8 rounded-sm object-cover flex-none" />
-      ) : (
-        <div className="w-8 h-8 rounded-sm bg-zinc-800 flex-none" />
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-white truncate">{song.title ?? 'Untitled'}</p>
-        <p className="text-xs text-zinc-400 truncate">
-          <ArtistNames names={song.artists} ids={song.artistIds ?? []} />
-        </p>
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 pb-2 pl-11 text-xs">
+      {shown.length === 0 && <dd className="col-span-2 text-zinc-500">No source picked yet</dd>}
+      {shown.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="text-zinc-500">{label}</dt>
+          <dd className={`truncate ${label === 'Last error' ? 'text-red-400' : 'text-zinc-300'}`} title={value}>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+function SongRow({ song, downloadId, onCancel, inFlight, onActed, details }: SongRowProps) {
+  const status = songStatus(song)
+  const [open, setOpen] = useState(false)
+  return (
+    <li>
+      <div className="flex items-center gap-3 h-12">
+        {song.imageUrl ? (
+          <img src={song.imageUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"
+            className="w-8 h-8 rounded-sm object-cover flex-none" />
+        ) : (
+          <div className="w-8 h-8 rounded-sm bg-zinc-800 flex-none" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-white truncate">{song.title ?? 'Untitled'}</p>
+          <p className="text-xs text-zinc-400 truncate">
+            <ArtistNames names={song.artists} ids={song.artistIds ?? []} />
+          </p>
+        </div>
+        <PlayOnYouTubeMusic videoId={song.youtubeId} title={song.title} artists={song.artists} />
+        <span className={`flex items-center gap-1.5 text-xs ${status.color}`}>
+          {status.glyph}
+          {status.word}
+        </span>
+        {!isTerminal(song.stage) && (
+          <button
+            type="button"
+            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+            aria-label={`Cancel ${song.title ?? 'song'}`}
+            disabled={inFlight}
+            // Reload the song list only once the cancel has been answered: a reload fired alongside the
+            // POST reads the song still live and the row keeps its stage until the next refresh.
+            onClick={async () => { await onCancel(downloadId, song.taskId); onActed() }}
+          >
+            <Square className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        )}
+        {details && (
+          <button
+            type="button"
+            className={`p-1 rounded hover:text-white hover:bg-zinc-700 ${open ? 'text-white' : 'text-zinc-400'}`}
+            aria-expanded={open}
+            aria-label={`Where ${song.title ?? 'this song'} comes from`}
+            onClick={() => setOpen(o => !o)}
+          >
+            <Info className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        )}
+        <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
+          {song.durationSeconds !== null && formatDuration(song.durationSeconds)}
+        </span>
       </div>
-      <PlayOnYouTubeMusic videoId={song.youtubeId} title={song.title} artists={song.artists} />
-      <span className={`flex items-center gap-1.5 text-xs ${status.color}`}>
-        {status.glyph}
-        {status.word}
-      </span>
-      {!isTerminal(song.stage) && (
-        <button
-          type="button"
-          className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
-          aria-label={`Cancel ${song.title ?? 'song'}`}
-          disabled={inFlight}
-          // Reload the song list only once the cancel has been answered: a reload fired alongside the
-          // POST reads the song still live and the row keeps its stage until the next refresh.
-          onClick={async () => { await onCancel(downloadId, song.taskId); onActed() }}
-        >
-          <Square className="w-3.5 h-3.5" aria-hidden="true" />
-        </button>
-      )}
-      <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
-        {song.durationSeconds !== null && formatDuration(song.durationSeconds)}
-      </span>
+      {open && <SongSource song={song} />}
     </li>
   )
 }
 
-export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight }: DownloadRowProps) {
+export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight, songDetails = false }: DownloadRowProps) {
   const [iconFailed, setIconFailed] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [songs, setSongs] = useState<DownloadSongView[] | null>(null)
@@ -368,6 +422,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
                   onCancel={onCancel}
                   inFlight={inFlight.has(song.taskId)}
                   onActed={() => setAttempt(a => a + 1)}
+                  details={songDetails}
                 />
               ))}
             </ul>

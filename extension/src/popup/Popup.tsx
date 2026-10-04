@@ -205,6 +205,7 @@ function AllView({ downloads }: { downloads: Downloads }) {
               onCancel={cancel}
               onRetry={retry}
               inFlight={inFlight}
+              songDetails
             />
           ))}
         </div>
