@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2 } from 'lucide-react'
+import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2, Play } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCollection, getRadio, getSongViews } from '../api/endpoints'
 import { useRetry } from '../hooks/useRetry'
 import { CollectionDetail, CollectionPageType, CollectionTrack, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { formatDuration, formatViews } from '../lib/utils'
+import { collectionLink } from '../lib/youtubeMusic'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { TypeBadge } from '../components/TypeBadge'
@@ -107,6 +108,8 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   const isAlbum = type === 'ALBUM'
   const isRadio = type === 'RADIO'
   const isEmpty = detail?.tracks.length === 0
+  // A radio's id is naviseerr's own, not a YouTube playlist, so it has no page there to link to.
+  const youTube = detail && type !== 'RADIO' && collectionLink(type, id, detail.playlistId, detail.tracks[0]?.id)
 
   const meta: string[] = []
   if (detail) {
@@ -193,8 +196,8 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                 <div className="h-5 w-40 rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none" />
               </>
             )}
-            <div className="mt-auto pt-2 flex flex-wrap items-start gap-3">
-              <div className="flex flex-col items-start gap-1.5">
+            <div className="mt-auto flex flex-col items-start gap-1.5">
+              <div className="flex flex-wrap items-start gap-2">
                 <button
                   type="button"
                   onClick={() => { if (!allInert) void downloadAll() }}
@@ -205,9 +208,22 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                   {allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
                   {allState === 'sent' ? 'Requested' : allState === 'pending' ? 'Requesting…' : 'Download all'}
                 </button>
-                {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
+                {/* Listen first: a link out, so the browser counts the click as the listener's and the
+                    page stays open behind the music. "Open" when it can only reach the page. */}
+                {youTube && (
+                  <a
+                    href={youTube.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full border border-zinc-700 h-10 px-5 font-semibold text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    <Play className="w-4 h-4" aria-hidden="true" />
+                    {youTube.plays ? 'Play' : 'Open'} on YouTube Music
+                  </a>
+                )}
+                {!isRadio && <StartRadioButton seedId={id} />}
               </div>
-              {!isRadio && <StartRadioButton seedId={id} />}
+              {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
             </div>
           </div>
         </div>
