@@ -8,7 +8,7 @@ const LABEL: Record<DownloadType, string> = { SONG: 'Song', ALBUM: 'Album', PLAY
 const ICON = { SONG: Music, ALBUM: Disc3, PLAYLIST: ListMusic, CURATED: ListMusic, RADIO: Radio } as const
 
 interface TypeBadgeProps {
-  type: DownloadType
+  type: DownloadType | 'RADIO'
   className?: string
 }
 
