@@ -1,4 +1,5 @@
 import { share } from '../lib/requestCache'
+import { apiErrorMessage } from '../lib/utils'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -51,7 +52,7 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
         ? await response.json().catch(() => undefined)
         : undefined
       throw new ApiError(
-        `API request failed: ${response.statusText}`,
+        apiErrorMessage(url, response.status, response.statusText),
         response.status,
         response.statusText,
         body
