@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
 import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2 } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { getCollection, getSongViews } from '../api/endpoints'
+import { getCollection, getRadio, getSongViews } from '../api/endpoints'
 import { useRetry } from '../hooks/useRetry'
-import { CollectionDetail, CollectionTrack, CollectionType, DownloadType } from '../api/types'
+import { CollectionDetail, CollectionPageType, CollectionTrack, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { formatDuration, formatViews } from '../lib/utils'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { TypeBadge } from '../components/TypeBadge'
+import { StartRadioButton } from '../components/StartRadioButton'
 
 interface CollectionPageProps {
-  /** From the route: /album/:id or /playlist/:id. The id is read from the URL. */
-  type: CollectionType
+  /** From the route: /album/:id, /playlist/:id or /radio/:id. The id is read from the URL. */
+  type: CollectionPageType
   /** Resolves true once the server accepted the request; the button that asked shows it. The
    *  downloads panel stays the source of truth for what actually queued. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
@@ -42,7 +43,7 @@ function formatTotal(tracks: CollectionTrack[]): string | null {
   return hr > 0 ? `${hr} hr ${minutes % 60} min` : `${minutes} min`
 }
 
-/** An album or playlist as its own page. Everything comes from the URL and one fetch, so a deep
+/** An album, playlist or saved radio as its own page. Everything comes from the URL and one fetch, so a deep
  *  link or a refresh works with no search state behind it: skeleton until the detail arrives. */
 export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps) {
   const { id = '' } = useParams()
@@ -66,7 +67,9 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   const key = `${type}:${id}:${attempt}`
   useEffect(() => {
     let cancelled = false
-    getCollection(id, type, { fresh: attempt > 0 })
+    const opts = { fresh: attempt > 0 }
+    const request = type === 'RADIO' ? getRadio(id, opts) : getCollection(id, type, opts)
+    request
       .then(detail => { if (!cancelled) setFetched({ key, status: 'ready', detail }) })
       .catch(() => { if (!cancelled) setFetched({ key, status: 'error' }) })
     return () => { cancelled = true }
@@ -101,6 +104,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   const artists = detail?.artists ?? []
   const iconURL = detail?.iconURL ?? null
   const isAlbum = type === 'ALBUM'
+  const isRadio = type === 'RADIO'
   const isEmpty = detail?.tracks.length === 0
 
   const meta: string[] = []
@@ -108,6 +112,8 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
     if (isAlbum) {
       if (artists.length > 0) meta.push(artists.join(', '))
       if (detail.year) meta.push(String(detail.year))
+    } else if (isRadio) {
+      meta.push('Picked by YouTube Music')
     } else {
       meta.push(`By ${artists[0] ?? 'Unknown Artist'}`)
     }
@@ -123,14 +129,17 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
     setAnnouncement(accepted ? `Requested ${title}` : `Couldn't request ${title}`)
   }
 
-  const downloadAll = () => send(id, type, name, {
-    youtubeId: id,
-    downloadType: type,
-    title: name,
-    artistNames: artists,
-    albumName: null,
-    iconURL: iconURL || null,
-  })
+  const downloadAll = async () => {
+    if (type === 'RADIO') return
+    await send(id, type, name, {
+      youtubeId: id,
+      downloadType: type,
+      title: name,
+      artistNames: artists,
+      albumName: null,
+      iconURL: iconURL || null,
+    })
+  }
 
   const downloadTrack = (track: CollectionTrack) => send(track.id, 'SONG', track.name, {
     youtubeId: track.id,
@@ -171,6 +180,11 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
               <>
                 <h2 className="text-3xl font-bold line-clamp-2">{name}</h2>
                 <p className="text-sm text-zinc-400">{meta.join(' · ')}</p>
+                {isRadio && (
+                  <p className="text-xs text-zinc-500 max-w-prose">
+                    Saved as it was when you started it. Start a new radio for a different mix.
+                  </p>
+                )}
               </>
             ) : (
               <>
@@ -179,18 +193,24 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                 <div className="h-5 w-40 rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none" />
               </>
             )}
-            <div className="mt-auto flex flex-col items-start gap-1.5">
-              <button
-                type="button"
-                onClick={() => { if (!allInert) void downloadAll() }}
-                aria-disabled={allInert}
-                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              >
-                {allState === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
-                {allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-                {allState === 'sent' ? 'Requested' : allState === 'pending' ? 'Requesting…' : 'Download all'}
-              </button>
-              {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
+            <div className="mt-auto pt-2 flex flex-wrap items-start gap-3">
+              {/* ponytail: no "Download all" on a radio until the server takes RADIO downloads (next PR). */}
+              {!isRadio && (
+                <div className="flex flex-col items-start gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { if (!allInert) void downloadAll() }}
+                    aria-disabled={allInert}
+                    className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    {allState === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
+                    {allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                    {allState === 'sent' ? 'Requested' : allState === 'pending' ? 'Requesting…' : 'Download all'}
+                  </button>
+                  {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
+                </div>
+              )}
+              {!isRadio && <StartRadioButton seedId={id} />}
             </div>
           </div>
         </div>
