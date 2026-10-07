@@ -91,6 +91,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
   // answer list anything still running, and when did the user last click download here.
   const serverHasLiveRef = useRef(false)
   const lastRequestedAtRef = useRef<number | null>(null)
+  // Polls in a row the server did not answer; drives the back-off in lib/downloadPolling.
+  const failuresRef = useRef(0)
   const [terminalRetentionMs, setTerminalRetentionMs] = useState<number>(DEFAULT_RETENTION_MS)
 
   const timeoutRef = useRef<number | null>(null)
@@ -222,6 +224,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
     abortRef.current = controller
     try {
       const response = await getActiveDownloads(controller.signal)
+      failuresRef.current = 0
       pollIntervalRef.current = response.pollIntervalMs
       retentionRef.current = response.terminalRetentionMs
       setPollIntervalMs(response.pollIntervalMs)
@@ -237,14 +240,16 @@ export function useActiveDownloads(playSwoosh: () => void) {
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
+      failuresRef.current++
       console.error('Failed to poll active downloads:', err)
     }
   }, [applyRows, staleIds, reconcile])
 
   /**
    * Books the next poll at whichever speed fits right now: fast while something is downloading or
-   * was just requested, slow when there is nothing to show. A hidden tab books nothing at all - the
-   * visibilitychange listener polls and restarts the loop when the tab comes back.
+   * was just requested, slow when there is nothing to show, backing off while the server does not
+   * answer. A hidden tab, or an offline browser, books nothing at all - the visibilitychange and
+   * online listeners poll and restart the loop when the tab or the network comes back.
    */
   const scheduleNext = useCallback(() => {
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
@@ -254,7 +259,10 @@ export function useActiveDownloads(playSwoosh: () => void) {
       lastRequestedAt: lastRequestedAtRef.current,
       now: Date.now(),
       serverPollIntervalMs: pollIntervalRef.current,
+      consecutiveFailures: failuresRef.current,
+      browserOffline: navigator.onLine === false,
     })
+    if (delayMs === null) return
     timeoutRef.current = window.setTimeout(async () => {
       // Went hidden since this was booked: stop here, the listener restarts us on return.
       if (document.hidden) return
@@ -308,6 +316,13 @@ export function useActiveDownloads(playSwoosh: () => void) {
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [pollNow])
+
+  // Same shape: an offline browser books no timer, so the network coming back has to ask at once.
+  useEffect(() => {
+    const onOnline = () => { void pollNow() }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
   }, [pollNow])
 
   useEffect(() => {

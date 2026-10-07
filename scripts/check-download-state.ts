@@ -4,6 +4,7 @@
  * throws and exits non-zero.
  */
 import './check-collection-progress'
+import './check-connectivity'
 import './check-download-polling'
 import './check-suggested'
 import './check-request-cache'

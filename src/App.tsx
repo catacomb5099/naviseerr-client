@@ -5,6 +5,7 @@ import { DownloadsPage } from './pages/DownloadsPage'
 import { CollectionPage } from './pages/CollectionPage'
 import { ArtistPage } from './pages/ArtistPage'
 import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
+import { ConnectivityBar } from './components/ConnectivityBar'
 import { DownloadPanel } from './components/DownloadPanel'
 import { SongInfoDialog } from './components/SongInfoDialog'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
@@ -59,6 +60,8 @@ function App() {
   return (
     <DownloadCardsContext.Provider value={downloadCards}>
     <div className="min-h-screen bg-black text-white">
+      {/* Above the routes, so it spans the window and survives every page change. */}
+      <ConnectivityBar />
       {/* Routes replace the pair of `hidden` divs that used to switch between the two pages. */}
       <Routes>
         <Route path="/" element={
