@@ -28,6 +28,7 @@ interface ManualImportDialogProps {
 const SUCCEEDED_HINT = 'This song is already downloaded and filed. Delete it from your library first to pick another file.'
 const CONFLICT_COPY = 'That file could not be chosen — the list has been refreshed.'
 const GONE_COPY = 'This download no longer exists.'
+const BUSY_COPY = 'Another action on this song is still running. Try again in a moment.'
 const DOWNLOAD_BUTTON = 'h-8 px-3 rounded-full text-xs font-semibold text-white bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-800 aria-disabled:text-zinc-500 aria-disabled:hover:bg-zinc-800 aria-disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
 
 const BUTTON = 'rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
@@ -112,6 +113,7 @@ function SongCandidates({ target, onClose, onPick }: { target: ManualImportTarge
     else if (outcome === 'conflict') { setPickError(CONFLICT_COPY); refetch() }
     else if (outcome === 'gone') setPickError(GONE_COPY)
     else if (outcome === 'failed') setPickError(REQUEST_FAILED_COPY)
+    else if (outcome === 'busy') setPickError(BUSY_COPY)
   }
   const choose = (c: SongCandidate) => {
     if (c.isCurrent || succeeded || pending) return

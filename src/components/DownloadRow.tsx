@@ -16,7 +16,7 @@ interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void | Promise<void>
-  onRetry: (id: string, taskId?: string) => void | Promise<void>
+  onRetry: (id: string, taskId?: string) => void | Promise<unknown>
   /** Opens the "choose a file" pop-up for a song (a single-song row or a child row). */
   onManualImport: (target: ManualImportTarget) => void
   inFlight: Set<string>
@@ -69,7 +69,7 @@ interface SongRowProps {
   song: DownloadSongView
   downloadId: string
   onCancel: (id: string, taskId?: string) => void | Promise<void>
-  onRetry: (id: string, taskId?: string) => void | Promise<void>
+  onRetry: (id: string, taskId?: string) => void | Promise<unknown>
   onManualImport: (target: ManualImportTarget) => void
   inFlight: boolean
   onActed: () => void

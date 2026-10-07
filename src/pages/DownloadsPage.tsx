@@ -21,7 +21,7 @@ interface DownloadsPageProps {
   /** Drives the live progress bar's transition duration, same as the panel's cards. */
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void
-  onRetry: (id: string, taskId?: string) => void | Promise<void>
+  onRetry: (id: string, taskId?: string) => void | Promise<unknown>
   /** useActiveDownloads.pick: runs a manual pick with the feed's own guard, card swap and poll. */
   onPick: (id: string, key: string, call: () => Promise<ActiveDownloadView>) => Promise<ActOutcome>
   inFlight: Set<string>
