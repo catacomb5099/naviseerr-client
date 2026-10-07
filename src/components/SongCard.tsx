@@ -81,7 +81,7 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
           aria-disabled={!!label}
           aria-label={label ? `${label}: ${track.name}` : `Download ${track.name}`}
           title={label ? `${label} - open Downloads` : undefined}
-          className="flex-shrink-0 bg-green-600 hover:bg-green-500 text-white aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300"
+          className="flex-shrink-0 bg-green-600 hover:bg-green-500 text-white aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default"
         >
           {label === null ? (
             <Download className="w-4 h-4" />
