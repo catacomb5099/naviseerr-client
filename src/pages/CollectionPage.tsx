@@ -12,6 +12,7 @@ import { PageNavButton } from '../components/PageNavButton'
 import { TypeBadge } from '../components/TypeBadge'
 import { PlayOnYouTubeMusic } from '../components/PlayOnYouTubeMusic'
 import { StartRadioButton } from '../components/StartRadioButton'
+import { ArtistNames } from '../components/ArtistNames'
 
 interface CollectionPageProps {
   /** From the route: /album/:id, /playlist/:id or /radio/:id. The id is read from the URL. */
@@ -111,10 +112,10 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   // A radio's id is naviseerr's own, not a YouTube playlist, so it has no page there to link to.
   const youTube = detail && type !== 'RADIO' && collectionLink(type, id, detail.playlistId, detail.tracks[0]?.id)
 
+  // The album's artists are rendered as links ahead of this line; everything else is plain text.
   const meta: string[] = []
   if (detail) {
     if (isAlbum) {
-      if (artists.length > 0) meta.push(artists.join(', '))
       if (detail.year) meta.push(String(detail.year))
     } else if (isRadio) {
       meta.push('Picked by YouTube Music')
@@ -182,7 +183,10 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
             {detail ? (
               <>
                 <h2 className="text-3xl font-bold line-clamp-2">{name}</h2>
-                <p className="text-sm text-zinc-400">{meta.join(' · ')}</p>
+                <p className="text-sm text-zinc-400">
+                  {isAlbum && artists.length > 0 && <><ArtistNames names={artists} ids={detail.artistIds} />{' · '}</>}
+                  {meta.join(' · ')}
+                </p>
                 {isRadio && (
                   <p className="text-xs text-zinc-500 max-w-prose">
                     Saved as it was when you started it. Start a new radio for a different mix.
@@ -277,7 +281,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                         <p className="text-xs text-red-400 truncate">{REQUEST_FAILED_COPY}</p>
                       ) : (
                         <p className="text-xs text-zinc-400 truncate">
-                          {track.artists.length > 0 ? track.artists.join(', ') : 'Unknown Artist'}
+                          <ArtistNames names={track.artists} ids={track.artistIds} />
                         </p>
                       )}
                     </div>
