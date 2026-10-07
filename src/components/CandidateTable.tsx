@@ -36,8 +36,9 @@ interface CandidateTableProps<T> {
 const PULSE = 'rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
 // The action column stays in view while the rest of the table scrolls sideways (ten columns of real
 // Soulseek paths overflow a 1280 px window): a solid background hides what scrolls under it, so the
-// current row's tint (white/5 over zinc-900) is spelled out as a colour here.
-const STICKY = 'sticky right-0'
+// current row's tint (white/5 over zinc-900) is spelled out as a colour here. The left shadow marks the
+// column as pinned, so a badge half under it reads as scrolled under, not clipped.
+const STICKY = 'sticky right-0 shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.7)]'
 const HEADER_BUTTON = 'inline-flex items-center gap-1 rounded hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 
 /** A sortable table of Soulseek files or folders. One semantic <table> in a sideways-scrolling box, so

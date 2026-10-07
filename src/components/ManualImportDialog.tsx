@@ -110,7 +110,7 @@ function SongCandidates({ target, onClose }: { target: ManualImportTarget; onClo
             type="button"
             aria-label={searchOpen ? 'Hide the filter' : 'Filter files'}
             aria-expanded={searchOpen}
-            aria-controls="candidate-filter"
+            aria-controls={searchOpen ? 'candidate-filter' : undefined}
             onClick={() => { setSearchOpen(o => !o); if (searchOpen) setFilter('') }}
             className={`${ICON_BUTTON} ${searchOpen ? 'text-white bg-white/10' : ''}`}
           >

@@ -67,7 +67,7 @@ export function slotRank(c: { freeSlot: boolean | null; queueLength: number }): 
 }
 
 export const GRADE_LABEL: Record<string, string> = {
-  EXACT: 'Exact match',
+  EXACT: 'Exact',
   OTHER_VERSION: 'Other version',
   UNVERIFIED: 'Unverified',
 }
@@ -124,7 +124,7 @@ export function statusCopy(
   switch (reason) {
     case 'BEFORE_CACHE':
       return kind === 'SONG'
-        ? 'This song was searched before file lists were kept. Retry it to get a list.'
+        ? 'No file list was kept for this song: it was searched before lists were kept, or its search ended without results. Retry it to get a list.'
         : 'This album was downloaded before folder lists were kept.'
     case 'NO_RESULTS':
       return `Soulseek found nothing for “${query ?? 'this song'}”. Retry the song to search again.`
