@@ -10,6 +10,11 @@ import {
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { ACTIVE_POLL_MS, nextPollDelayMs } from '../lib/downloadPolling'
 
+/** What one cancel/retry/pick did: 'ok' the server took it, 'conflict' it answered 409 with the settled
+ *  card (nothing changed), 'gone' the download no longer exists, 'failed' anything else, 'busy' the same
+ *  action was already in flight. */
+export type ActOutcome = 'ok' | 'conflict' | 'gone' | 'failed' | 'busy'
+
 // v3: songName became title/artists/imageUrl plus a download type and song tallies. An older
 // snapshot is discarded rather than migrated - it is at most a few minutes of download cards, and
 // reconciliation would rebuild anything still live anyway.
@@ -409,12 +414,13 @@ export function useActiveDownloads(playSwoosh: () => void) {
   }, [pollNow])
 
   /**
-   * One retry or cancel. `key` is the task id for a song, else the download id, so two songs of one
-   * album can be cancelled at once while the whole-download button stays single-flight. The server
-   * refuses a duplicate anyway (409); this stops the duplicate being sent at all.
+   * One retry, cancel or pick. `key` is the task id for a song, else the download id, so two songs of
+   * one album can be cancelled at once while the whole-download button stays single-flight. The server
+   * refuses a duplicate anyway (409); this stops the duplicate being sent at all. Answers with what
+   * happened so a dialog can close on 'ok' or explain a 'conflict'; the row buttons ignore it.
    */
-  const act = useCallback(async (id: string, key: string, call: () => Promise<ActiveDownloadView>) => {
-    if (inFlightRef.current.has(key)) return
+  const act = useCallback(async (id: string, key: string, call: () => Promise<ActiveDownloadView>): Promise<ActOutcome> => {
+    if (inFlightRef.current.has(key)) return 'busy'
     inFlightRef.current.add(key); setInFlight(new Set(inFlightRef.current))
     try {
       const view = await call()
@@ -422,13 +428,17 @@ export function useActiveDownloads(playSwoosh: () => void) {
       setCards(prev => ({ ...prev, [id]: replaceCard(prev[id], view) }))
       lastRequestedAtRef.current = Date.now()   // the 30 s fast-poll window, as after a new request
       void pollNow()
+      return 'ok'
     } catch (err) {
       if (err instanceof ApiError && err.status === 409 && isView(err.body)) {
         applyRows([err.body]); void pollNow()   // the server's answer is settled; show it
+        return 'conflict'
       } else if (err instanceof ApiError && err.status === 404) {
         dismiss(id, { silent: true })
+        return 'gone'
       } else {
         console.error('Download action failed:', err)
+        return 'failed'
       }
     } finally {
       inFlightRef.current.delete(key); setInFlight(new Set(inFlightRef.current))
@@ -441,6 +451,10 @@ export function useActiveDownloads(playSwoosh: () => void) {
   const retry = useCallback((id: string, taskId?: string) =>
     act(id, taskId ?? id, () => retryDownload(id, taskId)), [act])
 
+  /** A manual pick (one song's file, or a whole album's folder): the same guard, card swap and poll as
+   *  retry, keyed by the song so one song can be re-picked while another is being cancelled. */
+  const pick = useCallback((id: string, key: string, call: () => Promise<ActiveDownloadView>) => act(id, key, call), [act])
+
   return {
     cards: sortCards(Object.values(cards)),
     exiting,
@@ -452,6 +466,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
     requestDownload,
     cancel,
     retry,
+    pick,
     inFlight,
     soulseekLoggedIn,
   }
