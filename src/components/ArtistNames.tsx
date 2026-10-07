@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 /** Inline link styling only: no padding or border, so a name that becomes a link does not move
  *  anything around it. Underline on hover, a ring when reached by keyboard. */
-export const ARTIST_LINK = 'hover:underline hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded'
+export const ARTIST_LINK = 'pointer-events-auto hover:underline hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded'
 
 interface ArtistNamesProps {
   names: string[]
