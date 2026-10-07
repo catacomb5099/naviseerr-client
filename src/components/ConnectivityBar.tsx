@@ -21,7 +21,7 @@ export function ConnectivityBar() {
   const message = browserOffline ? "You're offline. Changes will show when you're back."
     : serverDown ? "Can't reach the Naviseerr server. Retrying…"
       : backOnline ? 'Back online.' : null
-  const tone = browserOffline || serverDown ? 'bg-amber-500 text-black' : 'bg-green-600 text-white'
+  const tone = browserOffline || serverDown ? 'bg-amber-500 text-black' : 'bg-green-700 text-white'
   return (
     <div role="status" className={message ? `sticky top-0 z-40 py-1.5 text-center text-sm ${tone}` : ''}>
       {message}

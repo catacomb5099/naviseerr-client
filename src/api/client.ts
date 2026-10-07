@@ -96,8 +96,12 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
     if (error instanceof Error && error.name === 'AbortError') {
       throw error
     }
-    // Refused, timed out (a TimeoutError, not an AbortError, so it lands here), DNS, or the browser
-    // is offline: the pages print err.message, so this is the sentence the user reads.
+    // Refused, DNS, or the browser is offline (fetch rejects with a TypeError), or no answer in time
+    // (a TimeoutError, not an AbortError, so it lands here): the pages print err.message, so this is
+    // the sentence the user reads. Anything else (a malformed 200 body, a bug) is not the server
+    // being away and must not light the bar.
+    const unreachable = error instanceof TypeError || (error instanceof DOMException && error.name === 'TimeoutError')
+    if (!unreachable) throw error
     reportServer(false)
     throw new Error(navigator.onLine === false ? OFFLINE_MESSAGE : SERVER_UNREACHABLE_MESSAGE)
   }
