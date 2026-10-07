@@ -11,7 +11,7 @@ import './check-show-more'
 import './check-youtube-music'
 import './check-artist-names'
 import { ActiveDownloadView } from '../src/api/types'
-import { DownloadCardState, failureCopy, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
+import { DownloadCardState, alreadyCopy, failureCopy, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
 import { apiErrorMessage, formatPlays, formatViews } from '../src/lib/utils'
 
@@ -216,5 +216,11 @@ assert(itemDownloadLabel({ ...finishedNew, failureCode: 'CANCELLED' }) === null,
 assert(itemDownloadLabel(live) === 'Downloading…' && itemDownloadLabel({ ...live, stage: 'QUEUED' }) === 'Downloading…', 'every live stage reads as downloading')
 assert(itemDownloadLabel(finishedOld) === 'Downloaded', 'succeeded reads as downloaded')
 assert(itemDownloadLabel({ ...finishedOld, stage: 'PARTIAL_SUCCESS' }) === 'Partly downloaded', 'partial reads as partly downloaded')
+
+// The words for a 409: live says downloading, finished says you have it, partial points at Retry.
+assert(alreadyCopy({ stage: 'SEARCHING' }, 'Song 2') === 'Already downloading Song 2', '409 for a live download')
+assert(alreadyCopy({ stage: 'QUEUED' }, 'Song 2') === 'Already downloading Song 2', '409 for a queued download')
+assert(alreadyCopy({ stage: 'SUCCEEDED' }, 'Wonderwall') === 'You already have Wonderwall', '409 for a finished download')
+assert(alreadyCopy({ stage: 'PARTIAL_SUCCESS' }, 'Definitely Maybe').startsWith('You already have part of Definitely Maybe'), '409 for a partly downloaded one')
 
 console.log('check-download-state: ok')

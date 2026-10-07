@@ -12,6 +12,7 @@ import { DownloadCardsContext } from './hooks/useItemDownload'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
 import { useDismissSound } from './hooks/useDismissSound'
 import { DownloadMetaInput } from './lib/downloadLibrary'
+import { RequestOutcome } from './lib/downloadPanel'
 import { DownloadType } from './api/types'
 
 function App() {
@@ -42,17 +43,17 @@ function App() {
   const openSongInfo = (id: string, plays?: string | null) => setSongInfo({ id, pathname, plays: plays ?? null })
   const closeSongInfo = () => setSongInfo(null)
 
-  /** True once the server accepted the request - what a button that asked for it shows. */
+  /** How the request ended - what the page that asked announces. */
   const handleDownload = async (
     id: string,
     type: DownloadType,
     meta: DownloadMetaInput,
-  ): Promise<boolean> => {
-    const result = await requestDownload(id, type, meta)
-    // Recorded under the server's id, so the cache and the panel agree on identity. A failed
-    // request records nothing: there is no download to remember.
-    if (result) library.record(result.downloadId, meta)
-    return result !== null
+  ): Promise<RequestOutcome> => {
+    const outcome = await requestDownload(id, type, meta)
+    // Recorded under the server's id, so the cache and the panel agree on identity. A failed request
+    // records nothing, and an existing download already has the server's own name and artwork.
+    if (outcome.status === 'accepted') library.record(outcome.download.downloadId, meta)
+    return outcome
   }
 
   return (

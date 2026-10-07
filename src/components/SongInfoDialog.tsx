@@ -7,6 +7,7 @@ import { useItemDownload } from '../hooks/useItemDownload'
 import { ApiError } from '../api/client'
 import { DownloadType, SongInfo } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
+import { RequestOutcome } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY, RequestState } from '../pages/CollectionPage'
 import { formatDuration, formatViews } from '../lib/utils'
 import { PlayOnYouTubeMusic } from './PlayOnYouTubeMusic'
@@ -20,10 +21,10 @@ interface SongInfoDialogProps {
    *  that video's smaller views, so the pop-up would otherwise contradict the row it came from. */
   rowPlays: string | null
   onClose: () => void
-  /** Same plumbing as the song rows: App requests the download and records its metadata. Resolves
-   *  true once the server accepted it - the page behind the backdrop is inert, so the button in the
-   *  footer is the only place that feedback can show. */
-  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
+  /** Same plumbing as the song rows: App requests the download and records its metadata. The page
+   *  behind the backdrop is inert, so the button in the footer is the only place feedback can show:
+   *  it greys from the feed once accepted or already on the server, and says so on a failure. */
+  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<RequestOutcome>
 }
 
 type Load =
@@ -82,7 +83,7 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
 
   const download = async (info: SongInfo) => {
     setRequest({ id: info.id, state: 'pending' })
-    const accepted = await onDownload(info.id, 'SONG', {
+    const outcome = await onDownload(info.id, 'SONG', {
       youtubeId: info.id,
       downloadType: 'SONG',
       title: info.name,
@@ -90,7 +91,7 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
       albumName: info.album?.name ?? null,
       iconURL: info.iconURL || null,
     })
-    setRequest(accepted ? null : { id: info.id, state: 'failed' })
+    setRequest(outcome.status === 'failed' ? { id: info.id, state: 'failed' } : null)
   }
 
   const facts: string[] = []

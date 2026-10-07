@@ -3,9 +3,9 @@ import { ApiError } from '../api/client'
 import {
   getActiveDownloads, resolveDownloads, downloadSong, downloadCollection, cancelDownload, retryDownload,
 } from '../api/endpoints'
-import { ActiveDownloadsResponse, ActiveDownloadView, Download, DownloadType } from '../api/types'
+import { ActiveDownloadsResponse, ActiveDownloadView, DownloadType } from '../api/types'
 import {
-  DownloadCardState, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, replaceCard, sortCards,
+  DownloadCardState, RequestOutcome, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, replaceCard, sortCards,
 } from '../lib/downloadPanel'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { ACTIVE_POLL_MS, nextPollDelayMs } from '../lib/downloadPolling'
@@ -330,7 +330,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
     id: string,
     type: DownloadType,
     meta: DownloadMetaInput,
-  ): Promise<Download | null> => {
+  ): Promise<RequestOutcome> => {
     try {
       const result = type === 'SONG' ? await downloadSong(id) : await downloadCollection(id, type)
       // Optimistic, and under the download's REAL id - the 202 body carries it, so there is no
@@ -364,12 +364,20 @@ export function useActiveDownloads(playSwoosh: () => void) {
       // listed the download yet - see FAST_WINDOW_AFTER_REQUEST_MS.
       lastRequestedAtRef.current = Date.now()
       void pollNow()
-      return result
+      return { status: 'accepted', download: result }
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409 && isView(err.body)) {
+        // The server already has this one and its card is the answer. Pulling it into the feed is what
+        // greys every button for the item at once and shows the download in the panel; a card the user
+        // dismissed earlier comes back, since they just asked for it again.
+        dismissedRef.current.delete(err.body.downloadId)
+        applyRows([err.body]); void pollNow()
+        return { status: 'exists', existing: err.body }
+      }
       console.error('Download request failed:', err)
-      return null
+      return { status: 'failed' }
     }
-  }, [pollNow])
+  }, [applyRows, pollNow])
 
   /**
    * One retry or cancel. `key` is the task id for a song, else the download id, so two songs of one
