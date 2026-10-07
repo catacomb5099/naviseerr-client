@@ -84,6 +84,11 @@ const fromBody = replaceCard(card, { ...row, stage: 'FAILED', failureCode: 'CANC
 assert(fromBody.stage === 'FAILED' && fromBody.failureCode === 'CANCELLED', 'the body wins on stage and outcome')
 assert(fromBody.title === 'Down' && fromBody.imageUrl === 'https://img/1.png', 'a null title in the body does not blank the card')
 assert(fromBody.lastChangedAt > card.lastChangedAt, 'an action restarts the dismiss clock')
+// A 409 "you already have it" carries a row whose updatedAt may be hours old. Seeded the way the feed seeds a
+// first sighting, a finished card would be past its dismiss TTL on arrival; the 409 path uses replaceCard.
+const hoursOld = { ...row, stage: 'SUCCEEDED' as const, updatedAt: new Date(Date.now() - 7_200_000).toISOString() }
+assert(Date.now() - mergeCard(undefined, hoursOld).lastChangedAt >= 7_000_000, 'a first sighting from the feed keeps the server clock')
+assert(Date.now() - replaceCard(undefined, hoursOld).lastChangedAt < 1000, 'the 409 card starts its dismiss clock at the click')
 
 // The panel lists the newest REQUEST first. A retry, a stage change or progress restarts the dismiss
 // clock (lastChangedAt) but must not move a card: a list that reshuffles under the pointer is how the

@@ -22,8 +22,8 @@ import { RequestOutcome } from '../lib/downloadPanel'
 interface HomePageProps {
   onNavigateToDownloads: () => void
   /** Requests the download and records its metadata; App owns both halves. `id` is the YouTube
-   *  videoId for a song or the collection id for an album/playlist. Resolves true once the server
-   *  accepted the request. */
+   *  videoId for a song or the collection id for an album/playlist. Resolves with how the request
+   *  ended: accepted, already on the server, or failed. */
   onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<RequestOutcome>
   /** Opens the song info pop-up App owns. */
   onInfo: (videoId: string, plays?: string | null) => void

@@ -369,15 +369,19 @@ export function useActiveDownloads(playSwoosh: () => void) {
       if (err instanceof ApiError && err.status === 409 && isView(err.body)) {
         // The server already has this one and its card is the answer. Pulling it into the feed is what
         // greys every button for the item at once and shows the download in the panel; a card the user
-        // dismissed earlier comes back, since they just asked for it again.
-        dismissedRef.current.delete(err.body.downloadId)
-        applyRows([err.body]); void pollNow()
-        return { status: 'exists', existing: err.body }
+        // dismissed earlier comes back, since they just asked for it again. replaceCard, not applyRows:
+        // the row's updatedAt can be hours old, and a finished card seeded from it would be past its
+        // dismiss TTL on arrival. The clock starts at the click, as it does after cancel or retry.
+        const existing = err.body
+        dismissedRef.current.delete(existing.downloadId)
+        setCards(prev => ({ ...prev, [existing.downloadId]: replaceCard(prev[existing.downloadId], existing) }))
+        void pollNow()
+        return { status: 'exists', existing }
       }
       console.error('Download request failed:', err)
       return { status: 'failed' }
     }
-  }, [applyRows, pollNow])
+  }, [pollNow])
 
   /**
    * One retry or cancel. `key` is the task id for a song, else the download id, so two songs of one
