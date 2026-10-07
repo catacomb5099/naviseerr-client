@@ -4,6 +4,9 @@ export interface Track {
   streamURL: string
   name: string
   artists: string[]  // Artist display names, as the server sends them
+  /** The artist page id behind each `artists` entry, index-aligned; null where YouTube gave none.
+   *  Absent from an older server: then every name is plain text. */
+  artistIds?: (string | null)[]
   albumId: string
   year: number
   /** YouTube Music's combined play count in its own wording, e.g. "7.2M plays"; null when YouTube gave
@@ -16,6 +19,8 @@ export interface Album {
   iconURL: string
   name: string
   artists: string[]  // Artist display names, as the server sends them
+  /** Index-aligned with `artists`; null where YouTube gave none; absent from an older server. */
+  artistIds?: (string | null)[]
   year: number
 }
 
@@ -33,6 +38,9 @@ export interface Playlist {
   iconURL: string
   name: string
   artists: string[]
+  /** The author's channel id(s), index-aligned with `artists`, null for a fan-made playlist. Not used
+   *  for links: a playlist's author is a channel, not an artist page. */
+  artistIds?: (string | null)[]
   /** The search endpoint does not populate this (always 0); GET /collections/{id} does. */
   trackCount: number
 }
@@ -66,6 +74,8 @@ export interface CollectionTrack {
   id: string
   name: string
   artists: string[]
+  /** Index-aligned with `artists`; null where YouTube gave none; absent from an older server. */
+  artistIds?: (string | null)[]
   iconURL: string | null
   durationSeconds: number | null
   /** YouTube's own wording, e.g. "28M plays". Only album tracks carry one; null for playlist tracks. */
@@ -80,6 +90,9 @@ export interface CollectionDetail {
   type: CollectionPageType
   name: string
   artists: string[]
+  /** Index-aligned with `artists`; null where YouTube gave none; absent from an older server and from
+   *  a saved radio. */
+  artistIds?: (string | null)[]
   iconURL: string | null
   year: number | null
   /** Equals tracks.length. */

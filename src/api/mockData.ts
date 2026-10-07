@@ -33,6 +33,7 @@ export const mockAlbums: Album[] = [
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     name: 'All or Nothing',
     artists: ['Jay Sean'],
+    artistIds: ['artist-1'],
     year: 2009
   },
   {
@@ -66,6 +67,7 @@ export const mockTracks: Track[] = [
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Down',
     name: 'Down',
     artists: ['Jay Sean', 'Lil Wayne'],
+    artistIds: ['artist-1', null], // one linked, one plain, like a real row with a nameless channel
     albumId: 'album-1',
     year: 2009,
     plays: null
@@ -76,6 +78,7 @@ export const mockTracks: Track[] = [
     streamURL: 'https://www.last.fm/music/Jay+Sean/_/Ride+It',
     name: 'Ride It',
     artists: ['Jay Sean'],
+    artistIds: ['artist-1'],
     albumId: 'album-2',
     year: 2008,
     plays: '96M plays'
