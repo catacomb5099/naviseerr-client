@@ -96,7 +96,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
   const [terminalRetentionMs, setTerminalRetentionMs] = useState<number>(DEFAULT_RETENTION_MS)
   // Asked alongside each feed poll. null = not known (before the first answer, or a server without
   // GET /status), and the strip stays hidden rather than crying wolf.
-  const [soulseekConnected, setSoulseekConnected] = useState<boolean | null>(null)
+  const [soulseekLoggedIn, setSoulseekLoggedIn] = useState<boolean | null>(null)
 
   const timeoutRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -226,12 +226,15 @@ export function useActiveDownloads(playSwoosh: () => void) {
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      const [response, connected] = await Promise.all([
-        getActiveDownloads(controller.signal),
-        getStatus(controller.signal).then(s => s.soulseek.connected, () => null),
-      ])
+      // Not awaited with the feed: while slskd is down the server takes up to 3 s to answer /status,
+      // and the downloads feed should not wait for that. An aborted call (a newer poll took over)
+      // leaves the last answer in place rather than hiding the strip for a beat.
+      void getStatus(controller.signal).then(
+        s => setSoulseekLoggedIn(s.soulseek.loggedIn),
+        () => { if (!controller.signal.aborted) setSoulseekLoggedIn(null) },
+      )
+      const response = await getActiveDownloads(controller.signal)
       failuresRef.current = 0
-      setSoulseekConnected(connected)
       pollIntervalRef.current = response.pollIntervalMs
       retentionRef.current = response.terminalRetentionMs
       setPollIntervalMs(response.pollIntervalMs)
@@ -450,6 +453,6 @@ export function useActiveDownloads(playSwoosh: () => void) {
     cancel,
     retry,
     inFlight,
-    soulseekConnected,
+    soulseekLoggedIn,
   }
 }
