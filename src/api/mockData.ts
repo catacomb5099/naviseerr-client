@@ -415,8 +415,8 @@ export function getMockSongViews(ids: string[]): Record<string, number> {
 
 import type {
   ActiveDownloadsResponse, ActiveDownloadView, AllDownloadsResponse, Download, DownloadDetailView,
-  DownloadFailureCode, DownloadSongView, DownloadStage, DownloadType, DownloadTypeFilter, SongCandidate,
-  SongCandidatesResponse,
+  AlbumCandidatesResponse, AlbumFolder, DownloadFailureCode, DownloadSongView, DownloadStage, DownloadType,
+  DownloadTypeFilter, SongCandidate, SongCandidatesResponse,
 } from './types'
 
 interface MockDownloadEntry {
@@ -1003,4 +1003,92 @@ export function pickMockSongCandidate(downloadId: string, taskId: string, body: 
   entry.outcome = 'SUCCEEDED'
   persistMockDownloads()
   return toView(entry, now)
+}
+
+// --- Manual import: the folders found for a whole album -------------------
+// Three sharers for the album fixture: the one the server picked (every song, FLAC), a deluxe FLAC rip
+// with extras, and an MP3 folder missing one song. Which folder is "current" follows the songs' own
+// sharer, so an album pick that rewrites the songs moves the marker with it.
+
+interface MockFolderSpec { username: string; folder: string; extension: string; bitrateKbps: number | null; uploadSpeed: number | null; freeSlot: boolean | null; queueLength: number; extras: number; skip?: number }
+
+const MOCK_ALBUM_FOLDERS: MockFolderSpec[] = [
+  { username: 'mock-peer', folder: '@@mock\\Music\\Jay Sean\\All or Nothing', extension: 'flac', bitrateKbps: null, uploadSpeed: 1770000, freeSlot: true, queueLength: 0, extras: 0 },
+  { username: 'vinylvault', folder: '@@viny\\Shared\\Albums\\Jay Sean - All or Nothing (2009) [FLAC]', extension: 'flac', bitrateKbps: null, uploadSpeed: 2400000, freeSlot: true, queueLength: 3, extras: 2 },
+  { username: 'mp3mike', folder: '@@mp3m\\Music\\Jay Sean\\All or Nothing [320]', extension: 'mp3', bitrateKbps: 320, uploadSpeed: 650000, freeSlot: false, queueLength: 5, extras: 0, skip: 3 },
+]
+
+function mockFolder(spec: MockFolderSpec, songs: DownloadSongView[]): AlbumFolder {
+  const files = songs
+    .filter(s => s.position !== spec.skip)
+    .map(s => {
+      const seconds = s.durationSeconds ?? 200
+      return {
+        index: s.position ?? 0,
+        taskId: s.taskId,
+        name: `${String(s.position).padStart(2, '0')} - ${s.title}.${spec.extension}`,
+        title: s.title ?? 'Untitled',
+        size: spec.extension === 'flac' ? Math.round((30 + (s.position ?? 0) * 2.5) * 1024 * 1024) : Math.round(((spec.bitrateKbps ?? 256) * 1000 / 8) * seconds),
+        bitrateKbps: spec.bitrateKbps,
+        lengthSeconds: seconds,
+        extension: spec.extension,
+      }
+    })
+  const mine = songs.filter(s => s.slskdUsername === spec.username && s.stage !== 'FAILED')
+  return {
+    username: spec.username,
+    folder: spec.folder,
+    fileCount: files.length,
+    totalSize: files.reduce((sum, f) => sum + f.size, 0),
+    uploadSpeed: spec.uploadSpeed,
+    freeSlot: spec.freeSlot,
+    queueLength: spec.queueLength,
+    extras: spec.extras,
+    songsCurrent: mine.filter(s => s.stage !== 'SUCCEEDED').length,
+    isCurrent: mine.length > 0,
+    files,
+  }
+}
+
+/** Mirrors GET /downloads/{id}/album-candidates. The album fixture answers with three folders; another
+ *  album from the simulator has no song list, so it answers NONE/NO_WHOLE_FOLDER; anything that is not
+ *  an album is a 409 NOT_AN_ALBUM; unknown ids 404. */
+export function getMockAlbumCandidates(downloadId: string): AlbumCandidatesResponse {
+  const { download, songs } = getMockDownloadDetail(downloadId)
+  if (download.downloadType !== 'ALBUM') {
+    throw new ApiError('conflict', 409, 'Conflict', { reason: 'NOT_AN_ALBUM', message: 'Only an album can be taken from one sharer\'s folder.' })
+  }
+  const base = { downloadId, query: download.title ?? 'album', songCount: songs.length || download.songCount }
+  if (downloadId !== FIXTURE_ALBUM_ID) {
+    return { ...base, status: 'NONE', reason: 'NO_WHOLE_FOLDER', searchedAt: iso(FIXTURE_BOOT - 30000), folders: [] }
+  }
+  return { ...base, status: 'READY', reason: null, searchedAt: iso(FIXTURE_BOOT - 60000), folders: MOCK_ALBUM_FOLDERS.map(f => mockFolder(f, songs)) }
+}
+
+/** Mirrors POST /downloads/{id}/album-pick: every song the folder holds that is not already downloaded
+ *  restarts in place from that folder; finished songs are kept. 409 with the card when the folder is not
+ *  in the list or has nothing left to replace. */
+export function pickMockAlbumFolder(downloadId: string, body: { username: string; folder: string }): ActiveDownloadView {
+  const { folders } = getMockAlbumCandidates(downloadId)
+  const fixture = FIXTURES[downloadId]
+  const folder = folders.find(f => f.username === body.username && f.folder === body.folder)
+  if (!fixture || !folder) throw new ApiError('conflict', 409, 'Conflict', fixture ?? toView(mockDownloads.get(downloadId)!, Date.now()))
+  const songs = FIXTURE_SONGS[downloadId]
+  const targets = songs.filter(s => s.stage !== 'SUCCEEDED' && folder.files.some(f => f.taskId === s.taskId))
+  if (targets.length === 0) throw new ApiError('conflict', 409, 'Conflict', fixture)
+  const now = Date.now()
+  for (const song of targets) {
+    const file = folder.files.find(f => f.taskId === song.taskId)!
+    Object.assign(song, {
+      slskdUsername: folder.username, slskdFilename: `${folder.folder}\\${file.name}`, stage: 'DOWNLOADING', progressPercent: 0,
+      failureCode: null, lastError: null, finishedAt: null, stageEnteredAt: iso(now), updatedAt: iso(now), candidateCount: 1, candidateIndex: 0,
+    })
+  }
+  Object.assign(fixture, {
+    stage: 'DOWNLOADING', finishedAt: null, updatedAt: iso(now), stageEnteredAt: iso(now),
+    songsSucceeded: songs.filter(s => s.stage === 'SUCCEEDED').length,
+    songsFailed: songs.filter(s => s.stage === 'FAILED').length,
+    progressPercent: Math.round(songs.reduce((sum, s) => sum + (s.progressPercent ?? 0), 0) / songs.length),
+  })
+  return fixture
 }
