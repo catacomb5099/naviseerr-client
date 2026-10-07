@@ -5,10 +5,12 @@ import { getSuggestedPlaylist } from '../api/endpoints'
 import { ApiError } from '../api/client'
 import { DownloadType, SuggestedPlaylist, SuggestedTrack } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
+import { itemDownload, itemDownloadLabel } from '../lib/downloadPanel'
 import { categoryName, editionDateLong, filtersCopy, tierCopy } from '../lib/suggested'
 import { formatPlays } from '../lib/utils'
 import { useSuggestedRefresh } from '../hooks/useSuggestedRefresh'
 import { useRetry } from '../hooks/useRetry'
+import { useDownloadCards } from '../hooks/useItemDownload'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { SuggestedPlaylistCover } from '../components/SuggestedPlaylistCover'
@@ -60,6 +62,8 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
   // Forgotten on leaving the page - the downloads panel is the record of what queued.
   const [requests, setRequests] = useState<Record<string, RequestState>>({})
   const [announcement, setAnnouncement] = useState('')
+  // The download feed: grey with the words while downloading or once downloaded; the click then opens Downloads.
+  const cards = useDownloadCards()
   // Owned here, not by the panel, so a run's outcome survives the re-fetch it triggers.
   const refresh = useSuggestedRefresh(retry)
 
@@ -96,7 +100,11 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
   const send = async (id: string, type: DownloadType, name: string, meta: DownloadMetaInput) => {
     setRequests(prev => ({ ...prev, [id]: 'pending' }))
     const accepted = await onDownload(id, type, meta)
-    setRequests(prev => ({ ...prev, [id]: accepted ? 'sent' : 'failed' }))
+    setRequests(prev => {
+      const next = { ...prev }
+      if (accepted) delete next[id]; else next[id] = 'failed'
+      return next
+    })
     setAnnouncement(accepted ? `Requested ${name}` : `Couldn't request ${name}`)
   }
 
@@ -121,8 +129,9 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
   })
 
   const allState = requests[category]
+  const allLabel = itemDownloadLabel(itemDownload(cards, 'CURATED', category))
   // Inert (not `disabled`) while it cannot be pressed, so a keyboard user's focus stays on it.
-  const allInert = !playlist || playlist.tracks.length === 0 || allState === 'pending' || allState === 'sent'
+  const allInert = !playlist || playlist.tracks.length === 0 || allState === 'pending' || allLabel !== null
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
@@ -157,13 +166,15 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                 <div className="mt-auto pt-2 flex flex-col items-start gap-1.5">
                   <button
                     type="button"
-                    onClick={() => { if (!allInert) void downloadAll() }}
+                    onClick={() => { if (allLabel) navigate('/downloads'); else if (!allInert) void downloadAll() }}
                     aria-disabled={allInert}
+                    title={allLabel ? `${allLabel} - open Downloads` : undefined}
                     className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >
-                    {allState === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
-                    {allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-                    {allState === 'sent' ? 'Requested' : allState === 'pending' ? 'Requesting…' : 'Download all'}
+                    {allLabel === 'Downloading…' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                    {allLabel !== null && allLabel !== 'Downloading…' && <Check className="w-4 h-4" aria-hidden="true" />}
+                    {allLabel === null && allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                    {allLabel ?? (allState === 'pending' ? 'Requesting…' : 'Download all')}
                   </button>
                   {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
                 </div>
@@ -214,7 +225,8 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
             <ul className="space-y-0.5">
               {playlist.tracks.map(track => {
                 const state = requests[track.id]
-                const inert = state === 'pending' || state === 'sent'
+                const trackLabel = itemDownloadLabel(itemDownload(cards, 'SONG', track.id))
+                const inert = state === 'pending' || trackLabel !== null
                 const plays = formatPlays(track.popularity)
                 return (
                   <li key={track.position} className="h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
@@ -252,14 +264,15 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                     </button>
                     <button
                       type="button"
-                      onClick={() => { if (!inert) void downloadTrack(track) }}
+                      onClick={() => { if (trackLabel) navigate('/downloads'); else if (!inert) void downloadTrack(track) }}
                       aria-disabled={inert}
-                      aria-label={state === 'sent' ? `Requested ${track.name}` : `Download ${track.name}`}
+                      aria-label={trackLabel ? `${trackLabel}: ${track.name}` : `Download ${track.name}`}
+                      title={trackLabel ? `${trackLabel} - open Downloads` : undefined}
                       className={`${ICON_BUTTON} aria-disabled:hover:text-zinc-400 aria-disabled:cursor-default`}
                     >
-                      {state === 'sent' ? (
+                      {trackLabel === 'Downloaded' || trackLabel === 'Partly downloaded' ? (
                         <Check className="w-4 h-4 text-green-500" aria-hidden="true" />
-                      ) : state === 'pending' ? (
+                      ) : trackLabel !== null || state === 'pending' ? (
                         <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none text-zinc-500" aria-hidden="true" />
                       ) : (
                         <ArrowDownToLine className="w-4 h-4" aria-hidden="true" />

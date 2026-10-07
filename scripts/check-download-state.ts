@@ -11,7 +11,7 @@ import './check-show-more'
 import './check-youtube-music'
 import './check-artist-names'
 import { ActiveDownloadView } from '../src/api/types'
-import { DownloadCardState, failureCopy, isCancelled, isTerminal, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
+import { DownloadCardState, failureCopy, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
 import { apiErrorMessage, formatPlays, formatViews } from '../src/lib/utils'
 
@@ -199,5 +199,22 @@ assert(formatPlays(null) === null && formatPlays(undefined) === null, 'formatPla
 assert(formatPlays(998) === '998 plays', 'formatPlays: small counts are written in full')
 assert(formatPlays(1_234_567) === '1.2M plays', 'formatPlays: millions are abbreviated to one decimal')
 assert(formatViews(19_334_421) === '19.3M views' && formatViews(null) === null, 'formatViews: one video\'s count says views, never plays')
+
+// Which download a button reads for its item: a live one beats a finished one, the newest request
+// beats an older one, and only the exact type + id counts.
+const finishedOld: DownloadCardState = { ...card, downloadId: 'old', stage: 'SUCCEEDED', requestedAt: T0 }
+const finishedNew: DownloadCardState = { ...card, downloadId: 'new', stage: 'FAILED', failureCode: 'TIMED_OUT', requestedAt: T2 }
+const live: DownloadCardState = { ...card, downloadId: 'live', stage: 'SEARCHING', requestedAt: T1 }
+assert(itemDownload([finishedOld, live, finishedNew], 'SONG', 'v1')?.downloadId === 'live', 'a live card wins over finished ones')
+assert(itemDownload([finishedOld, finishedNew], 'SONG', 'v1')?.downloadId === 'new', 'the newest request wins among finished ones')
+assert(itemDownload([finishedOld], 'ALBUM', 'v1') === undefined, 'another type is another download')
+assert(itemDownload([finishedOld], 'SONG', 'v2') === undefined, 'another id is another download')
+assert(itemDownload([], 'SONG', 'v1') === undefined, 'nothing known reads as nothing')
+assert(itemDownloadLabel(undefined) === null, 'no card: askable')
+assert(itemDownloadLabel(finishedNew) === null, 'a failed download can be asked for again')
+assert(itemDownloadLabel({ ...finishedNew, failureCode: 'CANCELLED' }) === null, 'a cancelled one too')
+assert(itemDownloadLabel(live) === 'Downloading…' && itemDownloadLabel({ ...live, stage: 'QUEUED' }) === 'Downloading…', 'every live stage reads as downloading')
+assert(itemDownloadLabel(finishedOld) === 'Downloaded', 'succeeded reads as downloaded')
+assert(itemDownloadLabel({ ...finishedOld, stage: 'PARTIAL_SUCCESS' }) === 'Partly downloaded', 'partial reads as partly downloaded')
 
 console.log('check-download-state: ok')
