@@ -34,6 +34,10 @@ interface CandidateTableProps<T> {
 }
 
 const PULSE = 'rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
+// The action column stays in view while the rest of the table scrolls sideways (ten columns of real
+// Soulseek paths overflow a 1280 px window): a solid background hides what scrolls under it, so the
+// current row's tint (white/5 over zinc-900) is spelled out as a colour here.
+const STICKY = 'sticky right-0'
 const HEADER_BUTTON = 'inline-flex items-center gap-1 rounded hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 
 /** A sortable table of Soulseek files or folders. One semantic <table> in a sideways-scrolling box, so
@@ -70,7 +74,7 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
                 </th>
               )
             })}
-            {renderAction && <th scope="col" className="px-3 py-2"><span className="sr-only">Action</span></th>}
+            {renderAction && <th scope="col" className={`px-3 py-2 ${STICKY} bg-zinc-900`}><span className="sr-only">Action</span></th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-800/80">
@@ -80,7 +84,7 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
                 {columns.map(col => (
                   <td key={col.key} className="px-3 py-2.5"><div className={`h-4 ${PULSE} ${col.key === 'file' ? 'w-48' : 'w-14'}`} /></td>
                 ))}
-                {renderAction && <td className="px-3 py-2.5"><div className={`h-4 w-20 ${PULSE}`} /></td>}
+                {renderAction && <td className={`px-3 py-2.5 ${STICKY} bg-zinc-900`}><div className={`h-4 w-20 ${PULSE}`} /></td>}
               </tr>
             ))
             : rows.map(row => {
@@ -90,7 +94,7 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
                   {columns.map(col => (
                     <td key={col.key} className={`px-2.5 py-2 ${cellAlign(col)} ${current ? 'text-zinc-300' : 'text-zinc-200'}`}>{col.render(row)}</td>
                   ))}
-                  {renderAction && <td className="px-2.5 py-1.5 text-right whitespace-nowrap">{renderAction(row)}</td>}
+                  {renderAction && <td className={`px-2.5 py-1.5 text-right whitespace-nowrap ${STICKY} ${current ? 'bg-[#232326]' : 'bg-zinc-900'}`}>{renderAction(row)}</td>}
                 </tr>
               )
             })}

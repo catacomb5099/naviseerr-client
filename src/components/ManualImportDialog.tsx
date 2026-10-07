@@ -177,7 +177,7 @@ export function ManualImportDialog({ target, onClose }: ManualImportDialogProps)
       ref={dialogRef}
       onClose={onClose}
       aria-label={`Choose a file for ${target.title}`}
-      className="w-[min(100vw-2rem,72rem)] bg-zinc-900 border border-zinc-800 rounded-xl p-0 text-white backdrop:bg-black/70"
+      className="w-[min(100vw-2rem,80rem)] bg-zinc-900 border border-zinc-800 rounded-xl p-0 text-white backdrop:bg-black/70"
     >
       <SongCandidates key={`${target.downloadId}:${target.taskId ?? ''}`} target={target} onClose={onClose} />
     </dialog>
