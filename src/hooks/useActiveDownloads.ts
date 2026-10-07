@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import {
-  getActiveDownloads, resolveDownloads, downloadSong, downloadCollection, cancelDownload, retryDownload,
+  getActiveDownloads, getStatus, resolveDownloads, downloadSong, downloadCollection, cancelDownload, retryDownload,
 } from '../api/endpoints'
 import { ActiveDownloadsResponse, ActiveDownloadView, DownloadType } from '../api/types'
 import {
@@ -94,6 +94,9 @@ export function useActiveDownloads(playSwoosh: () => void) {
   // Polls in a row the server did not answer; drives the back-off in lib/downloadPolling.
   const failuresRef = useRef(0)
   const [terminalRetentionMs, setTerminalRetentionMs] = useState<number>(DEFAULT_RETENTION_MS)
+  // Asked alongside each feed poll. null = not known (before the first answer, or a server without
+  // GET /status), and the strip stays hidden rather than crying wolf.
+  const [soulseekConnected, setSoulseekConnected] = useState<boolean | null>(null)
 
   const timeoutRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -223,8 +226,12 @@ export function useActiveDownloads(playSwoosh: () => void) {
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      const response = await getActiveDownloads(controller.signal)
+      const [response, connected] = await Promise.all([
+        getActiveDownloads(controller.signal),
+        getStatus(controller.signal).then(s => s.soulseek.connected, () => null),
+      ])
       failuresRef.current = 0
+      setSoulseekConnected(connected)
       pollIntervalRef.current = response.pollIntervalMs
       retentionRef.current = response.terminalRetentionMs
       setPollIntervalMs(response.pollIntervalMs)
@@ -443,5 +450,6 @@ export function useActiveDownloads(playSwoosh: () => void) {
     cancel,
     retry,
     inFlight,
+    soulseekConnected,
   }
 }

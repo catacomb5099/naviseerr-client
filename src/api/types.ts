@@ -366,3 +366,9 @@ export interface SuggestedPlaylist {
   trackCount: number
   tracks: SuggestedTrack[]
 }
+
+/** GET /status - is the server's Soulseek client logged in? `state` is slskd's own word ("Connected,
+ *  LoggedIn", "Disconnected"), or UNREACHABLE when slskd itself cannot be reached, `detail` saying why. */
+export interface StatusResponse {
+  soulseek: { connected: boolean; loggedIn: boolean; state: string; detail: string | null }
+}

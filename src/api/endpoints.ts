@@ -3,7 +3,7 @@ import {
   SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
-  CuratorRun,
+  CuratorRun, StatusResponse,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -290,6 +290,17 @@ export async function getActiveDownloads(signal?: AbortSignal): Promise<ActiveDo
   const data = await apiClient<ActiveDownloadsResponse>('/downloads/active', { signal })
   // apiClient returns `undefined` for a non-JSON (e.g. empty) response body.
   return data ?? { pollIntervalMs: 5000, terminalRetentionMs: 600000, downloads: [] }
+}
+
+/**
+ * Is the server's Soulseek client logged in? Polled with the downloads feed.
+ * GET /status
+ */
+export async function getStatus(signal?: AbortSignal): Promise<StatusResponse> {
+  if (USE_MOCK_DATA) {
+    return Promise.resolve({ soulseek: { connected: true, loggedIn: true, state: 'Connected, LoggedIn', detail: null } })
+  }
+  return apiClient<StatusResponse>('/status', { signal })
 }
 
 /** Server-side cap on GET /downloads?ids= */
