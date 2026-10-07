@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Loader2, RotateCcw, Square } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Loader2, RotateCcw, Square, UserRound } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
+import { ManualImportTarget } from '../hooks/useCandidates'
 import { DownloadItem, collectionPath, itemStageLabel } from '../lib/downloadLibrary'
 import { failureCopy, isCancelled, isTerminal } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
@@ -16,8 +17,12 @@ interface DownloadRowProps {
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void | Promise<void>
   onRetry: (id: string, taskId?: string) => void | Promise<void>
+  /** Opens the "choose a file" pop-up for a song (a single-song row or a child row). */
+  onManualImport: (target: ManualImportTarget) => void
   inFlight: Set<string>
 }
+
+const ACTION_BUTTON = 'p-2 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600'
 
 function stageColor(item: DownloadItem): string {
   if (item.stage === 'SUCCEEDED') return 'text-green-500'
@@ -65,13 +70,14 @@ interface SongRowProps {
   downloadId: string
   onCancel: (id: string, taskId?: string) => void | Promise<void>
   onRetry: (id: string, taskId?: string) => void | Promise<void>
+  onManualImport: (target: ManualImportTarget) => void
   inFlight: boolean
   onActed: () => void
 }
 
 const SONG_ACTION = 'p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600'
 
-function SongRow({ song, downloadId, onCancel, onRetry, inFlight, onActed }: SongRowProps) {
+function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight, onActed }: SongRowProps) {
   const status = songStatus(song)
   return (
     <li className="flex items-center gap-3 h-12">
@@ -118,6 +124,15 @@ function SongRow({ song, downloadId, onCancel, onRetry, inFlight, onActed }: Son
           <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}
+      <button
+        type="button"
+        className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+        aria-label={`Choose file for ${song.title ?? 'song'}`}
+        title="Choose the file yourself"
+        onClick={e => { e.stopPropagation(); onManualImport({ kind: 'SONG', downloadId, taskId: song.taskId, title: song.title ?? 'Untitled' }) }}
+      >
+        <UserRound className="w-3.5 h-3.5" aria-hidden="true" />
+      </button>
       <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
         {song.durationSeconds !== null && formatDuration(song.durationSeconds)}
       </span>
@@ -125,7 +140,7 @@ function SongRow({ song, downloadId, onCancel, onRetry, inFlight, onActed }: Son
   )
 }
 
-export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight }: DownloadRowProps) {
+export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onManualImport, inFlight }: DownloadRowProps) {
   const [iconFailed, setIconFailed] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [songs, setSongs] = useState<DownloadSongView[] | null>(null)
@@ -285,15 +300,15 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
           )}
         </div>
 
-        {/* One fixed-width column for the action button and the Open link, rendered for every row,
-            so the content to its left ends at the same x whether or not a row has either. Wide enough
-            for one action plus Open. Stops propagation like the chevron: a click here must not also
-            expand the row. */}
-        <div className="w-16 flex-none flex items-center justify-end gap-1">
+        {/* One fixed-width column for the action buttons and the Open link, rendered for every row,
+            so the content to its left ends at the same x whether or not a row has any. Wide enough
+            for Cancel/Retry, the person button and Play or Open. Stops propagation like the chevron:
+            a click here must not also expand the row. */}
+        <div className="w-24 flex-none flex items-center justify-end gap-1">
           {!terminal && (
             <button
               type="button"
-              className="p-2 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              className={ACTION_BUTTON}
               aria-label={`Cancel ${item.title}`}
               disabled={inFlight.has(item.downloadId)}
               onClick={e => { e.stopPropagation(); onCancel(item.downloadId) }}
@@ -304,12 +319,24 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
           {terminal && (item.stage === 'FAILED' || item.stage === 'PARTIAL_SUCCESS') && (
             <button
               type="button"
-              className="p-2 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              className={ACTION_BUTTON}
               aria-label={`Retry ${item.title}`}
               disabled={inFlight.has(item.downloadId)}
               onClick={e => { e.stopPropagation(); onRetry(item.downloadId) }}
             >
               <RotateCcw className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          {/* Shown at every stage: on a song still queued the pop-up simply says the search has not run yet. */}
+          {item.downloadType === 'SONG' && (
+            <button
+              type="button"
+              className={ACTION_BUTTON}
+              aria-label={`Choose file for ${item.title}`}
+              title="Choose the file yourself"
+              onClick={e => { e.stopPropagation(); onManualImport({ kind: 'SONG', downloadId: item.downloadId, taskId: null, title: item.title }) }}
+            >
+              <UserRound className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
           {openPath && (
@@ -356,6 +383,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
                   downloadId={item.downloadId}
                   onCancel={onCancel}
                   onRetry={onRetry}
+                  onManualImport={onManualImport}
                   inFlight={inFlight.has(song.taskId)}
                   onActed={() => setAttempt(a => a + 1)}
                 />

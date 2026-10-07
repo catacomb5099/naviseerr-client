@@ -1,0 +1,80 @@
+/** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
+import {
+  basename, filterRows, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank, slotLabel,
+  slotRank, sortRows, statusCopy,
+} from '../src/lib/candidates'
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(`check failed: ${message}`)
+}
+
+// slskd paths: backslashes with a share alias, and the odd sharer on forward slashes.
+assert(basename('@@fqkje\\Music\\Oasis\\05 - Live Forever.flac') === '05 - Live Forever.flac', 'basename on backslashes')
+assert(basename('music/oasis/05 - live forever.mp3') === '05 - live forever.mp3', 'basename on forward slashes')
+assert(basename('bare.flac') === 'bare.flac', 'basename of a bare name')
+
+// The format comes from the suffix only; slskd's extension field is not consulted.
+assert(formatOf('@@a\\x\\Song.FLAC') === 'flac', 'formatOf lower-cases the suffix')
+assert(formatOf('a\\b\\no-suffix') === '', 'formatOf without a suffix is blank')
+assert(formatOf('a\\.hidden') === '', 'a leading dot is not a suffix')
+
+assert(qualityLabel({ extension: 'flac', bitrateKbps: null }) === 'Lossless', 'flac is lossless without a bitrate')
+assert(qualityLabel({ extension: 'wv', bitrateKbps: 900 }) === 'Lossless', 'a lossless suffix wins over a bitrate')
+assert(qualityLabel({ extension: 'mp3', bitrateKbps: 320 }) === '320 kbps', 'lossy shows its bitrate')
+assert(qualityLabel({ extension: 'm4a', bitrateKbps: null }) === '—', 'unknown bitrate shows a dash')
+assert(qualityRank({ extension: 'flac', bitrateKbps: null })! > qualityRank({ extension: 'mp3', bitrateKbps: 320 })!, 'lossless ranks above 320')
+assert(qualityRank({ extension: 'mp3', bitrateKbps: null }) === null, 'unknown quality ranks null (sorted last)')
+
+assert(formatBytes(31234567) === '29.8 MB', `formatBytes MB: ${formatBytes(31234567)}`)
+assert(formatBytes(412345678) === '393 MB', `formatBytes hundreds: ${formatBytes(412345678)}`)
+assert(formatBytes(1536) === '1.5 KB', 'formatBytes KB')
+assert(formatBytes(2 * 1024 ** 3) === '2.0 GB', 'formatBytes GB')
+assert(formatBytes(null) === '—', 'formatBytes unknown')
+assert(formatSpeed(1770000) === '1.7 MB/s', `formatSpeed: ${formatSpeed(1770000)}`)
+assert(formatSpeed(0) === '—' && formatSpeed(null) === '—', 'formatSpeed unknown')
+
+assert(slotLabel({ freeSlot: true, queueLength: 0 }) === 'Free', 'free slot')
+assert(slotLabel({ freeSlot: false, queueLength: 12 }) === 'Queue 12', 'queue length')
+assert(slotLabel({ freeSlot: false, queueLength: 0 }) === 'Busy', 'no slot, empty queue')
+assert(slotLabel({ freeSlot: null, queueLength: 0 }) === '—', 'unknown slot')
+assert(slotRank({ freeSlot: true, queueLength: 0 })! < slotRank({ freeSlot: false, queueLength: 0 })!, 'free before busy')
+assert(slotRank({ freeSlot: false, queueLength: 2 })! < slotRank({ freeSlot: false, queueLength: 9 })!, 'shorter queue first')
+assert(gradeRank('EXACT') < gradeRank('OTHER_VERSION') && gradeRank('OTHER_VERSION') < gradeRank('UNVERIFIED'), 'grade order')
+
+// Sorting: nulls last both ways, ties stable, text case-insensitive.
+const rows = [
+  { id: 'a', n: 3 as number | null, s: 'beta' },
+  { id: 'b', n: null, s: 'Alpha' },
+  { id: 'c', n: 1, s: 'gamma' },
+  { id: 'd', n: 3, s: 'alpha' },
+]
+assert(sortRows(rows, r => r.n, 'asc').map(r => r.id).join('') === 'cadb', 'asc: nulls last, tie a before d')
+assert(sortRows(rows, r => r.n, 'desc').map(r => r.id).join('') === 'adcb', 'desc: nulls still last, tie a before d')
+assert(sortRows(rows, r => r.s, 'asc').map(r => r.id).join('') === 'bdac', 'text asc is case-insensitive and stable')
+assert(sortRows(rows, r => r.s, 'desc').map(r => r.id).join('') === 'cabd', 'text desc')
+assert(sortRows(rows, r => r.n, 'asc') !== rows && rows[0].id === 'a', 'sortRows returns a new array')
+assert(sortRows([{ s: 'Track 10' }, { s: 'Track 2' }], r => r.s, 'asc')[0].s === 'Track 2', 'numeric-aware text order')
+
+// Filtering: case-insensitive across every text the row offers; blank keeps everything.
+const files = [
+  { name: '05 - Live Forever.flac', sharer: 'alice', format: 'flac' },
+  { name: 'live forever.mp3', sharer: 'Bob', format: 'mp3' },
+]
+const hay = (f: typeof files[number]) => [f.name, f.sharer, f.format]
+assert(filterRows(files, 'FLAC', hay).length === 1, 'filter by format, any case')
+assert(filterRows(files, 'bob', hay)[0].sharer === 'Bob', 'filter by sharer')
+assert(filterRows(files, 'forever', hay).length === 2, 'filter by name')
+assert(filterRows(files, '  ', hay) === files, 'blank filter hands back the same list')
+assert(filterRows(files, 'zzz', hay).length === 0, 'no match, no rows')
+
+// Status wording follows the contract.
+assert(statusCopy('SONG', 'READY', null, 'x') === null, 'READY has no message')
+assert(statusCopy('SONG', 'SEARCHING', null, null)!.startsWith('Still searching'), 'SEARCHING wording')
+assert(statusCopy('SONG', 'NONE', 'NO_RESULTS', 'Live Forever')!.includes('“Live Forever”'), 'NO_RESULTS names the query')
+assert(statusCopy('SONG', 'NONE', 'BEFORE_CACHE', null)!.includes('before file lists were kept'), 'BEFORE_CACHE song')
+assert(statusCopy('ALBUM', 'NONE', 'BEFORE_CACHE', null)!.includes('folder lists'), 'BEFORE_CACHE album')
+assert(statusCopy('ALBUM', 'NONE', 'NO_WHOLE_FOLDER', null)!.includes('person icon on a song'), 'NO_WHOLE_FOLDER')
+assert(statusCopy('SONG', 'NONE', 'ALREADY_IN_LIBRARY', null)!.includes('already in your library'), 'ALREADY_IN_LIBRARY')
+assert(statusCopy('SONG', 'NONE', 'SOMETHING_NEW', null) !== null, 'an unknown reason still reads as a sentence')
+
+console.log('check-candidates: ok')

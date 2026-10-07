@@ -373,3 +373,45 @@ export interface SuggestedPlaylist {
 export interface StatusResponse {
   soulseek: { connected: boolean; loggedIn: boolean; state: string; detail: string | null }
 }
+
+// --- Manual import: the files Soulseek found for a song -------------------
+
+export type CandidateStatus = 'READY' | 'SEARCHING' | 'NONE'
+export type CandidateGrade = 'EXACT' | 'OTHER_VERSION' | 'UNVERIFIED'
+
+/** One file a Soulseek user shares that matched the song's search. `filename` is slskd's full path,
+ *  verbatim (backslashes, share alias and all): shown as its basename, sent back unchanged on a pick. */
+export interface SongCandidate {
+  username: string
+  filename: string
+  /** Bytes. */
+  size: number
+  /** slskd's bitRate; null for lossless files and when unknown. */
+  bitrateKbps: number | null
+  lengthSeconds: number | null
+  /** Lower-case, taken from the file name's suffix (slskd's own extension field is unreliable). */
+  extension: string
+  /** Bytes per second as slskd reports; null when unknown. */
+  uploadSpeed: number | null
+  /** null when unknown. */
+  freeSlot: boolean | null
+  queueLength: number
+  grade: CandidateGrade
+  isCurrent: boolean
+}
+
+/** GET /downloads/{id}/tasks/{taskId}/candidates - every file the song's Soulseek search found, in the
+ *  server's ranking (best first). `candidates` is empty while SEARCHING and with NONE; `reason` says why
+ *  there is nothing: BEFORE_CACHE (searched before lists were kept), NO_RESULTS, ALREADY_IN_LIBRARY. */
+export interface SongCandidatesResponse {
+  taskId: string
+  status: CandidateStatus
+  reason: string | null
+  /** What Soulseek was asked for (the title alone); null when never searched. */
+  query: string | null
+  searchedAt: string | null
+  songStage: DownloadStage
+  /** The file being (or last) downloaded, or null. */
+  current: { username: string; filename: string } | null
+  candidates: SongCandidate[]
+}

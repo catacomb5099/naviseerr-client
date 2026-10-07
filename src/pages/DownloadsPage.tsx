@@ -1,12 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { DownloadRow } from '../components/DownloadRow'
+import { ManualImportDialog } from '../components/ManualImportDialog'
 import { DownloadFilter, DownloadFilterPills } from '../components/DownloadFilterPills'
 import { Button } from '../components/ui/button'
 import { useAllDownloads } from '../hooks/useAllDownloads'
+import { ManualImportTarget } from '../hooks/useCandidates'
 import { DownloadMeta, pageItems, parseTypeFilter } from '../lib/downloadLibrary'
 import { DownloadCardState } from '../lib/downloadPanel'
 
@@ -74,6 +76,8 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
   }, [isCurrent, rows.length, pageNumber, filter, setSearchParams])
 
   const goToPage = (page: number) => setSearchParams(paramsFor(filter, page))
+  // The "choose a file" pop-up belongs to a row on this page, so the page holds which one is open.
+  const [manual, setManual] = useState<ManualImportTarget | null>(null)
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
@@ -122,6 +126,7 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
                   pollIntervalMs={pollIntervalMs}
                   onCancel={onCancel}
                   onRetry={onRetry}
+                  onManualImport={setManual}
                   inFlight={inFlight}
                 />
               ))}
@@ -151,6 +156,8 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
           )}
         </section>
       </main>
+
+      <ManualImportDialog target={manual} onClose={() => setManual(null)} />
     </div>
   )
 }
