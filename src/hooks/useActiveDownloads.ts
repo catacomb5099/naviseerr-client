@@ -264,8 +264,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
     })
     if (delayMs === null) return
     timeoutRef.current = window.setTimeout(async () => {
-      // Went hidden since this was booked: stop here, the listener restarts us on return.
-      if (document.hidden) return
+      // Went hidden or offline since this was booked: stop here, the listeners restart us on return.
+      if (document.hidden || navigator.onLine === false) return
       await poll()
       scheduleNext()
     }, delayMs)
