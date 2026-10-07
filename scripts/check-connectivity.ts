@@ -4,7 +4,7 @@
  * three readings come out.
  */
 import {
-  BACK_ONLINE_MS, clock, getConnectivity, reportServer, setBrowserOffline, subscribe,
+  BACK_ONLINE_MS, clock, getConnectivity, isServerDown, reportServer, setBrowserOffline, subscribe,
 } from '../src/lib/connectivity'
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -61,5 +61,13 @@ assert(!s().serverDown, 'coming back online drops the old server verdict')
 unsubscribe()
 reportServer(false)
 assert(changes() === 7, 'an unsubscribed listener is not called')
+
+// Which answers mean "the server is down": the proxy's 502/503 for the progress poll, nothing the
+// server itself says (a search 502 is the YouTube helper; a 503 for suggested playlists is "no curator").
+assert(isServerDown('/api/downloads/active', 502) && isServerDown('http://localhost:8080/downloads/all?pageSize=10', 503),
+  'a 502/503 on a downloads path is the server being down')
+assert(!isServerDown('/api/search/oasis', 502), 'a search 502 is the YouTube helper, not the server')
+assert(!isServerDown('/api/suggested-playlists', 503), 'the curator not being configured is not the server being down')
+assert(!isServerDown('/api/downloads/active', 200) && !isServerDown('/api/downloads/x', 404), 'other statuses are the server answering')
 
 console.log('check-connectivity: ok')

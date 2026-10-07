@@ -50,6 +50,16 @@ export function reportServer(reached: boolean) {
   update(state.browserOffline, !reached)
 }
 
+/**
+ * Does this HTTP answer mean the server itself is down? Only a 502/503 on a downloads path: that is
+ * what the web app's proxy returns for the progress poll when the server behind it is stopped. The
+ * server's own 502/503s (a search while the YouTube helper is down, the suggested playlists while no
+ * curator is configured) are the server answering, and must not switch the bar on.
+ */
+export function isServerDown(url: string, status: number): boolean {
+  return (status === 502 || status === 503) && url.includes('/downloads')
+}
+
 /** The browser's own flag. Coming back clears any server verdict too: it is about to be asked afresh. */
 export function setBrowserOffline(offline: boolean) {
   update(offline, offline && state.serverDown)

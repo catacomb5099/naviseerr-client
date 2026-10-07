@@ -1,4 +1,4 @@
-import { reportServer } from '../lib/connectivity'
+import { isServerDown, reportServer } from '../lib/connectivity'
 import { share } from '../lib/requestCache'
 import { apiErrorMessage } from '../lib/utils'
 
@@ -65,11 +65,8 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
       },
     })
 
-    // Any answer means the server is there - except a 502/503 from the web app's own proxy, which
-    // is what a down server looks like in Docker. On a search path that status is the YouTube
-    // helper being down, and the server itself answered.
-    const gatewayDown = (response.status === 502 || response.status === 503) && !url.includes('/search/')
-    reportServer(!gatewayDown)
+    // Any answer means the server is there, bar the one the web app's proxy gives for it in Docker.
+    reportServer(!isServerDown(url, response.status))
 
     if (!response.ok) {
       const body = response.headers.get('content-type')?.includes('application/json')
