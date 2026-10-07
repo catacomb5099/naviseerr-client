@@ -29,6 +29,7 @@ interface ManualImportDialogProps {
 }
 
 const SUCCEEDED_HINT = 'This song is already downloaded and filed. Delete it from your library first to pick another file.'
+const ALBUM_SUCCEEDED_HINT = 'Every song of this album is already downloaded and filed. Delete them from your library first to pick another sharer.'
 const CONFLICT_COPY = 'That file could not be chosen — the list has been refreshed.'
 const GONE_COPY = 'This download no longer exists.'
 const BUSY_COPY = 'Another action on this song is still running. Try again in a moment.'
@@ -351,6 +352,8 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
   const current = all.find(f => f.isCurrent) ?? null
   const stillDownloading = current?.songsCurrent ?? 0
   const live = target.kind === 'ALBUM' && !isTerminal(target.stage) && stillDownloading > 0
+  // Every song filed: the server would answer 409 to any folder, so say why up front (as the song view does).
+  const succeeded = target.kind === 'ALBUM' && target.stage === 'SUCCEEDED'
 
   const rowKey = (f: AlbumFolder) => `${f.username}|${f.folder}`
   const pickRow = (f: AlbumFolder) => {
@@ -358,7 +361,7 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
     void send(rowKey(f), { kind: 'ALBUM', downloadId: target.downloadId, body: { username: f.username, folder: f.folder } })
   }
   const choose = (f: AlbumFolder) => {
-    if (f.isCurrent || pending) return
+    if (f.isCurrent || succeeded || pending) return
     if (live) setConfirm(f)
     else pickRow(f)
   }
@@ -387,6 +390,7 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
                 : filtering ? `${rows.length} of ${all.length} folders`
                 : `${all.length} ${all.length === 1 ? 'folder' : 'folders'}, best match first · ${songCount} songs on the album`}
             </p>
+            {succeeded && <p className="text-zinc-400">{ALBUM_SUCCEEDED_HINT}</p>}
             {pickError && <p role="status" className="text-red-400">{pickError}</p>}
           </div>
           <CandidateTable
@@ -402,8 +406,9 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
             renderAction={f => (
               <RowAction
                 current={f.isCurrent}
-                currentLabel={f.songsCurrent > 0 ? 'Downloading' : 'Current'}
-                disabled={pending !== null}
+                currentLabel={f.songsCurrent > 0 && !succeeded ? 'Downloading' : 'Current'}
+                disabled={succeeded || pending !== null}
+                hint={succeeded ? ALBUM_SUCCEEDED_HINT : undefined}
                 pending={pending === rowKey(f)}
                 onClick={() => choose(f)}
               />
