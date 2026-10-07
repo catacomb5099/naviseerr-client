@@ -16,7 +16,7 @@ interface DownloadsPageProps {
   /** Drives the live progress bar's transition duration, same as the panel's cards. */
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void
-  onRetry: (id: string) => void
+  onRetry: (id: string, taskId?: string) => void | Promise<void>
   inFlight: Set<string>
   onNavigateHome: () => void
 }

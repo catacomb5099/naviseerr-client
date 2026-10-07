@@ -15,7 +15,7 @@ interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void | Promise<void>
-  onRetry: (id: string) => void
+  onRetry: (id: string, taskId?: string) => void | Promise<void>
   inFlight: Set<string>
 }
 
@@ -64,11 +64,14 @@ interface SongRowProps {
   song: DownloadSongView
   downloadId: string
   onCancel: (id: string, taskId?: string) => void | Promise<void>
+  onRetry: (id: string, taskId?: string) => void | Promise<void>
   inFlight: boolean
   onActed: () => void
 }
 
-function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps) {
+const SONG_ACTION = 'p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600'
+
+function SongRow({ song, downloadId, onCancel, onRetry, inFlight, onActed }: SongRowProps) {
   const status = songStatus(song)
   return (
     <li className="flex items-center gap-3 h-12">
@@ -91,7 +94,7 @@ function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps
       {!isTerminal(song.stage) && (
         <button
           type="button"
-          className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+          className={SONG_ACTION}
           aria-label={`Cancel ${song.title ?? 'song'}`}
           disabled={inFlight}
           // Reload the song list only once the cancel has been answered: a reload fired alongside the
@@ -99,6 +102,20 @@ function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps
           onClick={async () => { await onCancel(downloadId, song.taskId); onActed() }}
         >
           <Square className="w-3.5 h-3.5" aria-hidden="true" />
+        </button>
+      )}
+      {/* A failed song (a cancelled one too: retrying is how a cancel is undone) can be retried on its
+          own, even while the rest of the collection is still downloading. A song is either live or
+          failed, so one in-flight flag serves both buttons. */}
+      {song.stage === 'FAILED' && (
+        <button
+          type="button"
+          className={SONG_ACTION}
+          aria-label={`Retry ${song.title ?? 'song'}`}
+          disabled={inFlight}
+          onClick={async () => { await onRetry(downloadId, song.taskId); onActed() }}
+        >
+          <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}
       <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
@@ -338,6 +355,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
                   song={song}
                   downloadId={item.downloadId}
                   onCancel={onCancel}
+                  onRetry={onRetry}
                   inFlight={inFlight.has(song.taskId)}
                   onActed={() => setAttempt(a => a + 1)}
                 />
