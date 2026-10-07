@@ -1044,7 +1044,7 @@ function mockFolder(spec: MockFolderSpec, songs: DownloadSongView[]): AlbumFolde
     freeSlot: spec.freeSlot,
     queueLength: spec.queueLength,
     extras: spec.extras,
-    songsCurrent: mine.filter(s => s.stage !== 'SUCCEEDED').length,
+    songsCurrent: mine.length,
     isCurrent: mine.length > 0,
     files,
   }

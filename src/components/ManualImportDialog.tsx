@@ -349,9 +349,9 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
   const showTable = load.status === 'loading' || (data?.status === 'READY' && all.length > 0)
   const filtering = filter.trim().length > 0
   // The folder the album downloads from now; replacing it mid-flight is what the confirm is about.
+  // songsCurrent counts finished songs too, so the confirm names no number.
   const current = all.find(f => f.isCurrent) ?? null
-  const stillDownloading = current?.songsCurrent ?? 0
-  const live = target.kind === 'ALBUM' && !isTerminal(target.stage) && stillDownloading > 0
+  const live = target.kind === 'ALBUM' && !isTerminal(target.stage) && (current?.songsCurrent ?? 0) > 0
   // Every song filed: the server would answer 409 to any folder, so say why up front (as the song view does).
   const succeeded = target.kind === 'ALBUM' && target.stage === 'SUCCEEDED'
 
@@ -419,7 +419,7 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
 
       <ConfirmDialog
         open={confirm !== null}
-        message={`Replace ${stillDownloading === 1 ? 'the song' : `the ${stillDownloading} songs`} still downloading from ${current?.username ?? 'the current sharer'}'s folder?`}
+        message={`Replace the songs still downloading from ${current?.username ?? 'the current sharer'}'s folder? Songs already finished are kept.`}
         onConfirm={() => { if (confirm) pickRow(confirm) }}
         onCancel={() => setConfirm(null)}
       />

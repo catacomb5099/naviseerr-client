@@ -442,7 +442,7 @@ export interface AlbumFolder {
   queueLength: number
   /** Other audio files in the folder (a deluxe-edition hint). */
   extras: number
-  /** How many of the album's songs currently download from this folder. */
+  /** How many of the album's songs come from this folder now, finished ones included. */
   songsCurrent: number
   isCurrent: boolean
   files: AlbumFolderFile[]

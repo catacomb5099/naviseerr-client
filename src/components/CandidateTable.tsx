@@ -102,11 +102,11 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
                 {renderAction && <td className={`px-3 py-2.5 ${STICKY} bg-zinc-900`}><div className={`h-4 w-20 ${PULSE}`} /></td>}
               </tr>
             ))
-            : rows.map(row => {
+            : rows.map((row, i) => {
               const key = rowKey(row)
               const current = isCurrent?.(row) ?? false
               const open = renderExpanded ? expanded.has(key) : false
-              const panelId = `${idPrefix}-${key.replace(/[^a-zA-Z0-9_-]/g, '_')}`
+              const panelId = `${idPrefix}-${i}`
               return [
                 <tr key={key} aria-current={current || undefined} className={current ? 'bg-white/5' : 'hover:bg-white/[.03]'}>
                   {renderExpanded && (
@@ -114,7 +114,7 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
                       <button
                         type="button"
                         aria-expanded={open}
-                        aria-controls={panelId}
+                        aria-controls={open ? panelId : undefined}
                         aria-label={expandLabel?.(row) ?? 'Show files'}
                         onClick={() => toggle(key)}
                         className="w-6 h-6 inline-flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"

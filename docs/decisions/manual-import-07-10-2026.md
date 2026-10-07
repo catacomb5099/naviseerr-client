@@ -2,7 +2,7 @@
 
 **Date:** 07-10-2026
 **Status:** Accepted, implemented in three stacked PRs (see the list; look-only table, per-song pick, whole-album pick).
-**Research:** `sweep-1007-notes/research/manual-import-client.md` (private notes); contract `CONTRACT-manual-import.md`.
+**Research:** built against a shared API contract and research notes kept in the owner's private sweep notes (not in this repository).
 
 ## Context
 
