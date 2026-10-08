@@ -1,5 +1,5 @@
-import { type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import { useId, useState, type ReactNode } from 'react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from 'lucide-react'
 import { SortDir, SortValue } from '../lib/candidates'
 
 export interface Column<T> {
@@ -31,6 +31,10 @@ interface CandidateTableProps<T> {
   renderAction?: (row: T) => ReactNode
   /** Skeleton rows under the real header, so the table does not jump when the list lands. */
   loading?: boolean
+  /** Albums: what a row unfolds into (its files), behind a chevron in a first column. */
+  renderExpanded?: (row: T) => ReactNode
+  /** The chevron's accessible name, e.g. "Show files in <folder>". */
+  expandLabel?: (row: T) => string
 }
 
 const PULSE = 'rounded bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
@@ -43,7 +47,15 @@ const HEADER_BUTTON = 'inline-flex items-center gap-1 rounded hover:text-white f
 
 /** A sortable table of Soulseek files or folders. One semantic <table> in a sideways-scrolling box, so
  *  every column stays readable on a phone; the headers are real buttons carrying aria-sort. */
-export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurrent, renderAction, loading }: CandidateTableProps<T>) {
+export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurrent, renderAction, loading, renderExpanded, expandLabel }: CandidateTableProps<T>) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const idPrefix = useId()
+  const toggle = (key: string) => setExpanded(prev => {
+    const next = new Set(prev)
+    if (!next.delete(key)) next.add(key)
+    return next
+  })
+  const span = columns.length + (renderAction ? 1 : 0) + (renderExpanded ? 1 : 0)
   const next = (col: Column<T>): Sort => sort?.key === col.key
     ? { key: col.key, dir: sort.dir === 'asc' ? 'desc' : 'asc' }
     : { key: col.key, dir: col.firstDir ?? 'asc' }
@@ -54,6 +66,7 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
       <table className="w-full text-sm whitespace-nowrap">
         <thead className="bg-zinc-900/80 text-xs uppercase tracking-wide text-zinc-400">
           <tr>
+            {renderExpanded && <th scope="col" className="w-8 px-1"><span className="sr-only">Files</span></th>}
             {columns.map(col => {
               const active = sort?.key === col.key
               return (
@@ -82,22 +95,45 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
           {loading
             ? Array.from({ length: 6 }, (_, i) => (
               <tr key={i} aria-hidden="true">
+                {renderExpanded && <td className="px-1" />}
                 {columns.map(col => (
                   <td key={col.key} className="px-3 py-2.5"><div className={`h-4 ${PULSE} ${col.key === 'file' ? 'w-48' : 'w-14'}`} /></td>
                 ))}
                 {renderAction && <td className={`px-3 py-2.5 ${STICKY} bg-zinc-900`}><div className={`h-4 w-20 ${PULSE}`} /></td>}
               </tr>
             ))
-            : rows.map(row => {
+            : rows.map((row, i) => {
+              const key = rowKey(row)
               const current = isCurrent?.(row) ?? false
-              return (
-                <tr key={rowKey(row)} aria-current={current || undefined} className={current ? 'bg-white/5' : 'hover:bg-white/[.03]'}>
+              const open = renderExpanded ? expanded.has(key) : false
+              const panelId = `${idPrefix}-${i}`
+              return [
+                <tr key={key} aria-current={current || undefined} className={current ? 'bg-white/5' : 'hover:bg-white/[.03]'}>
+                  {renderExpanded && (
+                    <td className="px-1 py-1.5">
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-controls={open ? panelId : undefined}
+                        aria-label={expandLabel?.(row) ?? 'Show files'}
+                        onClick={() => toggle(key)}
+                        className="w-6 h-6 inline-flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+                      >
+                        <ChevronRight className={`w-4 h-4 transition-transform duration-150 motion-reduce:transition-none ${open ? 'rotate-90' : ''}`} aria-hidden="true" />
+                      </button>
+                    </td>
+                  )}
                   {columns.map(col => (
                     <td key={col.key} className={`px-2.5 py-2 ${cellAlign(col)} ${current ? 'text-zinc-300' : 'text-zinc-200'}`}>{col.render(row)}</td>
                   ))}
                   {renderAction && <td className={`px-2.5 py-1.5 text-right whitespace-nowrap ${STICKY} ${current ? 'bg-[#232326]' : 'bg-zinc-900'}`}>{renderAction(row)}</td>}
-                </tr>
-              )
+                </tr>,
+                open && renderExpanded && (
+                  <tr key={`${key}:files`} id={panelId}>
+                    <td colSpan={span} className="p-0">{renderExpanded(row)}</td>
+                  </tr>
+                ),
+              ]
             })}
         </tbody>
       </table>

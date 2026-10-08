@@ -7,7 +7,7 @@ import { DownloadRow } from '../components/DownloadRow'
 import { ManualImportDialog } from '../components/ManualImportDialog'
 import { DownloadFilter, DownloadFilterPills } from '../components/DownloadFilterPills'
 import { Button } from '../components/ui/button'
-import { pickSongCandidate } from '../api/endpoints'
+import { pickAlbumFolder, pickSongCandidate } from '../api/endpoints'
 import { ActiveDownloadView } from '../api/types'
 import { ActOutcome } from '../hooks/useActiveDownloads'
 import { useAllDownloads } from '../hooks/useAllDownloads'
@@ -165,8 +165,9 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
       <ManualImportDialog
         target={manual}
         onClose={() => setManual(null)}
-        onPick={(target, body) => onPick(target.downloadId, target.taskId,
-          () => pickSongCandidate(target.downloadId, target.taskId, body))}
+        onPick={request => request.kind === 'SONG'
+          ? onPick(request.downloadId, request.taskId, () => pickSongCandidate(request.downloadId, request.taskId, request.body))
+          : onPick(request.downloadId, request.downloadId, () => pickAlbumFolder(request.downloadId, request.body))}
       />
     </div>
   )

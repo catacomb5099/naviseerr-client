@@ -329,7 +329,8 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onManualI
               <RotateCcw className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
-          {/* Shown at every stage: on a song still queued the pop-up simply says the search has not run yet. */}
+          {/* Songs and albums only (a playlist is many unrelated songs: pick those one by one). Shown at
+              every stage: on a song still queued the pop-up simply says the search has not run yet. */}
           {item.downloadType === 'SONG' && (
             <button
               type="button"
@@ -337,6 +338,17 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onManualI
               aria-label={`Choose file for ${item.title}`}
               title="Choose the file yourself"
               onClick={e => { e.stopPropagation(); onManualImport({ kind: 'SONG', downloadId: item.downloadId, taskId: null, title: item.title }) }}
+            >
+              <UserRound className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          {item.downloadType === 'ALBUM' && (
+            <button
+              type="button"
+              className={ACTION_BUTTON}
+              aria-label={`Choose sharer for ${item.title}`}
+              title="Choose the sharer yourself"
+              onClick={e => { e.stopPropagation(); onManualImport({ kind: 'ALBUM', downloadId: item.downloadId, title: item.title, stage: item.stage }) }}
             >
               <UserRound className="w-4 h-4" aria-hidden="true" />
             </button>

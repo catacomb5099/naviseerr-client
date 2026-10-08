@@ -3,13 +3,14 @@ import {
   SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
-  CuratorRun, StatusResponse, SongCandidatesResponse,
+  CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
   cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates, pickMockSongCandidate,
+  getMockAlbumCandidates, pickMockAlbumFolder,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -286,6 +287,32 @@ export async function pickSongCandidate(downloadId: string, taskId: string, body
   return apiClient<ActiveDownloadView>(
     `/downloads/${encodeURIComponent(downloadId)}/tasks/${encodeURIComponent(taskId)}/pick`,
     { method: 'POST', body: JSON.stringify(body) })
+}
+
+/**
+ * The folders Soulseek sharers hold the whole album in, from the server's cached album search.
+ * GET /downloads/{id}/album-candidates  (409 NOT_AN_ALBUM for a playlist or radio; 404 unknown)
+ */
+export async function getAlbumCandidates(downloadId: string, signal?: AbortSignal): Promise<AlbumCandidatesResponse> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockAlbumCandidates(downloadId))
+  return apiClient<AlbumCandidatesResponse>(`/downloads/${encodeURIComponent(downloadId)}/album-candidates`, { signal })
+}
+
+/** The album pick body: the sharer and the folder EXACTLY as the folder list gave them. */
+export interface AlbumPick {
+  username: string
+  folder: string
+}
+
+/**
+ * Take the whole album from this sharer's folder instead: every song the folder holds that is not already
+ * downloaded restarts in place from it; finished songs are kept.
+ * POST /downloads/{id}/album-pick  (202 with the fresh card; 409 with the current card when nothing could change; 404 unknown)
+ */
+export async function pickAlbumFolder(downloadId: string, body: AlbumPick): Promise<ActiveDownloadView> {
+  if (USE_MOCK_DATA) return Promise.resolve(pickMockAlbumFolder(downloadId, body))
+  return apiClient<ActiveDownloadView>(
+    `/downloads/${encodeURIComponent(downloadId)}/album-pick`, { method: 'POST', body: JSON.stringify(body) })
 }
 
 /**

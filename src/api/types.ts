@@ -415,3 +415,48 @@ export interface SongCandidatesResponse {
   current: { username: string; filename: string } | null
   candidates: SongCandidate[]
 }
+
+/** One of the album's songs as a sharer's folder holds it. `index` is the album position. */
+export interface AlbumFolderFile {
+  index: number
+  taskId: string
+  /** The file's basename inside the folder. */
+  name: string
+  title: string
+  size: number
+  bitrateKbps: number | null
+  lengthSeconds: number | null
+  extension: string
+}
+
+/** One sharer's folder holding (most of) the album. `folder` is slskd's full directory path, verbatim:
+ *  shown as its basename, sent back unchanged on a pick. */
+export interface AlbumFolder {
+  username: string
+  folder: string
+  /** How many of this album's songs the folder holds. */
+  fileCount: number
+  totalSize: number
+  uploadSpeed: number | null
+  freeSlot: boolean | null
+  queueLength: number
+  /** Other audio files in the folder (a deluxe-edition hint). */
+  extras: number
+  /** How many of the album's songs come from this folder now, finished ones included. */
+  songsCurrent: number
+  isCurrent: boolean
+  files: AlbumFolderFile[]
+}
+
+/** GET /downloads/{id}/album-candidates - the folders the album's Soulseek search found, best first.
+ *  `reason` with NONE: NO_WHOLE_FOLDER (songs were searched one by one), BEFORE_CACHE, NO_ALBUM_SEARCH.
+ *  409 NOT_AN_ALBUM for a playlist or radio. */
+export interface AlbumCandidatesResponse {
+  downloadId: string
+  status: CandidateStatus
+  reason: string | null
+  query: string | null
+  searchedAt: string | null
+  songCount: number
+  folders: AlbumFolder[]
+}
