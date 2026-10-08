@@ -107,7 +107,8 @@ export interface ArtistDetail {
   /** YouTube Music's own featured playlists linked to the artist, minus those titled after the artist or a
    *  related artist (those are effectively "best of" lists, not appearances). */
   playlists: Playlist[]
-  /** `iconUrl` is "" here: related artists come without artwork. */
+  /** `iconUrl` is the related artist's largest thumbnail, passed through by the adapter since 28-09-2026;
+   *  "" only from an older adapter (the card then shows a plain disc). */
   similarArtists: Artist[]
 }
 
