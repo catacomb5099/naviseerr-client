@@ -401,8 +401,8 @@ export interface SongCandidate {
   isCurrent: boolean
 }
 
-/** GET /downloads/{id}/tasks/{taskId}/candidates - every audio file the song's Soulseek search returned (the
- *  first 500), in the server's ranking: the files that are the song first, the NONE ones last. `candidates` is empty while SEARCHING and with NONE; `reason` says why
+/** GET /downloads/{id}/tasks/{taskId}/candidates - every audio file the song's Soulseek search returned, uncapped,
+ *  in the server's ranking: the files that are the song first, the NONE ones last. `candidates` is empty while SEARCHING and with NONE; `reason` says why
  *  there is nothing: BEFORE_CACHE (searched before lists were kept), NO_RESULTS, ALREADY_IN_LIBRARY. */
 export interface SongCandidatesResponse {
   taskId: string
@@ -453,7 +453,7 @@ export interface AlbumFolder {
 }
 
 /** GET /downloads/{id}/album-candidates - every folder the album's Soulseek search found holding any of its
- *  songs (the first 50), the judged ones first.
+ *  songs, uncapped, the judged ones first.
  *  `reason` with NONE: NO_WHOLE_FOLDER (songs were searched one by one), BEFORE_CACHE, NO_ALBUM_SEARCH.
  *  409 NOT_AN_ALBUM for a playlist or radio. */
 export interface AlbumCandidatesResponse {
