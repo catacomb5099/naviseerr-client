@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import {
-  getActiveDownloads, resolveDownloads, downloadSong, downloadCollection, cancelDownload, retryDownload,
+  getActiveDownloads, getStatus, resolveDownloads, downloadSong, downloadCollection, cancelDownload, retryDownload,
 } from '../api/endpoints'
 import { ActiveDownloadsResponse, ActiveDownloadView, DownloadType } from '../api/types'
 import {
@@ -94,6 +94,9 @@ export function useActiveDownloads(playSwoosh: () => void) {
   // Polls in a row the server did not answer; drives the back-off in lib/downloadPolling.
   const failuresRef = useRef(0)
   const [terminalRetentionMs, setTerminalRetentionMs] = useState<number>(DEFAULT_RETENTION_MS)
+  // Asked alongside each feed poll. null = not known (before the first answer, or a server without
+  // GET /status), and the strip stays hidden rather than crying wolf.
+  const [soulseekLoggedIn, setSoulseekLoggedIn] = useState<boolean | null>(null)
 
   const timeoutRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -223,6 +226,13 @@ export function useActiveDownloads(playSwoosh: () => void) {
     const controller = new AbortController()
     abortRef.current = controller
     try {
+      // Not awaited with the feed: while slskd is down the server takes up to 3 s to answer /status,
+      // and the downloads feed should not wait for that. An aborted call (a newer poll took over)
+      // leaves the last answer in place rather than hiding the strip for a beat.
+      void getStatus(controller.signal).then(
+        s => setSoulseekLoggedIn(s.soulseek.loggedIn),
+        () => { if (!controller.signal.aborted) setSoulseekLoggedIn(null) },
+      )
       const response = await getActiveDownloads(controller.signal)
       failuresRef.current = 0
       pollIntervalRef.current = response.pollIntervalMs
@@ -443,5 +453,6 @@ export function useActiveDownloads(playSwoosh: () => void) {
     cancel,
     retry,
     inFlight,
+    soulseekLoggedIn,
   }
 }

@@ -17,6 +17,7 @@ React-based music search and download client with Spotify-inspired UI.
 - On the Downloads page a failed song inside an album or playlist can be retried on its own, even while the rest of the collection is still downloading; cancelled songs can be retried the same way
 - Download buttons know what you already asked for: grey "Downloading…" while it runs, "Downloaded" once you have it, and a click on a grey button opens the Downloads page instead of queuing it again; if the server already has something you ask for, the page says "Already downloading" / "You already have" and shows that download instead of an error
 - An amber bar at the top says when you're offline or the server can't be reached, and a green "Back online." bar shows for 12 s once it returns; progress polling pauses while offline and slows down while the server is unreachable
+- An amber strip across the top says "Not connected to Soulseek" while the server's Soulseek login is down; downloads wait until it is back
 - Responsive design for mobile and desktop
 - Docker deployment
 
@@ -113,6 +114,7 @@ Expected endpoints:
 - `GET /songs/views?ids=` - How many times each video was viewed (at most 50 ids)
 - `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
 - `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
+- `GET /status` - Whether the server's Soulseek client is connected (polled with the downloads feed)
 - `GET /downloads/all?pageSize=&pageNumber=&type=SONG|ALBUM|PLAYLIST` - Every download, paged, for the Downloads page; `type` is optional and narrows to one kind (PLAYLIST includes suggested playlists), with page counts per kind
 
 ## License

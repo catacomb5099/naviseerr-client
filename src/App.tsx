@@ -8,6 +8,7 @@ import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
 import { ConnectivityBar } from './components/ConnectivityBar'
 import { DownloadPanel } from './components/DownloadPanel'
 import { SongInfoDialog } from './components/SongInfoDialog'
+import { SoulseekStatusBar } from './components/SoulseekStatusBar'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
 import { DownloadCardsContext } from './hooks/useItemDownload'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
@@ -33,6 +34,7 @@ function App() {
     cancel: cancelDownload,
     retry: retryDownload,
     inFlight: downloadsInFlight,
+    soulseekLoggedIn,
   } = useActiveDownloads(playSwoosh)
   const library = useDownloadLibrary()
   // Which song's info pop-up is open, and on which page. One dialog for the whole app: every song row
@@ -62,6 +64,7 @@ function App() {
     <div className="min-h-screen bg-black text-white">
       {/* Above the routes, so it spans the window and survives every page change. */}
       <ConnectivityBar />
+      <SoulseekStatusBar loggedIn={soulseekLoggedIn} />
       {/* Routes replace the pair of `hidden` divs that used to switch between the two pages. */}
       <Routes>
         <Route path="/" element={
