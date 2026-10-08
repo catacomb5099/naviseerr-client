@@ -6,7 +6,7 @@ import { useRetry } from '../hooks/useRetry'
 import { useDownloadCards } from '../hooks/useItemDownload'
 import { CollectionDetail, CollectionPageType, CollectionTrack, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
-import { itemDownload, itemDownloadLabel } from '../lib/downloadPanel'
+import { RequestOutcome, alreadyCopy, itemDownload, itemDownloadLabel } from '../lib/downloadPanel'
 import { formatDuration, formatViews } from '../lib/utils'
 import { collectionLink } from '../lib/youtubeMusic'
 import { AppHeader } from '../components/AppHeader'
@@ -19,9 +19,9 @@ import { ArtistNames } from '../components/ArtistNames'
 interface CollectionPageProps {
   /** From the route: /album/:id, /playlist/:id or /radio/:id. The id is read from the URL. */
   type: CollectionPageType
-  /** Resolves true once the server accepted the request; the button that asked shows it. The
-   *  downloads panel stays the source of truth for what actually queued. */
-  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
+  /** How the request ended: accepted, already on the server (its card lands in the feed, so the
+   *  button greys from that), or failed. The page only words the announcement. */
+  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<RequestOutcome>
   /** Opens the song info pop-up App owns. */
   onInfo: (videoId: string, plays?: string | null) => void
 }
@@ -135,13 +135,15 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
 
   const send = async (id: string, type: DownloadType, title: string, meta: DownloadMetaInput) => {
     setRequests(prev => ({ ...prev, [id]: 'pending' }))
-    const accepted = await onDownload(id, type, meta)
+    const outcome = await onDownload(id, type, meta)
     setRequests(prev => {
       const next = { ...prev }
-      if (accepted) delete next[id]; else next[id] = 'failed'
+      if (outcome.status === 'failed') next[id] = 'failed'; else delete next[id]
       return next
     })
-    setAnnouncement(accepted ? `Requested ${title}` : `Couldn't request ${title}`)
+    setAnnouncement(outcome.status === 'accepted' ? `Requested ${title}`
+      : outcome.status === 'exists' ? alreadyCopy(outcome.existing, title)
+      : `Couldn't request ${title}`)
   }
 
   // A radio downloads as ONE download keyed by the radio's id: the server reads the saved songs, so

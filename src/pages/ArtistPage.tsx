@@ -6,6 +6,7 @@ import { useRetry } from '../hooks/useRetry'
 import { ApiError } from '../api/client'
 import { ArtistDetail, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
+import { RequestOutcome } from '../lib/downloadPanel'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { SongCard } from '../components/SongCard'
@@ -15,7 +16,7 @@ import { CAROUSEL_CONTAINER } from '../components/cardLayout'
 
 interface ArtistPageProps {
   /** Same plumbing as HomePage's song rows: App requests the download and records its metadata. */
-  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
+  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<RequestOutcome>
   /** Opens the song info pop-up App owns. */
   onInfo: (videoId: string, plays?: string | null) => void
 }

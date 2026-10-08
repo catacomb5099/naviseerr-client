@@ -5,7 +5,7 @@ import { getSuggestedPlaylist } from '../api/endpoints'
 import { ApiError } from '../api/client'
 import { DownloadType, SuggestedPlaylist, SuggestedTrack } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
-import { itemDownload, itemDownloadLabel } from '../lib/downloadPanel'
+import { RequestOutcome, alreadyCopy, itemDownload, itemDownloadLabel } from '../lib/downloadPanel'
 import { categoryName, editionDateLong, filtersCopy, tierCopy } from '../lib/suggested'
 import { formatPlays } from '../lib/utils'
 import { useSuggestedRefresh } from '../hooks/useSuggestedRefresh'
@@ -21,7 +21,7 @@ import { REQUEST_FAILED_COPY, RequestState } from './CollectionPage'
 
 interface SuggestedPlaylistPageProps {
   /** Same plumbing as the collection page: App requests the download and records its metadata. */
-  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
+  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<RequestOutcome>
   /** Opens the song info pop-up App owns. */
   onInfo: (videoId: string, plays?: string | null) => void
 }
@@ -99,13 +99,15 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
 
   const send = async (id: string, type: DownloadType, name: string, meta: DownloadMetaInput) => {
     setRequests(prev => ({ ...prev, [id]: 'pending' }))
-    const accepted = await onDownload(id, type, meta)
+    const outcome = await onDownload(id, type, meta)
     setRequests(prev => {
       const next = { ...prev }
-      if (accepted) delete next[id]; else next[id] = 'failed'
+      if (outcome.status === 'failed') next[id] = 'failed'; else delete next[id]
       return next
     })
-    setAnnouncement(accepted ? `Requested ${name}` : `Couldn't request ${name}`)
+    setAnnouncement(outcome.status === 'accepted' ? `Requested ${name}`
+      : outcome.status === 'exists' ? alreadyCopy(outcome.existing, name)
+      : `Couldn't request ${name}`)
   }
 
   const downloadTrack = (track: SuggestedTrack) => send(track.id, 'SONG', track.name, {

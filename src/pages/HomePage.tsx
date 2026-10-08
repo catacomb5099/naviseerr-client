@@ -17,13 +17,14 @@ import { ShowMore, forgetShelves, useFocusFirstNew, useShowMore } from '../hooks
 import { PAGE, looksAlike } from '../lib/showMore'
 import { DownloadType, SearchResponse } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
+import { RequestOutcome } from '../lib/downloadPanel'
 
 interface HomePageProps {
   onNavigateToDownloads: () => void
   /** Requests the download and records its metadata; App owns both halves. `id` is the YouTube
-   *  videoId for a song or the collection id for an album/playlist. Resolves true once the server
-   *  accepted the request. */
-  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<boolean>
+   *  videoId for a song or the collection id for an album/playlist. Resolves with how the request
+   *  ended: accepted, already on the server, or failed. */
+  onDownload: (id: string, type: DownloadType, meta: DownloadMetaInput) => Promise<RequestOutcome>
   /** Opens the song info pop-up App owns. */
   onInfo: (videoId: string, plays?: string | null) => void
 }

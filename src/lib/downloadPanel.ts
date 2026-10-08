@@ -1,4 +1,4 @@
-import { ActiveDownloadView, DownloadStage, DownloadType } from '../api/types'
+import { ActiveDownloadView, Download, DownloadStage, DownloadType } from '../api/types'
 
 export interface DownloadCardState {
   downloadId: string
@@ -62,6 +62,18 @@ export function sortCards(cards: DownloadCardState[]): DownloadCardState[] {
 export function itemDownload(cards: DownloadCardState[], type: DownloadType, id: string): DownloadCardState | undefined {
   const matching = cards.filter(c => c.downloadType === type && c.youtubeId === id)
   return matching.find(c => !isTerminal(c.stage)) ?? sortCards(matching)[0]
+}
+
+/** How a download request ended: accepted (202), the server already has it (409 with its card), or failed. */
+export type RequestOutcome =
+  | { status: 'accepted'; download: Download }
+  | { status: 'exists'; existing: ActiveDownloadView }
+  | { status: 'failed' }
+
+/** What a page announces when the server already has the item, by what state it is in. */
+export function alreadyCopy(existing: Pick<ActiveDownloadView, 'stage'>, title: string): string {
+  if (existing.stage === 'PARTIAL_SUCCESS') return `You already have part of ${title} - retry it from Downloads`
+  return isTerminal(existing.stage) ? `You already have ${title}` : `Already downloading ${title}`
 }
 
 /** What a download button says instead of "Download" for that item; null when it can be asked for.
