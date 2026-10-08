@@ -14,6 +14,7 @@ import { PageNavButton } from '../components/PageNavButton'
 import { SuggestedPlaylistCover } from '../components/SuggestedPlaylistCover'
 import { SuggestedRefreshPanel } from '../components/SuggestedRefreshPanel'
 import { PlayOnYouTubeMusic } from '../components/PlayOnYouTubeMusic'
+import { ArtistNames } from '../components/ArtistNames'
 import { REQUEST_FAILED_COPY, RequestState } from './CollectionPage'
 
 interface SuggestedPlaylistPageProps {
@@ -35,11 +36,11 @@ const PULSE = 'bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
 const BUTTON = 'rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 const ICON_BUTTON = 'inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 
-/** "Cocteau Twins · Blue Bell Knoll (1988)" - who and where from, on one line. */
-function trackLine(track: SuggestedTrack): string {
-  const who = track.artists.length > 0 ? track.artists.join(', ') : 'Unknown Artist'
-  if (!track.album) return who
-  return `${who} · ${track.album}${track.albumYear ? ` (${track.albumYear})` : ''}`
+/** "Cocteau Twins · Blue Bell Knoll (1988)" - who and where from, on one line. The names go through
+ *  ArtistNames like every other row; plain text today, links the day the curator sends artist ids. */
+function TrackLine({ track }: { track: SuggestedTrack }) {
+  const where = track.album ? ` · ${track.album}${track.albumYear ? ` (${track.albumYear})` : ''}` : ''
+  return <><ArtistNames names={track.artists} />{where}</>
 }
 
 /**
@@ -228,7 +229,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                       {state === 'failed' ? (
                         <p className="text-xs text-red-400 truncate">{REQUEST_FAILED_COPY}</p>
                       ) : (
-                        <p className="text-xs text-zinc-400 truncate">{trackLine(track)}</p>
+                        <p className="text-xs text-zinc-400 truncate"><TrackLine track={track} /></p>
                       )}
                     </div>
                     {plays && (
