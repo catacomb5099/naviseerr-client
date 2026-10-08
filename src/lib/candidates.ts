@@ -70,11 +70,20 @@ export const GRADE_LABEL: Record<string, string> = {
   EXACT: 'Exact',
   OTHER_VERSION: 'Other version',
   UNVERIFIED: 'Unverified',
+  NONE: 'Not a match',
+}
+
+/** What each badge means, for the hover hint; a person may overrule every one of them. */
+export const GRADE_HINT: Record<string, string> = {
+  EXACT: 'Naviseerr reads this file as the requested version of the song',
+  OTHER_VERSION: 'Naviseerr reads this file as another version: a live take, a remix, an edit',
+  UNVERIFIED: 'The file is the song by name, but nothing in its path names the artist',
+  NONE: 'Naviseerr reads this file as a different song. It is listed so you can decide for yourself',
 }
 
 /** Sort key for the match column: the server's grades in order of confidence. */
 export function gradeRank(grade: string): number {
-  return grade === 'EXACT' ? 0 : grade === 'OTHER_VERSION' ? 1 : 2
+  return grade === 'EXACT' ? 0 : grade === 'OTHER_VERSION' ? 1 : grade === 'UNVERIFIED' ? 2 : 3
 }
 
 export type SortDir = 'asc' | 'desc'

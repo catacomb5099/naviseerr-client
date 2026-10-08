@@ -7,7 +7,7 @@ import { CandidatesLoad, ManualImportTarget, useCandidates } from '../hooks/useC
 import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
-  GRADE_LABEL, basename, filterRows, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank, slotLabel,
+  GRADE_HINT, GRADE_LABEL, basename, filterRows, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank, slotLabel,
   slotRank, sortRows, statusCopy,
 } from '../lib/candidates'
 import { formatDuration } from '../lib/utils'
@@ -41,6 +41,7 @@ const GRADE_CLASS: Record<string, string> = {
   EXACT: 'bg-green-500/15 text-green-400',
   OTHER_VERSION: 'bg-amber-500/15 text-amber-400',
   UNVERIFIED: 'bg-zinc-700/60 text-zinc-300',
+  NONE: 'bg-zinc-800 text-zinc-500',
 }
 
 const fmt = (c: SongCandidate) => formatOf(c.filename) || c.extension
@@ -67,7 +68,7 @@ const SONG_COLUMNS: Column<SongCandidate>[] = [
   {
     key: 'match', label: 'Match', sortValue: c => gradeRank(c.grade),
     render: c => (
-      <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${GRADE_CLASS[c.grade] ?? GRADE_CLASS.UNVERIFIED}`}>
+      <span title={GRADE_HINT[c.grade]} className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${GRADE_CLASS[c.grade] ?? GRADE_CLASS.UNVERIFIED}`}>
         {GRADE_LABEL[c.grade] ?? c.grade}
       </span>
     ),
@@ -89,6 +90,19 @@ const ALBUM_COLUMNS: Column<AlbumFolder>[] = [
   {
     key: 'current', label: 'Current', align: 'right', firstDir: 'desc', sortValue: f => f.songsCurrent,
     render: f => f.songsCurrent > 0 ? `${f.songsCurrent} ${f.songsCurrent === 1 ? 'song' : 'songs'}` : '—',
+  },
+  {
+    key: 'match', label: 'Match', sortValue: f => f.judged ? 0 : 1,
+    render: f => (
+      <span
+        title={f.judged
+          ? "Naviseerr's own album search would take this folder"
+          : "Naviseerr's album search would not take this folder: too few of the album's songs, no artist in its path, a low bit rate or a sharer that stalls. It is listed so you can decide for yourself"}
+        className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${f.judged ? GRADE_CLASS.EXACT : GRADE_CLASS.NONE}`}
+      >
+        {f.judged ? 'Match' : 'Not judged'}
+      </span>
+    ),
   },
 ]
 

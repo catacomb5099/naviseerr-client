@@ -377,7 +377,8 @@ export interface StatusResponse {
 // --- Manual import: the files Soulseek found for a song -------------------
 
 export type CandidateStatus = 'READY' | 'SEARCHING' | 'NONE'
-export type CandidateGrade = 'EXACT' | 'OTHER_VERSION' | 'UNVERIFIED'
+/** The server's verdict on a file: NONE is a file its matcher calls another song, listed anyway (every option, 08-10-2026). */
+export type CandidateGrade = 'EXACT' | 'OTHER_VERSION' | 'UNVERIFIED' | 'NONE'
 
 /** One file a Soulseek user shares that matched the song's search. `filename` is slskd's full path,
  *  verbatim (backslashes, share alias and all): shown as its basename, sent back unchanged on a pick. */
@@ -400,8 +401,8 @@ export interface SongCandidate {
   isCurrent: boolean
 }
 
-/** GET /downloads/{id}/tasks/{taskId}/candidates - every file the song's Soulseek search found, in the
- *  server's ranking (best first). `candidates` is empty while SEARCHING and with NONE; `reason` says why
+/** GET /downloads/{id}/tasks/{taskId}/candidates - every audio file the song's Soulseek search returned, uncapped,
+ *  in the server's ranking: the files that are the song first, the NONE ones last. `candidates` is empty while SEARCHING and with NONE; `reason` says why
  *  there is nothing: BEFORE_CACHE (searched before lists were kept), NO_RESULTS, ALREADY_IN_LIBRARY. */
 export interface SongCandidatesResponse {
   taskId: string
@@ -445,10 +446,14 @@ export interface AlbumFolder {
   /** How many of the album's songs come from this folder now, finished ones included. */
   songsCurrent: number
   isCurrent: boolean
+  /** Whether Naviseerr's own album search would take this folder; false for one listed only for a person to
+   *  choose (too few of the album's songs, no artist in its path, a low bit rate, a sharer that stalls). */
+  judged: boolean
   files: AlbumFolderFile[]
 }
 
-/** GET /downloads/{id}/album-candidates - the folders the album's Soulseek search found, best first.
+/** GET /downloads/{id}/album-candidates - every folder the album's Soulseek search found holding any of its
+ *  songs, uncapped, the judged ones first.
  *  `reason` with NONE: NO_WHOLE_FOLDER (songs were searched one by one), BEFORE_CACHE, NO_ALBUM_SEARCH.
  *  409 NOT_AN_ALBUM for a playlist or radio. */
 export interface AlbumCandidatesResponse {

@@ -1,6 +1,6 @@
 /** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
 import {
-  basename, filterRows, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank, slotLabel,
+  GRADE_HINT, GRADE_LABEL, basename, filterRows, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank, slotLabel,
   slotRank, sortRows, statusCopy,
 } from '../src/lib/candidates'
 
@@ -40,6 +40,8 @@ assert(slotLabel({ freeSlot: null, queueLength: 0 }) === '—', 'unknown slot')
 assert(slotRank({ freeSlot: true, queueLength: 0 })! < slotRank({ freeSlot: false, queueLength: 0 })!, 'free before busy')
 assert(slotRank({ freeSlot: false, queueLength: 2 })! < slotRank({ freeSlot: false, queueLength: 9 })!, 'shorter queue first')
 assert(gradeRank('EXACT') < gradeRank('OTHER_VERSION') && gradeRank('OTHER_VERSION') < gradeRank('UNVERIFIED'), 'grade order')
+assert(gradeRank('UNVERIFIED') < gradeRank('NONE'), 'a file the matcher calls another song sorts last')
+assert(GRADE_LABEL.NONE === 'Not a match' && GRADE_HINT.NONE.includes('different song'), 'the NONE badge says what it is')
 
 // Sorting: nulls last both ways, ties stable, text case-insensitive.
 const rows = [

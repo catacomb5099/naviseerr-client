@@ -906,9 +906,12 @@ function mockCandidateList(song: DownloadSongView, taskId: string): SongCandidat
     const extension = r < 0.4 ? 'flac' : r < 0.85 ? 'mp3' : 'm4a'
     const bitrateKbps = extension === 'flac' ? null : extension === 'm4a' ? 256 : [128, 192, 245, 256, 320][Math.floor(rnd() * 5)]
     const g = rnd()
-    const grade: SongCandidate['grade'] = g < 0.7 ? 'EXACT' : g < 0.9 ? 'OTHER_VERSION' : 'UNVERIFIED'
+    // Every option (08-10-2026): about one row in eight is a file the server's matcher calls another song.
+    const grade: SongCandidate['grade'] = g < 0.62 ? 'EXACT' : g < 0.8 ? 'OTHER_VERSION' : g < 0.88 ? 'UNVERIFIED' : 'NONE'
     const suffix = grade === 'OTHER_VERSION' ? [' (Live)', ' (Remix)', ' (Acoustic)'][Math.floor(rnd() * 3)] : ''
-    const name = grade === 'UNVERIFIED' ? `${title.toLowerCase().replace(/\s+/g, '_')}${suffix}` : `${String(1 + Math.floor(rnd() * 12)).padStart(2, '0')} - ${artist} - ${title}${suffix}`
+    const otherSong = [`${title} Under`, `Let Me ${title}`, `${title} (Interlude)`, 'Untitled Track'][Math.floor(rnd() * 4)]
+    const name = grade === 'UNVERIFIED' ? `${title.toLowerCase().replace(/\s+/g, '_')}${suffix}`
+      : `${String(1 + Math.floor(rnd() * 12)).padStart(2, '0')} - ${artist} - ${grade === 'NONE' ? otherSong : title}${suffix}`
     const seconds = grade === 'OTHER_VERSION' ? length + Math.floor(rnd() * 90) : length + Math.floor(rnd() * 5) - 2
     const freeRoll = rnd()
     rows.push({
@@ -925,7 +928,7 @@ function mockCandidateList(song: DownloadSongView, taskId: string): SongCandidat
       isCurrent: false,
     })
   }
-  const gradeOrder = { EXACT: 0, OTHER_VERSION: 1, UNVERIFIED: 2 }
+  const gradeOrder = { EXACT: 0, OTHER_VERSION: 1, UNVERIFIED: 2, NONE: 3 }
   rows.sort((a, b) => gradeOrder[a.grade] - gradeOrder[b.grade]
     || Number(b.freeSlot === true) - Number(a.freeSlot === true)
     || (b.uploadSpeed ?? 0) - (a.uploadSpeed ?? 0))
@@ -1010,17 +1013,19 @@ export function pickMockSongCandidate(downloadId: string, taskId: string, body: 
 // with extras, and an MP3 folder missing one song. Which folder is "current" follows the songs' own
 // sharer, so an album pick that rewrites the songs moves the marker with it.
 
-interface MockFolderSpec { username: string; folder: string; extension: string; bitrateKbps: number | null; uploadSpeed: number | null; freeSlot: boolean | null; queueLength: number; extras: number; skip?: number }
+interface MockFolderSpec { username: string; folder: string; extension: string; bitrateKbps: number | null; uploadSpeed: number | null; freeSlot: boolean | null; queueLength: number; extras: number; skip?: number; only?: number; judged?: boolean }
 
 const MOCK_ALBUM_FOLDERS: MockFolderSpec[] = [
   { username: 'mock-peer', folder: '@@mock\\Music\\Jay Sean\\All or Nothing', extension: 'flac', bitrateKbps: null, uploadSpeed: 1770000, freeSlot: true, queueLength: 0, extras: 0 },
   { username: 'vinylvault', folder: '@@viny\\Shared\\Albums\\Jay Sean - All or Nothing (2009) [FLAC]', extension: 'flac', bitrateKbps: null, uploadSpeed: 2400000, freeSlot: true, queueLength: 3, extras: 2 },
   { username: 'mp3mike', folder: '@@mp3m\\Music\\Jay Sean\\All or Nothing [320]', extension: 'mp3', bitrateKbps: 320, uploadSpeed: 650000, freeSlot: false, queueLength: 5, extras: 0, skip: 3 },
+  // Every option (08-10-2026): a folder the server's own search would not take, one song at 128 kbps, listed anyway.
+  { username: 'tapehead', folder: '@@tape\\Downloads\\soulseek\\misc', extension: 'mp3', bitrateKbps: 128, uploadSpeed: 210000, freeSlot: true, queueLength: 0, extras: 14, only: 1, judged: false },
 ]
 
 function mockFolder(spec: MockFolderSpec, songs: DownloadSongView[]): AlbumFolder {
   const files = songs
-    .filter(s => s.position !== spec.skip)
+    .filter(s => s.position !== spec.skip && (spec.only == null || s.position === spec.only))
     .map(s => {
       const seconds = s.durationSeconds ?? 200
       return {
@@ -1046,6 +1051,7 @@ function mockFolder(spec: MockFolderSpec, songs: DownloadSongView[]): AlbumFolde
     extras: spec.extras,
     songsCurrent: mine.length,
     isCurrent: mine.length > 0,
+    judged: spec.judged ?? true,
     files,
   }
 }
