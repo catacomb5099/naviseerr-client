@@ -16,6 +16,7 @@ React-based music search and download client with Spotify-inspired UI.
 - Downloads panel and history show server-resolved artwork and titles as they arrive
 - On the Downloads page a failed song inside an album or playlist can be retried on its own, even while the rest of the collection is still downloading; cancelled songs can be retried the same way
 - Download buttons know what you already asked for: grey "Downloading…" while it runs, "Downloaded" once you have it, and a click on a grey button opens the Downloads page instead of queuing it again; if the server already has something you ask for, the page says "Already downloading" / "You already have" and shows that download instead of an error
+- An amber bar at the top says when you're offline or the server can't be reached, and a green "Back online." bar shows for 12 s once it returns; progress polling pauses while offline and slows down while the server is unreachable
 - Responsive design for mobile and desktop
 - Docker deployment
 
