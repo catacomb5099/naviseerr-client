@@ -9,7 +9,6 @@ import { collectionSummary } from '../lib/collectionProgress'
 import { formatDuration } from '../lib/utils'
 import { CollectionProgress, CollectionSummary } from './CollectionProgress'
 import { TypeBadge } from './TypeBadge'
-import { PlayOnYouTubeMusic } from './PlayOnYouTubeMusic'
 
 interface DownloadRowProps {
   item: DownloadItem
@@ -108,7 +107,6 @@ function SongRow({ song, downloadId, onCancel, inFlight, onActed }: SongRowProps
           <ArtistNames names={song.artists} ids={song.artistIds ?? []} />
         </p>
       </div>
-      <PlayOnYouTubeMusic videoId={song.youtubeId} title={song.title} artists={song.artists} />
       <span className={`flex items-center gap-1.5 text-xs ${status.color}`}>
         {status.glyph}
         {status.word}
@@ -319,9 +317,6 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, inFlight 
             >
               <RotateCcw className="w-4 h-4" aria-hidden="true" />
             </button>
-          )}
-          {item.downloadType === 'SONG' && (
-            <PlayOnYouTubeMusic videoId={item.youtubeId} title={item.title} artists={item.artistNames} className="h-6 w-6" />
           )}
           {openPath && (
             <Link
