@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDownToLine, Check, Loader2, X } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getSongInfo } from '../api/endpoints'
 import { useRetry } from '../hooks/useRetry'
+import { useItemDownload } from '../hooks/useItemDownload'
 import { ApiError } from '../api/client'
 import { DownloadType, SongInfo } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
@@ -43,8 +44,12 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
   // yet, which is what "loading" means; a result for this exact key is ours and is not fetched again.
   const [fetched, setFetched] = useState<(Load & { key: string }) | null>(null)
   const [attempt, retry] = useRetry(videoId ?? '')
-  // Keyed by song, so reopening the same song still shows it was requested and another song starts fresh.
+  // Keyed by song, so a failed request for one song is not shown for the next.
   const [request, setRequest] = useState<{ id: string; state: RequestState } | null>(null)
+  const navigate = useNavigate()
+  // The download feed: grey with the words while this song is downloading or once it is downloaded, and
+  // the click then opens the Downloads page (closing the pop-up) instead of asking again.
+  const { label } = useItemDownload('SONG', videoId ?? '')
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -73,7 +78,7 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const info = load.status === 'ready' ? load.info : null
   const state = request?.id === videoId ? request.state : undefined
-  const inert = state === 'pending' || state === 'sent'
+  const inert = state === 'pending' || label !== null
 
   const download = async (info: SongInfo) => {
     setRequest({ id: info.id, state: 'pending' })
@@ -85,7 +90,7 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
       albumName: info.album?.name ?? null,
       iconURL: info.iconURL || null,
     })
-    setRequest({ id: info.id, state: accepted ? 'sent' : 'failed' })
+    setRequest(accepted ? null : { id: info.id, state: 'failed' })
   }
 
   const facts: string[] = []
@@ -213,14 +218,16 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
                 {/* Inert (not `disabled`) while the details load and once asked, so focus stays on it. */}
                 <button
                   type="button"
-                  onClick={() => { if (info && !inert) void download(info) }}
+                  onClick={() => { if (label) { onClose(); navigate('/downloads') } else if (info && !inert) void download(info) }}
                   aria-disabled={!info || inert}
+                  title={label ? `${label} - open Downloads` : undefined}
                   className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
-                  {state === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
-                  {state === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-                  {!state || state === 'failed' ? <ArrowDownToLine className="w-4 h-4" aria-hidden="true" /> : null}
-                  {state === 'sent' ? 'Requested' : state === 'pending' ? 'Requesting…' : 'Download'}
+                  {label === 'Downloading…' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                  {label !== null && label !== 'Downloading…' && <Check className="w-4 h-4" aria-hidden="true" />}
+                  {label === null && state === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                  {label === null && state !== 'pending' && <ArrowDownToLine className="w-4 h-4" aria-hidden="true" />}
+                  {label ?? (state === 'pending' ? 'Requesting…' : 'Download')}
                 </button>
                 {state === 'failed' && <p role="status" className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
               </div>

@@ -54,6 +54,25 @@ export function sortCards(cards: DownloadCardState[]): DownloadCardState[] {
  * so a busy list doesn't bloat, and clamped to the server's retention window so a card is never
  * still waiting out its TTL long after the server stopped reporting it.
  */
+/**
+ * The download that counts for one item (exact type + id): a live one if any, else the newest request.
+ * Undefined when the feed knows nothing about it. Exact on purpose: a song inside a downloading playlist
+ * is a different download from the single, and the server keeps them apart too.
+ */
+export function itemDownload(cards: DownloadCardState[], type: DownloadType, id: string): DownloadCardState | undefined {
+  const matching = cards.filter(c => c.downloadType === type && c.youtubeId === id)
+  return matching.find(c => !isTerminal(c.stage)) ?? sortCards(matching)[0]
+}
+
+/** What a download button says instead of "Download" for that item; null when it can be asked for.
+ *  FAILED (cancelled included) reads as askable: nothing was fetched, so nothing duplicates. */
+export function itemDownloadLabel(card: DownloadCardState | undefined): string | null {
+  if (!card || card.stage === 'FAILED') return null
+  if (card.stage === 'SUCCEEDED') return 'Downloaded'
+  if (card.stage === 'PARTIAL_SUCCESS') return 'Partly downloaded'
+  return 'Downloading…'
+}
+
 export function dismissTtlMs(cardCount: number, terminalRetentionMs: number): number {
   const base = cardCount <= 3 ? 30000 : cardCount <= 10 ? 10000 : 5000
   return Math.min(base, terminalRetentionMs)

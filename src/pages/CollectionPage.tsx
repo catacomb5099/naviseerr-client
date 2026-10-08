@@ -3,8 +3,10 @@ import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2, Play } from 'lucide-r
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCollection, getRadio, getSongViews } from '../api/endpoints'
 import { useRetry } from '../hooks/useRetry'
+import { useDownloadCards } from '../hooks/useItemDownload'
 import { CollectionDetail, CollectionPageType, CollectionTrack, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
+import { itemDownload, itemDownloadLabel } from '../lib/downloadPanel'
 import { formatDuration, formatViews } from '../lib/utils'
 import { collectionLink } from '../lib/youtubeMusic'
 import { AppHeader } from '../components/AppHeader'
@@ -29,8 +31,9 @@ type Load =
   | { status: 'ready'; detail: CollectionDetail }
 
 /** One button's request, keyed by what it posted (the collection id or a track id). Absent means
- *  never asked. `sent` and `pending` keep the button in place but inert, so focus is not dropped. */
-export type RequestState = 'pending' | 'sent' | 'failed'
+ *  never asked. `pending` keeps the button in place but inert, so focus is not dropped. There is no
+ *  "sent": the accepted download lands in the feed at once, and the feed is what the button reads. */
+export type RequestState = 'pending' | 'failed'
 
 export const REQUEST_FAILED_COPY = "Couldn't request this — try again"
 
@@ -62,6 +65,9 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   const [attempt, retry] = useRetry(`${type}:${id}`)
   // Forgotten on leaving the page - the panel is the record of what queued.
   const [requests, setRequests] = useState<Record<string, RequestState>>({})
+  // The download feed: a button is grey with the words while its item is downloading or once it is
+  // downloaded, and then opens the Downloads page instead of asking again.
+  const cards = useDownloadCards()
   // What the live region reads out. Text, not an icon: the check alone says nothing to a reader.
   const [announcement, setAnnouncement] = useState('')
   // How many times each video was viewed, by id, for the songs that came without plays.
@@ -130,7 +136,11 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   const send = async (id: string, type: DownloadType, title: string, meta: DownloadMetaInput) => {
     setRequests(prev => ({ ...prev, [id]: 'pending' }))
     const accepted = await onDownload(id, type, meta)
-    setRequests(prev => ({ ...prev, [id]: accepted ? 'sent' : 'failed' }))
+    setRequests(prev => {
+      const next = { ...prev }
+      if (accepted) delete next[id]; else next[id] = 'failed'
+      return next
+    })
     setAnnouncement(accepted ? `Requested ${title}` : `Couldn't request ${title}`)
   }
 
@@ -155,10 +165,11 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   })
 
   const allState = requests[id]
+  const allLabel = itemDownloadLabel(itemDownload(cards, type, id))
   // Inert (not `disabled`) while it cannot be pressed, so a keyboard user's focus stays on it: while
-  // the list is still loading, when there is nothing to download, and once the request is in flight
-  // or accepted.
-  const allInert = load.status !== 'ready' || isEmpty || allState === 'pending' || allState === 'sent'
+  // the list is still loading, when there is nothing to download, while the request is in flight, and
+  // once the feed shows it downloading or downloaded (when the click opens Downloads instead).
+  const allInert = load.status !== 'ready' || isEmpty || allState === 'pending' || allLabel !== null
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 md:px-6">
@@ -204,13 +215,15 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
               <div className="flex flex-wrap items-start gap-2">
                 <button
                   type="button"
-                  onClick={() => { if (!allInert) void downloadAll() }}
+                  onClick={() => { if (allLabel) navigate('/downloads'); else if (!allInert) void downloadAll() }}
                   aria-disabled={allInert}
+                  title={allLabel ? `${allLabel} - open Downloads` : undefined}
                   className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default rounded-full h-10 px-5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
-                  {allState === 'sent' && <Check className="w-4 h-4" aria-hidden="true" />}
-                  {allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-                  {allState === 'sent' ? 'Requested' : allState === 'pending' ? 'Requesting…' : 'Download all'}
+                  {allLabel === 'Downloading…' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                  {allLabel !== null && allLabel !== 'Downloading…' && <Check className="w-4 h-4" aria-hidden="true" />}
+                  {allLabel === null && allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                  {allLabel ?? (allState === 'pending' ? 'Requesting…' : 'Download all')}
                 </button>
                 {/* Listen first: a link out, so the browser counts the click as the listener's and the
                     page stays open behind the music. "Open" when it can only reach the page. */}
@@ -260,7 +273,8 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
               {detail.tracks.map(track => {
                 const thumb = track.iconURL || iconURL
                 const state = requests[track.id]
-                const inert = state === 'pending' || state === 'sent'
+                const trackLabel = itemDownloadLabel(itemDownload(cards, 'SONG', track.id))
+                const inert = state === 'pending' || trackLabel !== null
                 // "plays" is YouTube Music's combined count, which album tracks carry. A playlist song
                 // (mostly music videos and fan uploads) has only its own video's count, a smaller
                 // number, so it reads "views": a views number is never labelled as plays.
@@ -307,14 +321,15 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                         when a click turns the arrow into a check. */}
                     <button
                       type="button"
-                      onClick={() => { if (!inert) void downloadTrack(track) }}
+                      onClick={() => { if (trackLabel) navigate('/downloads'); else if (!inert) void downloadTrack(track) }}
                       aria-disabled={inert}
-                      aria-label={state === 'sent' ? `Requested ${track.name}` : `Download ${track.name}`}
+                      aria-label={trackLabel ? `${trackLabel}: ${track.name}` : `Download ${track.name}`}
+                      title={trackLabel ? `${trackLabel} - open Downloads` : undefined}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white aria-disabled:hover:text-zinc-400 aria-disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                     >
-                      {state === 'sent' ? (
+                      {trackLabel === 'Downloaded' || trackLabel === 'Partly downloaded' ? (
                         <Check className="w-4 h-4 text-green-500" aria-hidden="true" />
-                      ) : state === 'pending' ? (
+                      ) : trackLabel !== null || state === 'pending' ? (
                         <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none text-zinc-500" aria-hidden="true" />
                       ) : (
                         <ArrowDownToLine className="w-4 h-4" aria-hidden="true" />

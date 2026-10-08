@@ -15,6 +15,7 @@ React-based music search and download client with Spotify-inspired UI.
 - Download a song by its YouTube id; the server works out what to fetch
 - Downloads panel and history show server-resolved artwork and titles as they arrive
 - On the Downloads page a failed song inside an album or playlist can be retried on its own, even while the rest of the collection is still downloading; cancelled songs can be retried the same way
+- Download buttons know what you already asked for: grey "Downloading…" while it runs, "Downloaded" once you have it, and a click on a grey button opens the Downloads page instead of queuing it again
 - Responsive design for mobile and desktop
 - Docker deployment
 

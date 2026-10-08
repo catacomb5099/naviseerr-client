@@ -8,6 +8,7 @@ import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
 import { DownloadPanel } from './components/DownloadPanel'
 import { SongInfoDialog } from './components/SongInfoDialog'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
+import { DownloadCardsContext } from './hooks/useItemDownload'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
 import { useDismissSound } from './hooks/useDismissSound'
 import { DownloadMetaInput } from './lib/downloadLibrary'
@@ -55,6 +56,7 @@ function App() {
   }
 
   return (
+    <DownloadCardsContext.Provider value={downloadCards}>
     <div className="min-h-screen bg-black text-white">
       {/* Routes replace the pair of `hidden` divs that used to switch between the two pages. */}
       <Routes>
@@ -105,6 +107,7 @@ function App() {
         onToggleMuted={toggleMuted}
       />
     </div>
+    </DownloadCardsContext.Provider>
   )
 }
 
