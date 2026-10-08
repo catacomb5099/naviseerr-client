@@ -21,3 +21,7 @@ FROM caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
 EXPOSE 80
+# `docker compose ps` says "healthy" once Caddy serves the app; before this the web app was the one
+# part of the all-in-one install with no health state. BusyBox wget, so nothing extra is installed.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost/ >/dev/null || exit 1

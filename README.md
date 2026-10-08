@@ -78,7 +78,8 @@ docker build -t naviseerr-client .
 ```
 
 It serves the app on port 80 and forwards `/api/*` to the server, which it expects to reach as
-`naviseerr:8080` (the service name in naviseerr's compose file). `VITE_API_URL` is baked in when the
+`naviseerr:8080` (the service name in naviseerr's compose file). The image checks its own health
+(`docker compose ps` shows `healthy` once the app is served). `VITE_API_URL` is baked in when the
 image is built (`/api`), so it cannot be changed when the container starts.
 
 ## Project Structure
