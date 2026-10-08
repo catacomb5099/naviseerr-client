@@ -16,7 +16,7 @@ interface DownloadRowProps {
   item: DownloadItem
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void | Promise<void>
-  onRetry: (id: string, taskId?: string) => void | Promise<void>
+  onRetry: (id: string, taskId?: string) => void | Promise<unknown>
   /** Opens the "choose a file" pop-up for a song (a single-song row or a child row). */
   onManualImport: (target: ManualImportTarget) => void
   inFlight: Set<string>
@@ -69,7 +69,7 @@ interface SongRowProps {
   song: DownloadSongView
   downloadId: string
   onCancel: (id: string, taskId?: string) => void | Promise<void>
-  onRetry: (id: string, taskId?: string) => void | Promise<void>
+  onRetry: (id: string, taskId?: string) => void | Promise<unknown>
   onManualImport: (target: ManualImportTarget) => void
   inFlight: boolean
   onActed: () => void
@@ -91,6 +91,8 @@ function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight
         <p className="text-sm text-white truncate">{song.title ?? 'Untitled'}</p>
         <p className="text-xs text-zinc-400 truncate">
           <ArtistNames names={song.artists} ids={song.artistIds ?? []} />
+          {/* Who the file comes from, once a file was chosen: how a manual pick shows on the row. */}
+          {song.slskdUsername && <span className="text-zinc-500" title={song.slskdFilename ?? undefined}> · from {song.slskdUsername}</span>}
         </p>
       </div>
       <span className={`flex items-center gap-1.5 text-xs ${status.color}`}>

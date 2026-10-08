@@ -18,7 +18,7 @@ React-based music search and download client with Spotify-inspired UI.
 - Download buttons know what you already asked for: grey "Downloading…" while it runs, "Downloaded" once you have it, and a click on a grey button opens the Downloads page instead of queuing it again; if the server already has something you ask for, the page says "Already downloading" / "You already have" and shows that download instead of an error
 - An amber bar at the top says when you're offline or the server can't be reached, and a green "Back online." bar shows for 12 s once it returns; progress polling pauses while offline and slows down while the server is unreachable
 - An amber strip across the top says "Not connected to Soulseek" while the server's Soulseek login is down; downloads wait until it is back
-- On the Downloads page, the person icon on a song opens every file Soulseek found for it (format, quality, length, size, sharer speed, queue) as a sortable, filterable table
+- On the Downloads page, the person icon on a song opens every file Soulseek found for it (format, quality, length, size, sharer speed, queue) as a sortable, filterable table; press Download on any row to fetch that file instead (a download already under way asks before it is replaced)
 - Responsive design for mobile and desktop
 - Docker deployment
 
@@ -118,6 +118,7 @@ Expected endpoints:
 - `GET /status` - Whether the server's Soulseek client is connected (polled with the downloads feed)
 - `GET /downloads/all?pageSize=&pageNumber=&type=SONG|ALBUM|PLAYLIST` - Every download, paged, for the Downloads page; `type` is optional and narrows to one kind (PLAYLIST includes suggested playlists), with page counts per kind
 - `GET /downloads/{id}/tasks/{taskId}/candidates` - Every file Soulseek found for one song, from the server's cached search
+- `POST /downloads/{id}/tasks/{taskId}/pick` - Download this file for the song instead, replacing the current transfer in place
 
 ## License
 

@@ -33,6 +33,7 @@ function App() {
     requestDownload,
     cancel: cancelDownload,
     retry: retryDownload,
+    pick: pickDownload,
     inFlight: downloadsInFlight,
     soulseekLoggedIn,
   } = useActiveDownloads(playSwoosh)
@@ -81,6 +82,7 @@ function App() {
             pollIntervalMs={pollIntervalMs}
             onCancel={cancelDownload}
             onRetry={retryDownload}
+            onPick={pickDownload}
             inFlight={downloadsInFlight}
             onNavigateHome={() => navigate('/')}
           />

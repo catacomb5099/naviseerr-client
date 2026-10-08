@@ -740,10 +740,14 @@ const FIXTURE_SONGS: Record<string, DownloadSongView[]> = {
   [FIXTURE_LIVE_PLAYLIST_ID]: fixtureSongs(FIXTURE_LIVE_PLAYLIST_ID, ['SUCCEEDED', 'DOWNLOADING', 'SEARCHING', 'QUEUED'], 'NO_CANDIDATES'),
 }
 
+/** Files chosen by hand for simulator songs (taskId -> file); fixture songs are rewritten in place. */
+const mockPicks = new Map<string, { username: string; filename: string }>()
+
 /** A single-song simulator download as its one song row, so the per-song endpoints have a taskId. */
 function simulatorSong(entry: MockDownloadEntry, view: ActiveDownloadView): DownloadSongView {
   const track = mockTracks.find(t => t.id === entry.youtubeId)
   const started = view.stage === 'DOWNLOADING' || view.stage === 'SUCCEEDED' || view.stage === 'READY_TO_DOWNLOAD'
+  const picked = mockPicks.get(`${entry.downloadId}-song-1`)
   return {
     taskId: `${entry.downloadId}-song-1`,
     youtubeId: entry.youtubeId,
@@ -762,8 +766,8 @@ function simulatorSong(entry: MockDownloadEntry, view: ActiveDownloadView): Down
     candidateCount: 3,
     candidateIndex: 1,
     retryIndex: 0,
-    slskdUsername: started ? 'mock-peer' : null,
-    slskdFilename: started ? `@@mock\\Music\\Jay Sean\\${entry.title}.flac` : null,
+    slskdUsername: started ? picked?.username ?? 'mock-peer' : null,
+    slskdFilename: started ? picked?.filename ?? `@@mock\\Music\\Jay Sean\\${entry.title}.flac` : null,
     lastError: null,
   }
 }
@@ -961,4 +965,42 @@ export function getMockSongCandidates(downloadId: string, taskId: string): SongC
     current: current ? { username: current.username, filename: current.filename } : null,
     candidates,
   }
+}
+
+/** Mirrors POST /downloads/{id}/tasks/{taskId}/pick. The song restarts in place with the chosen file:
+ *  a fixture song is rewritten (stage DOWNLOADING from 0 %, its parent reopened and re-tallied), a
+ *  simulator song's clock is moved to the start of its transfer. 409 with the current card when the
+ *  song is already downloaded and filed or the file is not in its list; 404 for unknown ids. */
+export function pickMockSongCandidate(downloadId: string, taskId: string, body: { username: string; filename: string }): ActiveDownloadView {
+  const song = findMockSong(downloadId, taskId)
+  if (!song) throw new ApiError('not found', 404, 'Not Found', { message: 'No such song in this download' })
+  const card = () => FIXTURES[downloadId] ?? toView(mockDownloads.get(downloadId)!, Date.now())
+  if (song.stage === 'SUCCEEDED') throw new ApiError('conflict', 409, 'Conflict', card())
+  const list = getMockSongCandidates(downloadId, taskId).candidates
+  if (!list.some(c => c.username === body.username && c.filename === body.filename)) {
+    throw new ApiError('conflict', 409, 'Conflict', card())
+  }
+  const now = Date.now()
+  const fixture = FIXTURES[downloadId]
+  if (fixture) {
+    Object.assign(song, {
+      slskdUsername: body.username, slskdFilename: body.filename, stage: 'DOWNLOADING', progressPercent: 0,
+      failureCode: null, lastError: null, finishedAt: null, stageEnteredAt: iso(now), updatedAt: iso(now),
+      candidateCount: 1, candidateIndex: 0,
+    })
+    const songs = FIXTURE_SONGS[downloadId]
+    Object.assign(fixture, {
+      stage: 'DOWNLOADING', finishedAt: null, updatedAt: iso(now), stageEnteredAt: iso(now),
+      songsSucceeded: songs.filter(s => s.stage === 'SUCCEEDED').length,
+      songsFailed: songs.filter(s => s.stage === 'FAILED').length,
+      progressPercent: Math.round(songs.reduce((sum, s) => sum + (s.progressPercent ?? 0), 0) / songs.length),
+    })
+    return fixture
+  }
+  const entry = mockDownloads.get(downloadId)!
+  mockPicks.set(taskId, body)
+  entry.createdAt = now - T_READY_END
+  entry.outcome = 'SUCCEEDED'
+  persistMockDownloads()
+  return toView(entry, now)
 }

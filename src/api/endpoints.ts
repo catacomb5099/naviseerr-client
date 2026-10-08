@@ -9,7 +9,7 @@ import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
-  cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates,
+  cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates, pickMockSongCandidate,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -267,6 +267,25 @@ export async function getSongCandidates(downloadId: string, taskId: string, sign
   if (USE_MOCK_DATA) return Promise.resolve(getMockSongCandidates(downloadId, taskId))
   return apiClient<SongCandidatesResponse>(
     `/downloads/${encodeURIComponent(downloadId)}/tasks/${encodeURIComponent(taskId)}/candidates`, { signal })
+}
+
+/** The pick body: the sharer and the file EXACTLY as the candidates list gave them (slskd path, verbatim). */
+export interface CandidatePick {
+  username: string
+  filename: string
+}
+
+/**
+ * Download this file instead: the song's current transfer is cancelled and the song restarts in place
+ * (same row) with only the chosen file. Reopens a finished download.
+ * POST /downloads/{id}/tasks/{taskId}/pick  (202 with the fresh card; 409 with the current card when the song is
+ * already downloaded and filed or the file is not in its list; 404 unknown)
+ */
+export async function pickSongCandidate(downloadId: string, taskId: string, body: CandidatePick): Promise<ActiveDownloadView> {
+  if (USE_MOCK_DATA) return Promise.resolve(pickMockSongCandidate(downloadId, taskId, body))
+  return apiClient<ActiveDownloadView>(
+    `/downloads/${encodeURIComponent(downloadId)}/tasks/${encodeURIComponent(taskId)}/pick`,
+    { method: 'POST', body: JSON.stringify(body) })
 }
 
 /**

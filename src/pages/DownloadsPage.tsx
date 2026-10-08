@@ -7,6 +7,9 @@ import { DownloadRow } from '../components/DownloadRow'
 import { ManualImportDialog } from '../components/ManualImportDialog'
 import { DownloadFilter, DownloadFilterPills } from '../components/DownloadFilterPills'
 import { Button } from '../components/ui/button'
+import { pickSongCandidate } from '../api/endpoints'
+import { ActiveDownloadView } from '../api/types'
+import { ActOutcome } from '../hooks/useActiveDownloads'
 import { useAllDownloads } from '../hooks/useAllDownloads'
 import { ManualImportTarget } from '../hooks/useCandidates'
 import { DownloadMeta, pageItems, parseTypeFilter } from '../lib/downloadLibrary'
@@ -18,7 +21,9 @@ interface DownloadsPageProps {
   /** Drives the live progress bar's transition duration, same as the panel's cards. */
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void
-  onRetry: (id: string, taskId?: string) => void | Promise<void>
+  onRetry: (id: string, taskId?: string) => void | Promise<unknown>
+  /** useActiveDownloads.pick: runs a manual pick with the feed's own guard, card swap and poll. */
+  onPick: (id: string, key: string, call: () => Promise<ActiveDownloadView>) => Promise<ActOutcome>
   inFlight: Set<string>
   onNavigateHome: () => void
 }
@@ -47,7 +52,7 @@ const EMPTY_BY_FILTER: Record<DownloadFilter, string> = {
   PLAYLIST: 'No playlists downloaded yet',
 }
 
-export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry, inFlight, onNavigateHome }: DownloadsPageProps) {
+export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry, onPick, inFlight, onNavigateHome }: DownloadsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageNumber = parsePageNumber(searchParams.get('page'))
   // The pill lives in the URL next to the page, so a filtered page can be linked to and comes back
@@ -157,7 +162,12 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
         </section>
       </main>
 
-      <ManualImportDialog target={manual} onClose={() => setManual(null)} />
+      <ManualImportDialog
+        target={manual}
+        onClose={() => setManual(null)}
+        onPick={(target, body) => onPick(target.downloadId, target.taskId,
+          () => pickSongCandidate(target.downloadId, target.taskId, body))}
+      />
     </div>
   )
 }
