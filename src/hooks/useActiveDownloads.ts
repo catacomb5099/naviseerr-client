@@ -401,7 +401,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
   const cancel = useCallback((id: string, taskId?: string) =>
     act(id, taskId ?? id, () => cancelDownload(id, taskId)), [act])
 
-  const retry = useCallback((id: string) => act(id, id, () => retryDownload(id)), [act])
+  const retry = useCallback((id: string, taskId?: string) =>
+    act(id, taskId ?? id, () => retryDownload(id, taskId)), [act])
 
   return {
     cards: sortCards(Object.values(cards)),
