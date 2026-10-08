@@ -3,13 +3,13 @@ import {
   SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
-  CuratorRun, StatusResponse,
+  CuratorRun, StatusResponse, SongCandidatesResponse,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
-  cancelMockDownload, retryMockDownload, getMockSongViews,
+  cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -256,6 +256,17 @@ export async function getDownloadDetail(
 ): Promise<DownloadDetailView> {
   if (USE_MOCK_DATA) return Promise.resolve(getMockDownloadDetail(downloadId))
   return apiClient<DownloadDetailView>(`/downloads/${encodeURIComponent(downloadId)}`, { signal })
+}
+
+/**
+ * Every file Soulseek found for one song of a download, from the server's cached search - what the
+ * "choose a file" table shows. Never cached here: the status moves while a search runs.
+ * GET /downloads/{id}/tasks/{taskId}/candidates  (404 unknown download or song)
+ */
+export async function getSongCandidates(downloadId: string, taskId: string, signal?: AbortSignal): Promise<SongCandidatesResponse> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockSongCandidates(downloadId, taskId))
+  return apiClient<SongCandidatesResponse>(
+    `/downloads/${encodeURIComponent(downloadId)}/tasks/${encodeURIComponent(taskId)}/candidates`, { signal })
 }
 
 /**
