@@ -9,6 +9,7 @@ import { collectionSummary } from '../lib/collectionProgress'
 import { formatDuration } from '../lib/utils'
 import { CollectionProgress, CollectionSummary } from './CollectionProgress'
 import { TypeBadge } from './TypeBadge'
+import { ArtistNames } from './ArtistNames'
 
 interface DownloadRowProps {
   item: DownloadItem
@@ -37,30 +38,6 @@ const WAITING_COPY: Partial<Record<DownloadStage, string>> = {
   STARTING: 'Starting',
   SEARCHING: 'Searching',
   READY_TO_DOWNLOAD: 'Ready to download',
-}
-
-const ARTIST_LINK = 'hover:underline hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded'
-
-/** The artist line: a link to the artist's page for each name the server has an id for, plain text
- *  otherwise. Inline content only, so the parent's `truncate` still clips the whole line. */
-function ArtistNames({ names, ids }: { names: string[]; ids: (string | null)[] }) {
-  if (names.length === 0) return <>Unknown Artist</>
-  return (
-    <>
-      {names.map((name, i) => {
-        const id = ids[i]
-        return (
-          <span key={i}>
-            {i > 0 && ', '}
-            {/* A collection row toggles on click; following a link must not also toggle it. */}
-            {id
-              ? <Link to={`/artist/${encodeURIComponent(id)}`} onClick={e => e.stopPropagation()} className={ARTIST_LINK}>{name}</Link>
-              : name}
-          </span>
-        )
-      })}
-    </>
-  )
 }
 
 function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; color: string } {

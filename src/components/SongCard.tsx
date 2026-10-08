@@ -4,6 +4,7 @@ import { Button } from './ui/button'
 import { Track } from '../api/types'
 import { Download, Info } from 'lucide-react'
 import { PlayOnYouTubeMusic } from './PlayOnYouTubeMusic'
+import { ArtistNames } from './ArtistNames'
 
 interface SongCardProps {
   track: Track
@@ -42,7 +43,7 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-medium truncate">{track.name}</h3>
           <p className="text-sm text-zinc-400 truncate">
-            {artistNames.length > 0 ? artistNames.join(', ') : 'Unknown Artist'}
+            <ArtistNames names={artistNames} ids={track.artistIds} />
           </p>
         </div>
 
