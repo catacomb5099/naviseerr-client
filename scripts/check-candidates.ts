@@ -1,7 +1,7 @@
 /** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
 import {
-  GRADE_HINT, GRADE_LABEL, basename, filterRows, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank, slotLabel,
-  slotRank, sortRows, statusCopy,
+  GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
+  slotLabel, slotRank, sortRows, statusCopy,
 } from '../src/lib/candidates'
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -12,6 +12,14 @@ function assert(condition: unknown, message: string): asserts condition {
 assert(basename('@@fqkje\\Music\\Oasis\\05 - Live Forever.flac') === '05 - Live Forever.flac', 'basename on backslashes')
 assert(basename('music/oasis/05 - live forever.mp3') === '05 - live forever.mp3', 'basename on forward slashes')
 assert(basename('bare.flac') === 'bare.flac', 'basename of a bare name')
+
+// The folder is the rest of the path; name and folder put back together give the path slskd sent.
+const path = '@@fqkje\\Music\\Oasis\\05 - Live Forever.flac'
+assert(folderOf(path) === '@@fqkje\\Music\\Oasis', 'folderOf on backslashes keeps the share alias')
+assert(folderOf('music/oasis/x.mp3') === 'music/oasis', 'folderOf on forward slashes')
+assert(folderOf('bare.flac') === '', 'a bare name has no folder')
+assert(folderOf('\\x.flac') === '', 'a leading separator alone is not a folder')
+assert(`${folderOf(path)}\\${basename(path)}` === path, 'folder + name is the whole path')
 
 // The format comes from the suffix only; slskd's extension field is not consulted.
 assert(formatOf('@@a\\x\\Song.FLAC') === 'flac', 'formatOf lower-cases the suffix')
@@ -68,6 +76,8 @@ assert(filterRows(files, 'bob', hay)[0].sharer === 'Bob', 'filter by sharer')
 assert(filterRows(files, 'forever', hay).length === 2, 'filter by name')
 assert(filterRows(files, '  ', hay) === files, 'blank filter hands back the same list')
 assert(filterRows(files, 'zzz', hay).length === 0, 'no match, no rows')
+// The dialog hands the whole path to the filter, so a folder word finds the file (09-10-2026).
+assert(filterRows([{ p: '@@a\\Music\\Oasis\\x.flac' }], 'oasis', r => [r.p]).length === 1, 'filter matches a folder word')
 
 // Status wording follows the contract.
 assert(statusCopy('SONG', 'READY', null, 'x') === null, 'READY has no message')

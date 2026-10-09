@@ -881,7 +881,12 @@ const MOCK_SHARERS = [
   'alice', 'bob_shares', 'vinylvault', 'DJ-Mixtape', 'lossless_lou', 'ritmo', 'tapehead', 'kmusic',
   'oldskool77', 'flacfan', 'mp3mike', 'soundhoard',
 ]
-const MOCK_FOLDERS = ['Music', 'Musik\\Pop', 'Downloads\\soulseek', 'Shared\\Albums', 'Archive\\2009']
+// Two long ones shaped like real Soulseek shares, so mock mode shows the folder line cut from the left.
+const MOCK_FOLDERS = [
+  'Music', 'Musik\\Pop', 'Downloads\\soulseek', 'Shared\\Albums', 'Archive\\2009',
+  'Torr\\1001 Albums You Must Hear Before You Die Part 2 of 2 (1955-2005) [MP3]\\1001 Albums You Must Hear Before You Die (0801-0850) MP3',
+  'Pirated\\Discography (1994-2016) [Japanese editions] [FLAC]\\Box Set - Complete Single Collection 94-05 (2006)',
+]
 
 /** A small seeded random, so one task's list never changes between calls. */
 function seeded(seed: string): () => number {

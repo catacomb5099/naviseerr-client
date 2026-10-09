@@ -11,6 +11,13 @@ export function basename(path: string): string {
   return parts[parts.length - 1] || path
 }
 
+/** Everything before the last path separator: the folder slskd put the file in. "" for a bare name
+ *  (and for a leading separator alone). Both separators cut, as in `basename`. */
+export function folderOf(path: string): string {
+  const cut = Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'))
+  return cut > 0 ? path.slice(0, cut) : ''
+}
+
 /** The format from the file name's suffix, lower-case ("flac", "mp3"); "" when there is none. The
  *  server does the same because slskd's own extension field is often blank or wrong. */
 export function formatOf(filename: string): string {

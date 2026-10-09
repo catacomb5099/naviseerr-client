@@ -7,8 +7,8 @@ import { CandidatesLoad, ManualImportTarget, useCandidates } from '../hooks/useC
 import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
-  GRADE_HINT, GRADE_LABEL, basename, filterRows, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank, slotLabel,
-  slotRank, sortRows, statusCopy,
+  GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
+  slotLabel, slotRank, sortRows, statusCopy,
 } from '../lib/candidates'
 import { formatDuration } from '../lib/utils'
 import { CandidateTable, Column, Sort } from './CandidateTable'
@@ -46,11 +46,22 @@ const GRADE_CLASS: Record<string, string> = {
 
 const fmt = (c: SongCandidate) => formatOf(c.filename) || c.extension
 
+/** A file or folder name over the folder it sits in, as slskd reports it. The folder line is cut from the
+ *  LEFT so the useful end (artist\album) stays readable: dir="rtl" moves the ellipsis to the start and
+ *  <bdi> keeps the characters in order (measured in Chromium; a plain rtl span flips leading "@@" to the
+ *  end). The cell's title carries the whole path for hover; the DOM holds it whole for screen readers. */
+function PathCell({ path }: { path: string }) {
+  const folder = folderOf(path)
+  return (
+    <span title={path} className="block max-w-[18rem]">
+      <span className="block truncate">{basename(path)}</span>
+      {folder && <span dir="rtl" className="block truncate text-left text-[11px] text-zinc-500"><bdi>{folder}</bdi></span>}
+    </span>
+  )
+}
+
 const SONG_COLUMNS: Column<SongCandidate>[] = [
-  {
-    key: 'file', label: 'File', sortValue: c => basename(c.filename),
-    render: c => <span title={c.filename} className="block max-w-[15rem] truncate">{basename(c.filename)}</span>,
-  },
+  { key: 'file', label: 'File', sortValue: c => basename(c.filename), render: c => <PathCell path={c.filename} /> },
   { key: 'format', label: 'Format', sortValue: c => fmt(c), render: c => fmt(c).toUpperCase() || '—' },
   {
     key: 'quality', label: 'Quality', align: 'right', firstDir: 'desc',
@@ -75,14 +86,12 @@ const SONG_COLUMNS: Column<SongCandidate>[] = [
   },
 ]
 
-const SONG_HAYSTACK = (c: SongCandidate) => [basename(c.filename), c.username, fmt(c)]
+// The whole path, so a folder word ("1001 Albums", "FLAC") finds the file too.
+const SONG_HAYSTACK = (c: SongCandidate) => [c.filename, c.username, fmt(c)]
 
 const ALBUM_COLUMNS: Column<AlbumFolder>[] = [
   { key: 'sharer', label: 'Sharer', sortValue: f => f.username, render: f => f.username },
-  {
-    key: 'folder', label: 'Folder', sortValue: f => basename(f.folder),
-    render: f => <span title={f.folder} className="block max-w-[18rem] truncate">{basename(f.folder)}</span>,
-  },
+  { key: 'folder', label: 'Folder', sortValue: f => basename(f.folder), render: f => <PathCell path={f.folder} /> },
   { key: 'files', label: 'Files', align: 'right', firstDir: 'desc', sortValue: f => f.fileCount, render: f => `${f.fileCount}` },
   { key: 'size', label: 'Size', align: 'right', firstDir: 'desc', sortValue: f => f.totalSize, render: f => formatBytes(f.totalSize) },
   { key: 'speed', label: 'Speed', align: 'right', firstDir: 'desc', sortValue: f => f.uploadSpeed, render: f => formatSpeed(f.uploadSpeed) },
@@ -106,7 +115,7 @@ const ALBUM_COLUMNS: Column<AlbumFolder>[] = [
   },
 ]
 
-const ALBUM_HAYSTACK = (f: AlbumFolder) => [f.username, basename(f.folder), ...f.files.map(x => x.extension)]
+const ALBUM_HAYSTACK = (f: AlbumFolder) => [f.username, f.folder, ...f.files.map(x => x.extension)]
 
 /** Sort, filter and pick state shared by the song and the album views. Mounted fresh per target. */
 function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => void, refetch: () => void) {
