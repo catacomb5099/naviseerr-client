@@ -21,6 +21,8 @@ React-based music search and download client with Spotify-inspired UI.
 - On the Downloads page, the person icon on a song opens every audio file Soulseek returned for it (format, quality, length, size, sharer speed, queue, the folder it sits in, and Naviseerr's own verdict: Exact, Other version, Unverified or Not a match) as a sortable, filterable table; press Download on any row to fetch that file instead (a download already under way asks before it is replaced). The same icon on an album lists every sharer folder holding any of the album's songs, the ones Naviseerr's own search would take first and the rest marked "Not judged", each unfolding into its files, and takes the remaining songs from the folder you pick
 - When that pop-up has no list, it says what really happened to the search and when (slskd refused it, the song was never searched on its own because the album's folder supplied its file, it was searched before lists were kept on 8 October 2026 or its search never completed, it was cancelled) and names slskd's own search id and time, so you can find that search in slskd's Searches page
 - Where the search can be run again (a failed song, a finished album), a Try again button in that pop-up does just that: the row underneath restarts, the pop-up says "Still searching Soulseek", and the list fills in on its own when the search finishes (for an album the server looks for a whole-album sharer again first); a song or album still live gets a note instead
+- An amber strip across the top says "Not connected to Soulseek as <username>" while the server's Soulseek login is down (the account name when the server knows it, so a taken or mistyped name is recognisable from the strip); downloads wait until it is back
+- On the Downloads page, the person icon on a song opens every audio file Soulseek returned for it (format, quality, length, size, sharer speed, queue, and Naviseerr's own verdict: Exact, Other version, Unverified or Not a match) as a sortable, filterable table; press Download on any row to fetch that file instead (a download already under way asks before it is replaced). The same icon on an album lists every sharer folder holding any of the album's songs, the ones Naviseerr's own search would take first and the rest marked "Not judged", each unfolding into its files, and takes the remaining songs from the folder you pick
 - Responsive design for mobile and desktop
 - Docker deployment
 
@@ -117,7 +119,7 @@ Expected endpoints:
 - `GET /songs/views?ids=` - How many times each video was viewed (at most 50 ids)
 - `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
 - `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
-- `GET /status` - Whether the server's Soulseek client is connected (polled with the downloads feed)
+- `GET /status` - Whether the server's Soulseek client is connected, and which Soulseek account it logs in with (polled with the downloads feed)
 - `GET /downloads/all?pageSize=&pageNumber=&type=SONG|ALBUM|PLAYLIST` - Every download, paged, for the Downloads page; `type` is optional and narrows to one kind (PLAYLIST includes suggested playlists), with page counts per kind
 - `GET /downloads/{id}/tasks/{taskId}/candidates` - Every file Soulseek found for one song, from the server's cached search
 - `POST /downloads/{id}/tasks/{taskId}/pick` - Download this file for the song instead, replacing the current transfer in place
