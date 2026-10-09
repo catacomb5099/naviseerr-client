@@ -15,6 +15,7 @@ import { useDownloadLibrary } from './hooks/useDownloadLibrary'
 import { useDismissSound } from './hooks/useDismissSound'
 import { DownloadMetaInput } from './lib/downloadLibrary'
 import { RequestOutcome } from './lib/downloadPanel'
+import { DownloadRequestOptions } from './api/endpoints'
 import { DownloadType } from './api/types'
 
 function App() {
@@ -52,8 +53,9 @@ function App() {
     id: string,
     type: DownloadType,
     meta: DownloadMetaInput,
+    opts?: DownloadRequestOptions,
   ): Promise<RequestOutcome> => {
-    const outcome = await requestDownload(id, type, meta)
+    const outcome = await requestDownload(id, type, meta, opts)
     // Recorded under the server's id, so the cache and the panel agree on identity. A failed request
     // records nothing, and an existing download already has the server's own name and artwork.
     if (outcome.status === 'accepted') library.record(outcome.download.downloadId, meta)
@@ -83,6 +85,14 @@ function App() {
             onCancel={cancelDownload}
             onRetry={retryDownload}
             onPick={pickDownload}
+            onDownloadAgain={item => handleDownload(item.youtubeId, item.downloadType, {
+              youtubeId: item.youtubeId,
+              downloadType: item.downloadType,
+              title: item.title,
+              artistNames: item.artistNames,
+              albumName: item.albumName,
+              iconURL: item.iconURL,
+            }, { force: true })}
             inFlight={downloadsInFlight}
             onNavigateHome={() => navigate('/')}
           />

@@ -220,31 +220,40 @@ export async function getSuggestedRefresh(signal?: AbortSignal): Promise<Curator
   return apiClient<CuratorRun>('/suggested-playlists/refresh', { signal })
 }
 
+/** `force`: "download it again" on purpose, knowing a finished copy exists. The server then refuses
+ *  only a live duplicate. An older server ignores the flag and answers its usual 409. */
+export interface DownloadRequestOptions {
+  force?: boolean
+}
+
 /**
  * Download one song by YouTube videoId
- * POST /download/song/{videoId}
+ * POST /download/song/{videoId}[?force=true]
  */
-export async function downloadSong(videoId: string): Promise<Download> {
+export async function downloadSong(videoId: string, opts?: DownloadRequestOptions): Promise<Download> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] downloadSong called with videoId: ${videoId}`)
     return Promise.resolve(getMockDownload(videoId, 'SONG'))
   }
-  return apiClient<Download>(`/download/song/${encodeURIComponent(videoId)}`, { method: 'POST' })
+  return apiClient<Download>(
+    `/download/song/${encodeURIComponent(videoId)}${opts?.force ? '?force=true' : ''}`, { method: 'POST' })
 }
 
 /**
  * Download every track of an album or playlist, or every song of a suggested playlist's edition
- * POST /download/collection/{id}?type=ALBUM|PLAYLIST|CURATED
+ * POST /download/collection/{id}?type=ALBUM|PLAYLIST|CURATED[&force=true]
  *
  * For CURATED, `id` is the curator's category key, the same one GET /suggested-playlists/{category} takes.
  */
-export async function downloadCollection(id: string, type: Exclude<DownloadType, 'SONG'>): Promise<Download> {
+export async function downloadCollection(
+  id: string, type: Exclude<DownloadType, 'SONG'>, opts?: DownloadRequestOptions,
+): Promise<Download> {
   if (USE_MOCK_DATA) {
     console.log(`[Mock] downloadCollection called with id: ${id}, type: ${type}`)
     return Promise.resolve(getMockDownload(id, type))
   }
   return apiClient<Download>(
-    `/download/collection/${encodeURIComponent(id)}?type=${type}`, { method: 'POST' })
+    `/download/collection/${encodeURIComponent(id)}?type=${type}${opts?.force ? '&force=true' : ''}`, { method: 'POST' })
 }
 
 /**
