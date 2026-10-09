@@ -431,8 +431,9 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick, onRetry }: Vi
   // Every song filed: the server would answer 409 to any folder, so say why up front (as the song view does).
   const succeeded = target.kind === 'ALBUM' && target.stage === 'SUCCEEDED'
   // Under an empty list: "Try again" is the whole-download retry (no taskId), which since 09-10-2026 looks for a
-  // whole-album sharer again; the album's stage travels on the target (taken when the pop-up opened: a stale guess
-  // ends in a 409, worded as the conflict line, and a refetch).
+  // whole-album sharer again; the album's stage travels on the target, kept live by the Downloads page, so once the
+  // retried album search ends with its songs still searching the note replaces the button (a stage that is still
+  // stale for a poll ends in a 409, worded as the conflict line, and a refetch).
   const stage = target.kind === 'ALBUM' ? target.stage : null
   const canSearchAgain = data && stage ? searchAgainAllowed(data.status, data.reason, stage) : false
   const action = load.status === 'error' || empty

@@ -63,7 +63,9 @@ and Radarr solve this with "manual import": a table of what was found, pick a ro
     finishes. The button shows only where the server's retry would take it (`searchAgainAllowed` in
     `src/lib/candidates.ts`): an empty list on a FAILED song, or on a FAILED / PARTIAL_SUCCESS album. A song or album
     still live gets a note instead (cancel it on its row first / wait for it to finish): retrying one would stop
-    transfers that may be going fine. A song already downloaded, one never searched (already in the library) and an
+    transfers that may be going fine. The album's stage is read live from the Downloads page's rows while the pop-up
+    is open (review, 09-10-2026): after Try again the album search may end with nothing again while its songs still
+    search one by one, and the pop-up then shows the note, not a button that would only answer with a conflict. A song already downloaded, one never searched (already in the library) and an
     album with no search on record (before 04-10-2026) get no button: there is nothing to run again. A failed fetch of
     the list keeps a button, now called "Reload", so two different actions never share a name. Against a server
     older than the album change, the album's Try again still retries the album, but its songs search on their own and
