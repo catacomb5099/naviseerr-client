@@ -32,6 +32,12 @@ and Radarr solve this with "manual import": a table of what was found, pick a ro
    keeps finished ones; the confirm names how many songs are still downloading from the current sharer.
 7. **Nested dialogs stop their `close` event**: React re-dispatches a `<dialog>` close up the component tree, so
    the confirm layer's close would otherwise close the main pop-up too.
+8. **The path cell shows the folder under the name** (added 09-10-2026). The server always sent the whole slskd
+   path; the table showed only the last piece, so two "12 - Song.flac" rows from a proper album folder and from a
+   1001-songs compilation looked the same. Now a muted second line shows the folder, verbatim (share alias
+   included), cut from the LEFT so the end (artist\album) stays readable (`dir="rtl"` + `<bdi>`, measured in
+   Chromium); the full path stays on hover and in the DOM. The filter box matches folder words too. No new
+   column (the song table already scrolls sideways), no folder on the Downloads page's one-line song row.
 
 ## Consequences
 
