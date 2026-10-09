@@ -1,5 +1,6 @@
 /** Pure helpers for the manual-import table: what a Soulseek file row shows, how rows sort and filter.
  *  Kept free of React so `scripts/check-candidates.ts` can exercise them. */
+import { DownloadStage } from '../api/types'
 import { shortDate } from './utils'
 
 /** The suffixes the server treats as lossless (SlskdSearchResultProcessor); such files carry no bitrate. */
@@ -159,7 +160,7 @@ export function statusCopy(
         ? `No file list was kept for this song: it was searched before lists were kept (${LISTS_KEPT_SINCE}), or its search never completed.`
         : `Naviseerr searched Soulseek for “${query ?? 'this album'}”${when} and found a sharer holding the album, but folder lists were only kept from ${LISTS_KEPT_SINCE}, so there is no list.`
     case 'NO_RESULTS':
-      return `Soulseek found nothing for “${query ?? 'this song'}”${when}. Retry the song to search again.`
+      return `Soulseek found nothing for “${query ?? 'this song'}”${when}.`
     case 'ALREADY_IN_LIBRARY':
       return 'This song was already in your library, so nothing was searched.'
     case 'NO_OWN_SEARCH':
@@ -183,6 +184,16 @@ export function statusCopy(
     default:
       return kind === 'SONG' ? 'No file list is available for this song.' : 'No folder list is available for this album.'
   }
+}
+
+/** Whether the pop-up's "Try again" may run the search again (09-10-2026). The server's retry only resets a FAILED
+ *  song or a finished (FAILED / PARTIAL_SUCCESS) album, and only an empty list wants it: READY has files to choose
+ *  from, SEARCHING is already running. ALREADY_IN_LIBRARY was never searched and NO_ALBUM_SEARCH has nothing to
+ *  restart. A song or album still live is left alone (the dialog says to cancel it first / wait). */
+export function searchAgainAllowed(status: string, reason: string | null, stage: DownloadStage): boolean {
+  if (status !== 'NONE') return false
+  if (reason === 'ALREADY_IN_LIBRARY' || reason === 'NO_ALBUM_SEARCH') return false
+  return stage === 'FAILED' || stage === 'PARTIAL_SUCCESS'
 }
 
 /** The grey line under the header that lets a person find the search in slskd's own Searches page:

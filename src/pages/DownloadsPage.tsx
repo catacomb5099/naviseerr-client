@@ -21,7 +21,8 @@ interface DownloadsPageProps {
   /** Drives the live progress bar's transition duration, same as the panel's cards. */
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void
-  onRetry: (id: string, taskId?: string) => void | Promise<unknown>
+  /** useActiveDownloads.retry: the rows ignore its answer; the "choose a file" pop-up's Try again reads it. */
+  onRetry: (id: string, taskId?: string) => Promise<ActOutcome>
   /** useActiveDownloads.pick: runs a manual pick with the feed's own guard, card swap and poll. */
   onPick: (id: string, key: string, call: () => Promise<ActiveDownloadView>) => Promise<ActOutcome>
   /** "Download again" on a finished row: a new, forced request for the same item. */
@@ -165,9 +166,16 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
         </section>
       </main>
 
+      {/* An album pop-up reads the download's stage live from this page's rows (cards first, then the server
+          row), not the snapshot it opened with: after Try again the album goes live and the pop-up must swap
+          its button for the "still being searched" note while the songs search. The dialog's view is keyed
+          on kind and id only, so a changing stage does not remount it. */}
       <ManualImportDialog
-        target={manual}
+        target={manual?.kind === 'ALBUM'
+          ? { ...manual, stage: items.find(item => item.downloadId === manual.downloadId)?.stage ?? manual.stage }
+          : manual}
         onClose={() => setManual(null)}
+        onRetry={onRetry}
         onPick={request => request.kind === 'SONG'
           ? onPick(request.downloadId, request.taskId, () => pickSongCandidate(request.downloadId, request.taskId, request.body))
           : onPick(request.downloadId, request.downloadId, () => pickAlbumFolder(request.downloadId, request.body))}
