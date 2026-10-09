@@ -49,12 +49,14 @@ const fmt = (c: SongCandidate) => formatOf(c.filename) || c.extension
 /** A file or folder name over the folder it sits in, as slskd reports it. The folder line is cut from the
  *  LEFT so the useful end (artist\album) stays readable: dir="rtl" moves the ellipsis to the start and
  *  <bdi> keeps the characters in order (measured in Chromium; a plain rtl span flips leading "@@" to the
- *  end). The cell's title carries the whole path for hover; the DOM holds it whole for screen readers. */
+ *  end). The cell's title carries the whole path for hover; the DOM holds it whole for screen readers, with
+ *  a hidden ", in " between name and folder so the two are not read as one run-on word. */
 function PathCell({ path }: { path: string }) {
   const folder = folderOf(path)
   return (
     <span title={path} className="block max-w-[18rem]">
       <span className="block truncate">{basename(path)}</span>
+      {folder && <span className="sr-only">, in </span>}
       {folder && <span dir="rtl" className="block truncate text-left text-[11px] text-zinc-500"><bdi>{folder}</bdi></span>}
     </span>
   )
