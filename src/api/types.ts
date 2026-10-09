@@ -374,6 +374,10 @@ export interface SuggestedPlaylist {
  *  absent on a server older than 09-10-2026. */
 export interface StatusResponse {
   soulseek: { connected: boolean; loggedIn: boolean; state: string; detail: string | null; username?: string | null }
+  /** The music library as the server's organiser sees it (09-10-2026): `enabled` false when no library is configured
+   *  (then root and problem are null); `problem` one plain sentence when the folder is missing or cannot be written to,
+   *  null when fine. Absent on an older server. */
+  library?: { enabled: boolean; root: string | null; problem: string | null }
 }
 
 // --- Manual import: the files Soulseek found for a song -------------------
