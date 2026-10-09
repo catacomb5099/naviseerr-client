@@ -45,8 +45,11 @@ and Radarr solve this with "manual import": a table of what was found, pick a ro
    album as one folder". The server now sends the real reason and slskd's own `searchId`; the pop-up words each
    reason in one sentence with the day from `searchedAt` ("on 5 Oct") and the day lists began (8 October 2026):
    refused by slskd (`SEARCH_FAILED`), Soulseek offline, never searched on its own because the album's folder gave
-   the song its file (`NO_OWN_SEARCH`), nothing left to search (`NOTHING_TO_SEARCH`), cancelled, before lists were
-   kept. A grey line under the header, `Soulseek search <id> · 5 Oct 09:23` (local time), lets a person find the
+   the song its file (`NO_OWN_SEARCH`), nothing left to search (`NOTHING_TO_SEARCH`), cancelled (a song and an album
+   each in their own words), before lists were kept. For a song, `BEFORE_CACHE` keeps both possibilities ("searched
+   before lists were kept, or its search never completed"): the server answers it for every song with no completed
+   search that it cannot name a cause for, and a server older than #136 answers it for every failed search, so a
+   confident dated sentence would be wrong for those rows (review, 09-10-2026). A grey line under the header, `Soulseek search <id> · 5 Oct 09:23` (local time), lets a person find the
    search in slskd's Searches page; it is absent when slskd never took a search, which is then the fact. The
    sentences no longer tell the person to retry: the in-dialog "Try again" button (next change) does that. Unknown
    reasons keep falling through to the generic sentence, so the web app works against older servers.

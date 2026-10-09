@@ -955,7 +955,7 @@ const MOCK_NO_LIST: Record<string, 'NO_OWN_SEARCH' | 'BEFORE_CACHE'> = {
 
 /** Mirrors GET /downloads/{id}/tasks/{taskId}/candidates. A song still searching answers SEARCHING; a
  *  song whose search found nothing answers NONE/NO_RESULTS, one whose search never completed
- *  NONE/SEARCH_FAILED or SOULSEEK_OFFLINE (no search id: slskd never took one); the rest get the list,
+ *  NONE/SEARCH_FAILED, SOULSEEK_OFFLINE or CANCELLED (no search id: slskd never took one); the rest get the list,
  *  with the row that matches the song's own file marked current (the server's first pick when no pick
  *  was made yet). 404 for unknown ids. */
 export function getMockSongCandidates(downloadId: string, taskId: string): SongCandidatesResponse {
@@ -969,8 +969,8 @@ export function getMockSongCandidates(downloadId: string, taskId: string): SongC
   if (song.stage === 'FAILED' && song.failureCode === 'NO_CANDIDATES') {
     return { ...base, status: 'NONE', reason: 'NO_RESULTS', current: null, candidates: [] }
   }
-  if (song.stage === 'FAILED' && (song.failureCode === 'SEARCH_FAILED' || song.failureCode === 'SOULSEEK_OFFLINE' || song.failureCode === 'TIMED_OUT')) {
-    const reason = song.failureCode === 'SOULSEEK_OFFLINE' ? 'SOULSEEK_OFFLINE' : 'SEARCH_FAILED'
+  if (song.stage === 'FAILED' && (song.failureCode === 'SEARCH_FAILED' || song.failureCode === 'SOULSEEK_OFFLINE' || song.failureCode === 'TIMED_OUT' || song.failureCode === 'CANCELLED')) {
+    const reason = song.failureCode === 'SOULSEEK_OFFLINE' || song.failureCode === 'CANCELLED' ? song.failureCode : 'SEARCH_FAILED'
     return { ...base, status: 'NONE', reason, searchId: null, searchedAt: null, current: null, candidates: [] }
   }
   const noList = MOCK_NO_LIST[taskId]

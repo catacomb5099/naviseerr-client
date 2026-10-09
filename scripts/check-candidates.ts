@@ -95,12 +95,15 @@ const albumBefore = statusCopy('ALBUM', 'NONE', 'BEFORE_CACHE', 'Definitely Mayb
 assert(albumBefore.includes('“Definitely Maybe”') && albumBefore.includes(' on 5 Oct ') && albumBefore.includes('8 October 2026'),
   `BEFORE_CACHE album names the query, the day and when lists began: ${albumBefore}`)
 assert(!statusCopy('ALBUM', 'NONE', 'BEFORE_CACHE', null, null)!.includes(' on '), 'no date, no dangling "on"')
-assert(statusCopy('SONG', 'NONE', 'BEFORE_CACHE', null)!.includes('before file lists were kept'), 'BEFORE_CACHE song')
+const songBefore = statusCopy('SONG', 'NONE', 'BEFORE_CACHE', null)!
+assert(songBefore.includes('before lists were kept') && songBefore.includes('or its search never completed'),
+  `BEFORE_CACHE song keeps both possibilities (the server cannot tell them apart): ${songBefore}`)
 assert(statusCopy('SONG', 'NONE', 'NO_RESULTS', 'Live Forever', NOON)!.includes('on 5 Oct'), 'NO_RESULTS is dated too')
 const albumFailed = statusCopy('ALBUM', 'NONE', 'SEARCH_FAILED', null, NOON)!
 assert(albumFailed.includes('refused') && !albumFailed.includes('Nobody shared'), 'a refused album search no longer reads as "nobody shared enough"')
 assert(statusCopy('ALBUM', 'NONE', 'NOTHING_TO_SEARCH', null)!.includes('already started'), 'NOTHING_TO_SEARCH')
-assert(statusCopy('ALBUM', 'NONE', 'CANCELLED', null, NOON)!.includes('cancelled with the download on 5 Oct'), 'CANCELLED is dated')
+assert(statusCopy('ALBUM', 'NONE', 'CANCELLED', null, NOON)!.includes('album search was cancelled with the download on 5 Oct'), 'CANCELLED album is dated')
+assert(statusCopy('SONG', 'NONE', 'CANCELLED', null, NOON)!.includes('search for this song was cancelled on 5 Oct'), 'CANCELLED song does not speak of an album')
 assert(statusCopy('SONG', 'NONE', 'NO_OWN_SEARCH', null)!.includes('never searched for on its own'), 'NO_OWN_SEARCH')
 const songFailed = statusCopy('SONG', 'NONE', 'SEARCH_FAILED', null)!
 assert(songFailed.includes('never completed') && songFailed.includes('slskd'), 'SEARCH_FAILED song names slskd')

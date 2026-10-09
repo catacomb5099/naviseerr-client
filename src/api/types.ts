@@ -404,9 +404,10 @@ export interface SongCandidate {
 /** GET /downloads/{id}/tasks/{taskId}/candidates - every audio file the song's Soulseek search returned, uncapped,
  *  in the server's ranking: the files that are the song first, the NONE ones last. `candidates` is empty while SEARCHING and with NONE; `reason` says why
  *  there is nothing: ALREADY_IN_LIBRARY (nothing was searched), NO_OWN_SEARCH (the file came from the album search's folder
- *  or a pick; the song was never searched on its own), SEARCH_FAILED / SOULSEEK_OFFLINE (its own search never completed,
- *  slskd may have no record of it), NO_RESULTS (it completed and found nothing relevant), BEFORE_CACHE (searched before
- *  lists were kept, 8 October 2026). Reasons the web app does not know fall through to a generic sentence. */
+ *  or a pick; the song was never searched on its own), SEARCH_FAILED / SOULSEEK_OFFLINE / CANCELLED (its own search never
+ *  completed, slskd may have no record of it), NO_RESULTS (it completed and found nothing relevant), BEFORE_CACHE (no
+ *  completed search and no cause the server can name: searched before lists were kept, 8 October 2026, or a failed search
+ *  on a server older than naviseerr #136). Reasons the web app does not know fall through to a generic sentence. */
 export interface SongCandidatesResponse {
   taskId: string
   status: CandidateStatus

@@ -152,8 +152,11 @@ export function statusCopy(
   const when = onDate(searchedAt)
   switch (reason) {
     case 'BEFORE_CACHE':
+      // The song sentence hedges: the server answers BEFORE_CACHE for every song with no completed search
+      // that it cannot name a cause for (and, before naviseerr #136, for every failed search), so a
+      // confident "searched before lists were kept" would be wrong for those rows.
       return kind === 'SONG'
-        ? `This song was searched${when} before file lists were kept (${LISTS_KEPT_SINCE}), so there is no list.`
+        ? `No file list was kept for this song: it was searched before lists were kept (${LISTS_KEPT_SINCE}), or its search never completed.`
         : `Naviseerr searched Soulseek for “${query ?? 'this album'}”${when} and found a sharer holding the album, but folder lists were only kept from ${LISTS_KEPT_SINCE}, so there is no list.`
     case 'NO_RESULTS':
       return `Soulseek found nothing for “${query ?? 'this song'}”${when}. Retry the song to search again.`
@@ -172,7 +175,9 @@ export function statusCopy(
     case 'NOTHING_TO_SEARCH':
       return 'Every song had already started on its own when the album search was due, so nothing was searched for the album as a whole. Use the person icon on a song instead.'
     case 'CANCELLED':
-      return `The album search was cancelled with the download${when}.`
+      return kind === 'SONG'
+        ? `The search for this song was cancelled${when}, so there is no list.`
+        : `The album search was cancelled with the download${when}.`
     case 'NO_ALBUM_SEARCH':
       return 'This album was downloaded before folder lists were kept.'
     default:
