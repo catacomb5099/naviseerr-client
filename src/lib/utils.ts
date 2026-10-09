@@ -22,6 +22,15 @@ export function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
 }
 
+// Spelled out rather than Intl: 'en' puts the month first and 'en-GB' abbreviates September as "Sept".
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "5 Oct" in the local calendar, with the year once it is not `now`'s ("21 Sep 2025"). */
+export function shortDate(date: Date, now: Date = new Date()): string {
+  const year = date.getFullYear() === now.getFullYear() ? '' : ` ${date.getFullYear()}`
+  return `${date.getDate()} ${MONTHS[date.getMonth()]}${year}`
+}
+
 /** "1.2M", "998K" - how YouTube itself abbreviates a play count. */
 const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 

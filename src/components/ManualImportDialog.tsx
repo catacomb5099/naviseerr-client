@@ -8,7 +8,7 @@ import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
   GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
-  slotLabel, slotRank, sortRows, statusCopy,
+  searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../lib/candidates'
 import { formatDuration } from '../lib/utils'
 import { CandidateTable, Column, Sort } from './CandidateTable'
@@ -143,9 +143,10 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
   return { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send }
 }
 
-/** The header every view shares: title, what Soulseek was asked for, the filter toggle and the X. */
-function DialogHeader({ title, query, searchOpen, onToggleSearch, filter, onFilter, onClose }: {
-  title: string; query: string | null | undefined; searchOpen: boolean; onToggleSearch: () => void
+/** The header every view shares: title, what Soulseek was asked for, slskd's own id and time for that search
+ *  when it took one, the filter toggle and the X. */
+function DialogHeader({ title, query, search, searchOpen, onToggleSearch, filter, onFilter, onClose }: {
+  title: string; query: string | null | undefined; search: string | null; searchOpen: boolean; onToggleSearch: () => void
   filter: string; onFilter: (text: string) => void; onClose: () => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -157,6 +158,7 @@ function DialogHeader({ title, query, searchOpen, onToggleSearch, filter, onFilt
         <p className="text-sm text-zinc-400 truncate">
           {query ? <>Soulseek was asked for: <span className="text-zinc-300">“{query}”</span></> : ' '}
         </p>
+        {search && <p className="text-xs text-zinc-500 truncate">{search}</p>}
       </div>
       <div className="flex items-center gap-1 flex-none">
         {searchOpen && (
@@ -239,7 +241,7 @@ function SongCandidates({ target, load, refetch, onClose, onPick }: ViewProps) {
     return col ? sortRows(filtered, col.sortValue, sort.dir) : filtered
   }, [all, filter, sort])
 
-  const message = load.status === 'error' ? load.message : data ? statusCopy('SONG', data.status, data.reason, data.query) : null
+  const message = load.status === 'error' ? load.message : data ? statusCopy('SONG', data.status, data.reason, data.query, data.searchedAt) : null
   const searching = data?.status === 'SEARCHING'
   const empty = data?.status === 'READY' && all.length === 0
   const showTable = load.status === 'loading' || (data?.status === 'READY' && all.length > 0)
@@ -265,6 +267,7 @@ function SongCandidates({ target, load, refetch, onClose, onPick }: ViewProps) {
       <DialogHeader
         title={`Choose a file for ${target.title}`}
         query={data?.query}
+        search={searchLine(data?.searchId, data?.searchedAt)}
         searchOpen={searchOpen}
         onToggleSearch={toggleSearch}
         filter={filter}
@@ -368,7 +371,7 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
     ? { ...col, render: (f: AlbumFolder) => `${f.fileCount} of ${songCount || f.fileCount}` }
     : col), [songCount])
 
-  const message = load.status === 'error' ? load.message : data ? statusCopy('ALBUM', data.status, data.reason, data.query) : null
+  const message = load.status === 'error' ? load.message : data ? statusCopy('ALBUM', data.status, data.reason, data.query, data.searchedAt) : null
   const searching = data?.status === 'SEARCHING'
   const empty = data?.status === 'READY' && all.length === 0
   const showTable = load.status === 'loading' || (data?.status === 'READY' && all.length > 0)
@@ -396,6 +399,7 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
       <DialogHeader
         title={`Choose a sharer for ${target.title}`}
         query={data?.query}
+        search={searchLine(data?.searchId, data?.searchedAt)}
         searchOpen={searchOpen}
         onToggleSearch={toggleSearch}
         filter={filter}

@@ -403,13 +403,20 @@ export interface SongCandidate {
 
 /** GET /downloads/{id}/tasks/{taskId}/candidates - every audio file the song's Soulseek search returned, uncapped,
  *  in the server's ranking: the files that are the song first, the NONE ones last. `candidates` is empty while SEARCHING and with NONE; `reason` says why
- *  there is nothing: BEFORE_CACHE (searched before lists were kept), NO_RESULTS, ALREADY_IN_LIBRARY. */
+ *  there is nothing: ALREADY_IN_LIBRARY (nothing was searched), NO_OWN_SEARCH (the file came from the album search's folder
+ *  or a pick; the song was never searched on its own), SEARCH_FAILED / SOULSEEK_OFFLINE (its own search never completed,
+ *  slskd may have no record of it), NO_RESULTS (it completed and found nothing relevant), BEFORE_CACHE (searched before
+ *  lists were kept, 8 October 2026). Reasons the web app does not know fall through to a generic sentence. */
 export interface SongCandidatesResponse {
   taskId: string
   status: CandidateStatus
   reason: string | null
   /** What Soulseek was asked for (the title alone); null when never searched. */
   query: string | null
+  /** slskd's own id for the song's search, as its Searches page lists it; null when slskd never took one.
+   *  Absent from servers older than 09-10-2026. */
+  searchId?: string | null
+  /** When the file list was remembered; null for every reason but NO_RESULTS. */
   searchedAt: string | null
   songStage: DownloadStage
   /** The file being (or last) downloaded, or null. */
@@ -454,13 +461,20 @@ export interface AlbumFolder {
 
 /** GET /downloads/{id}/album-candidates - every folder the album's Soulseek search found holding any of its
  *  songs, uncapped, the judged ones first.
- *  `reason` with NONE: NO_WHOLE_FOLDER (songs were searched one by one), BEFORE_CACHE, NO_ALBUM_SEARCH.
+ *  `reason` with NONE: NO_WHOLE_FOLDER (the search ran, nobody had enough, songs were searched one by one),
+ *  SEARCH_FAILED (slskd refused or never answered the album search: nobody was asked, the songs searched on their own),
+ *  NOTHING_TO_SEARCH (every song had already started on its own), CANCELLED, BEFORE_CACHE (a folder was found but lists
+ *  were not kept yet: a row from before 8 October 2026), NO_ALBUM_SEARCH (no album search on record).
  *  409 NOT_AN_ALBUM for a playlist or radio. */
 export interface AlbumCandidatesResponse {
   downloadId: string
   status: CandidateStatus
   reason: string | null
   query: string | null
+  /** slskd's own id for the album search; null when slskd never took one. Absent from servers older than 09-10-2026. */
+  searchId?: string | null
+  /** When the folders were remembered, else when the search ended (so set on every finished search, also a refused one:
+   *  then it is when Naviseerr gave up). */
   searchedAt: string | null
   songCount: number
   folders: AlbumFolder[]

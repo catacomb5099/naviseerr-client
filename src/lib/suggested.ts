@@ -1,5 +1,6 @@
 /** Words and looks for the suggested playlists: pure functions, checked by scripts/check-suggested.ts. */
 import { CuratorRun, SuggestedPlaylistSummary } from '../api/types'
+import { shortDate } from './utils'
 
 export const ALL_TIME = 'All-time hits'
 
@@ -58,8 +59,6 @@ function parseEditionDate(editionDate: string): Date | null {
 const WEEKDAY = new Intl.DateTimeFormat('en', { weekday: 'long' })
 // Fixed English for the long form: the app's copy is English, and 'en-GB' puts the day first.
 const LONG_DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-// Spelled out rather than Intl: 'en' puts the month first and 'en-GB' abbreviates September as "Sept".
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /**
  * How fresh an edition is, the way the streaming services say it: "Updated today", "Updated yesterday",
@@ -74,8 +73,7 @@ export function editionLabel(editionDate: string, now: Date = new Date()): strin
   if (days <= 0) return 'Updated today'
   if (days === 1) return 'Updated yesterday'
   if (days < 7) return `Updated ${WEEKDAY.format(edition)}`
-  const year = edition.getFullYear() === today.getFullYear() ? '' : ` ${edition.getFullYear()}`
-  return `Updated ${edition.getDate()} ${MONTHS[edition.getMonth()]}${year}`
+  return `Updated ${shortDate(edition, today)}`
 }
 
 /** "27 September 2026" for the playlist page's header; the raw text when it cannot be read. */
