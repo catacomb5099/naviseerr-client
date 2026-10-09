@@ -1,7 +1,7 @@
 /** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
 import {
   GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
-  searchLine, slotLabel, slotRank, sortRows, statusCopy,
+  searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../src/lib/candidates'
 import { shortDate } from '../src/lib/utils'
 
@@ -108,12 +108,29 @@ assert(statusCopy('SONG', 'NONE', 'NO_OWN_SEARCH', null)!.includes('never search
 const songFailed = statusCopy('SONG', 'NONE', 'SEARCH_FAILED', null)!
 assert(songFailed.includes('never completed') && songFailed.includes('slskd'), 'SEARCH_FAILED song names slskd')
 assert(statusCopy('SONG', 'NONE', 'SOULSEEK_OFFLINE', null)!.includes('offline'), 'SOULSEEK_OFFLINE song')
-for (const reason of ['BEFORE_CACHE', 'NO_OWN_SEARCH', 'SEARCH_FAILED', 'SOULSEEK_OFFLINE', 'NOTHING_TO_SEARCH', 'CANCELLED']) {
+for (const reason of ['NO_RESULTS', 'BEFORE_CACHE', 'NO_OWN_SEARCH', 'SEARCH_FAILED', 'SOULSEEK_OFFLINE', 'NOTHING_TO_SEARCH', 'CANCELLED']) {
   for (const kind of ['SONG', 'ALBUM'] as const) {
     const text = statusCopy(kind, 'NONE', reason, 'x', NOON)!
     assert(!/Retry|Try again/.test(text) && !/undefined|null/.test(text), `${kind} ${reason} leaves the retrying to the button: ${text}`)
   }
 }
+
+// "Try again" runs the search again only where the server's retry would take it (09-10-2026): an empty list on a
+// FAILED song or on a finished album. Never with a list, a running search, a song that was never searched, an album
+// with no search on record, or a row still live (the dialog's note says to cancel it first / wait).
+assert(searchAgainAllowed('NONE', 'NO_RESULTS', 'FAILED'), 'a failed song that found nothing can be searched again')
+assert(searchAgainAllowed('NONE', 'BEFORE_CACHE', 'FAILED'), 'a failed song with no list kept can be searched again')
+assert(searchAgainAllowed('NONE', 'SEARCH_FAILED', 'FAILED') && searchAgainAllowed('NONE', 'SOULSEEK_OFFLINE', 'FAILED'), 'a refused song search can run again')
+assert(!searchAgainAllowed('NONE', 'BEFORE_CACHE', 'SUCCEEDED'), 'a downloaded song is left alone')
+assert(!searchAgainAllowed('NONE', 'ALREADY_IN_LIBRARY', 'SUCCEEDED') && !searchAgainAllowed('NONE', 'ALREADY_IN_LIBRARY', 'FAILED'), 'nothing was searched for a song already in the library')
+assert(!searchAgainAllowed('NONE', 'NO_RESULTS', 'DOWNLOADING') && !searchAgainAllowed('NONE', 'BEFORE_CACHE', 'SEARCHING'), 'a live song: cancel it first')
+assert(!searchAgainAllowed('SEARCHING', null, 'SEARCHING') && !searchAgainAllowed('SEARCHING', null, 'FAILED'), 'a running search is not started twice')
+assert(!searchAgainAllowed('READY', null, 'FAILED'), 'a list to choose from needs no new search')
+assert(searchAgainAllowed('NONE', 'NO_WHOLE_FOLDER', 'PARTIAL_SUCCESS') && searchAgainAllowed('NONE', 'NO_WHOLE_FOLDER', 'FAILED'), 'a finished album looks for a whole-album sharer again')
+assert(searchAgainAllowed('NONE', 'SEARCH_FAILED', 'PARTIAL_SUCCESS') && searchAgainAllowed('NONE', 'NOTHING_TO_SEARCH', 'FAILED'), 'a refused or skipped album search can run again')
+assert(!searchAgainAllowed('NONE', 'NO_WHOLE_FOLDER', 'DOWNLOADING') && !searchAgainAllowed('NONE', 'NO_WHOLE_FOLDER', 'SEARCHING'), 'a live album waits or is cancelled first')
+assert(!searchAgainAllowed('NONE', 'NO_ALBUM_SEARCH', 'FAILED'), 'an album with no search on record has nothing to restart')
+assert(!statusCopy('SONG', 'NONE', 'NO_RESULTS', 'x')!.includes('Retry'), 'NO_RESULTS leaves the retrying to the button')
 
 // The grey line names slskd's own search so a person can find it in slskd's Searches page.
 assert(searchLine(null, NOON) === null && searchLine(undefined, null) === null, 'no search id, no line (slskd never took one)')

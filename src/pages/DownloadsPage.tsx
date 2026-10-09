@@ -21,7 +21,8 @@ interface DownloadsPageProps {
   /** Drives the live progress bar's transition duration, same as the panel's cards. */
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void
-  onRetry: (id: string, taskId?: string) => void | Promise<unknown>
+  /** useActiveDownloads.retry: the rows ignore its answer; the "choose a file" pop-up's Try again reads it. */
+  onRetry: (id: string, taskId?: string) => Promise<ActOutcome>
   /** useActiveDownloads.pick: runs a manual pick with the feed's own guard, card swap and poll. */
   onPick: (id: string, key: string, call: () => Promise<ActiveDownloadView>) => Promise<ActOutcome>
   /** "Download again" on a finished row: a new, forced request for the same item. */
@@ -168,6 +169,7 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
       <ManualImportDialog
         target={manual}
         onClose={() => setManual(null)}
+        onRetry={onRetry}
         onPick={request => request.kind === 'SONG'
           ? onPick(request.downloadId, request.taskId, () => pickSongCandidate(request.downloadId, request.taskId, request.body))
           : onPick(request.downloadId, request.downloadId, () => pickAlbumFolder(request.downloadId, request.body))}

@@ -51,13 +51,28 @@ and Radarr solve this with "manual import": a table of what was found, pick a ro
    search that it cannot name a cause for, and a server older than #136 answers it for every failed search, so a
    confident dated sentence would be wrong for those rows (review, 09-10-2026). A grey line under the header, `Soulseek search <id> · 5 Oct 09:23` (local time), lets a person find the
    search in slskd's Searches page; it is absent when slskd never took a search, which is then the fact. The
-   sentences no longer tell the person to retry: the in-dialog "Try again" button (next change) does that. Unknown
+   sentences no longer tell the person to retry: the in-dialog "Try again" button (decision 10) does that. Unknown
    reasons keep falling through to the generic sentence, so the web app works against older servers.
+10. **"Try again" in the pop-up searches again** (added 09-10-2026, with naviseerr's `feat/ai-album-retry-searches-again`).
+    The button under an empty list used to re-read the same remembered list, so "Soulseek found nothing" came straight
+    back and the person had to close the pop-up, find the row's Retry icon, press it and open the pop-up again. Now it
+    calls the retry the Downloads page already has, through `useActiveDownloads.retry`: the song's own retry for a
+    song, the whole-download retry for an album (which, since the server change, looks for a whole-album sharer again
+    before the songs search one by one). The row underneath goes live, the button says "Starting a new search…", the
+    pop-up then says "Still searching Soulseek…" and its existing 3-second loop fills the list when the search
+    finishes. The button shows only where the server's retry would take it (`searchAgainAllowed` in
+    `src/lib/candidates.ts`): an empty list on a FAILED song, or on a FAILED / PARTIAL_SUCCESS album. A song or album
+    still live gets a note instead (cancel it on its row first / wait for it to finish): retrying one would stop
+    transfers that may be going fine. A song already downloaded, one never searched (already in the library) and an
+    album with no search on record (before 04-10-2026) get no button: there is nothing to run again. A failed fetch of
+    the list keeps a button, now called "Reload", so two different actions never share a name. Against a server
+    older than the album change, the album's Try again still retries the album, but its songs search on their own and
+    the album's own list stays empty.
 
 ## Consequences
 
 - New endpoints the client expects: `GET /downloads/{id}/tasks/{taskId}/candidates`,
   `POST /downloads/{id}/tasks/{taskId}/pick`, `GET /downloads/{id}/album-candidates`, `POST /downloads/{id}/album-pick`.
 - `src/lib/candidates.ts` holds every pure helper (basename, format, quality label, sizes, sort, filter, status
-  wording) with asserts in `scripts/check-candidates.ts`.
+  wording, whether Try again may run) with asserts in `scripts/check-candidates.ts`.
 - The sharer now shows on each song row inside a collection ("· from alice"), so a swap is visible at a glance.

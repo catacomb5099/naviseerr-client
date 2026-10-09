@@ -8,7 +8,7 @@ import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
   GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
-  searchLine, slotLabel, slotRank, sortRows, statusCopy,
+  searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../lib/candidates'
 import { formatDuration } from '../lib/utils'
 import { CandidateTable, Column, Sort } from './CandidateTable'
@@ -26,6 +26,9 @@ interface ManualImportDialogProps {
   onClose: () => void
   /** Runs the pick through the downloads feed (useActiveDownloads.pick), so the row underneath updates. */
   onPick: (request: PickRequest) => Promise<ActOutcome>
+  /** useActiveDownloads.retry: "Try again" under an empty list runs the song's own retry (taskId given) or the
+   *  whole album's, so the search really runs again and the row underneath goes live. */
+  onRetry: (downloadId: string, taskId?: string) => Promise<ActOutcome>
 }
 
 const SUCCEEDED_HINT = 'This song is already downloaded and filed. Delete it from your library first to pick another file.'
@@ -33,6 +36,11 @@ const ALBUM_SUCCEEDED_HINT = 'Every song of this album is already downloaded and
 const CONFLICT_COPY = 'That file could not be chosen — the list has been refreshed.'
 const GONE_COPY = 'This download no longer exists.'
 const BUSY_COPY = 'Another action on this song is still running. Try again in a moment.'
+const SEARCH_CONFLICT_COPY = 'Nothing could be searched again right now — the list has been refreshed.'
+const LIVE_SONG_NOTE = 'The song is still downloading. Cancel it on its row first to search again.'
+const LIVE_ALBUM_NOTE = 'The songs are still being searched one by one. Try again is available once the download has finished, or after you cancel it.'
+/** The pending key of "Try again"; never a row key (those read "sharer|path"). */
+const SEARCH_AGAIN_KEY = 'search-again'
 const BUTTON = 'rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 const ICON_BUTTON = 'h-8 w-8 inline-flex items-center justify-center rounded-full text-zinc-400 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 const DOWNLOAD_BUTTON = 'h-8 px-3 rounded-full text-xs font-semibold text-white bg-green-600 hover:bg-green-500 aria-disabled:bg-zinc-800 aria-disabled:text-zinc-500 aria-disabled:hover:bg-zinc-800 aria-disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
@@ -127,20 +135,24 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
   // The row whose pick is on its way, and what the last pick said.
   const [pending, setPending] = useState<string | null>(null)
   const [pickError, setPickError] = useState<string | null>(null)
-  const send = async (key: string, request: PickRequest) => {
+  /** One call through the downloads feed; a pick and "Try again" share the pending key and the error line. */
+  const run = async (key: string, call: () => Promise<ActOutcome>, onOk: () => void, conflictCopy: string) => {
     if (pending) return
     setPending(key)
     setPickError(null)
-    const outcome = await onPick(request)
+    const outcome = await call()
     setPending(null)
-    if (outcome === 'ok') onClose()
-    else if (outcome === 'conflict') { setPickError(CONFLICT_COPY); refetch() }
+    if (outcome === 'ok') onOk()
+    else if (outcome === 'conflict') { setPickError(conflictCopy); refetch() }
     else if (outcome === 'gone') setPickError(GONE_COPY)
     else if (outcome === 'failed') setPickError(REQUEST_FAILED_COPY)
     else if (outcome === 'busy') setPickError(BUSY_COPY)
   }
+  const send = (key: string, request: PickRequest) => run(key, () => onPick(request), onClose, CONFLICT_COPY)
+  // After the 202 the server reads SEARCHING, and useCandidates' own 3-second loop fills the list in.
+  const searchAgain = (call: () => Promise<ActOutcome>) => run(SEARCH_AGAIN_KEY, call, refetch, SEARCH_CONFLICT_COPY)
   const toggleSearch = () => { setSearchOpen(o => !o); if (searchOpen) setFilter('') }
-  return { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send }
+  return { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain: pending === SEARCH_AGAIN_KEY }
 }
 
 /** The header every view shares: title, what Soulseek was asked for, slskd's own id and time for that search
@@ -191,15 +203,37 @@ function DialogHeader({ title, query, search, searchOpen, onToggleSearch, filter
   )
 }
 
-/** The one line when there is no table: the server's status sentence, an error, or "nothing found". */
-function EmptyState({ message, searching, onRetry }: { message: string; searching: boolean; onRetry: () => void }) {
+/** The one line when there is no table: the server's status sentence, an error, or "nothing found". Under it
+ *  either the action ("Try again" runs the search again, "Reload" re-reads the list) or a note saying why there
+ *  is none; while a search is being started the button spins and says so. Nothing while SEARCHING. */
+function EmptyState({ message, searching, action, note, error }: {
+  message: string
+  searching: boolean
+  action?: { label: string; pending: boolean; onClick: () => void }
+  note?: string | null
+  error?: string | null
+}) {
   return (
     <div className="py-12 text-center text-zinc-400">
       <p role="status" className="inline-flex items-center gap-2">
         {searching && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
         {message}
       </p>
-      {!searching && <div><button type="button" onClick={onRetry} className={`mt-3 ${BUTTON}`}>Try again</button></div>}
+      {note && <p className="mt-2 text-sm text-zinc-500">{note}</p>}
+      {error && <p role="status" className="mt-2 text-sm text-red-400">{error}</p>}
+      {!searching && action && (
+        <div>
+          <button
+            type="button"
+            aria-disabled={action.pending}
+            onClick={() => { if (!action.pending) action.onClick() }}
+            className={`mt-3 inline-flex items-center gap-2 ${BUTTON}`}
+          >
+            {action.pending && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+            {action.pending ? 'Starting a new search…' : action.label}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -224,11 +258,14 @@ function RowAction({ current, currentLabel, disabled, hint, pending, onClick }: 
   )
 }
 
-type ViewProps = { target: ManualImportTarget; load: CandidatesLoad; refetch: () => void; onClose: () => void; onPick: ManualImportDialogProps['onPick'] }
+type ViewProps = {
+  target: ManualImportTarget; load: CandidatesLoad; refetch: () => void; onClose: () => void
+  onPick: ManualImportDialogProps['onPick']; onRetry: ManualImportDialogProps['onRetry']
+}
 
 /** The file list for one song: sort, filter, the empty/searching/none states, Download per row. */
-function SongCandidates({ target, load, refetch, onClose, onPick }: ViewProps) {
-  const { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send } = usePickState(onPick, onClose, refetch)
+function SongCandidates({ target, load, refetch, onClose, onPick, onRetry }: ViewProps) {
+  const { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain } = usePickState(onPick, onClose, refetch)
   // The row waiting for "Replace?".
   const [confirm, setConfirm] = useState<SongCandidate | null>(null)
 
@@ -249,6 +286,17 @@ function SongCandidates({ target, load, refetch, onClose, onPick }: ViewProps) {
   const succeeded = data?.songStage === 'SUCCEEDED'
   // A transfer is under way (or about to be): picking another file replaces it, so ask first.
   const live = data ? !isTerminal(data.songStage) && data.current !== null : false
+  // Under an empty list: "Try again" where the server's retry would take the song (its own retry, by taskId);
+  // "Reload" for a failed fetch or an odd empty READY list, which only need a re-read; else a note saying why not.
+  const canSearchAgain = data ? searchAgainAllowed(data.status, data.reason, data.songStage) : false
+  const action = load.status === 'error' || empty
+    ? { label: 'Reload', pending: false, onClick: refetch }
+    : data && canSearchAgain
+      ? { label: 'Try again', pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId, data.taskId)) }
+      : undefined
+  const note = data?.status === 'NONE' && !canSearchAgain
+    ? succeeded ? SUCCEEDED_HINT : !isTerminal(data.songStage) ? LIVE_SONG_NOTE : null
+    : null
 
   const rowKey = (c: SongCandidate) => `${c.username}|${c.filename}`
   const pickRow = (c: SongCandidate) => {
@@ -276,7 +324,7 @@ function SongCandidates({ target, load, refetch, onClose, onPick }: ViewProps) {
       />
 
       {(message || empty) && (
-        <EmptyState message={message ?? 'The search found no files for this song.'} searching={searching} onRetry={refetch} />
+        <EmptyState message={message ?? 'The search found no files for this song.'} searching={searching} action={action} note={note} error={pickError} />
       )}
 
       {showTable && (
@@ -354,8 +402,8 @@ function FolderFiles({ folder }: { folder: AlbumFolder }) {
 }
 
 /** The folder list for a whole album: one row per sharer, unfolding into the files it holds. */
-function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) {
-  const { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send } = usePickState(onPick, onClose, refetch)
+function AlbumCandidates({ target, load, refetch, onClose, onPick, onRetry }: ViewProps) {
+  const { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain } = usePickState(onPick, onClose, refetch)
   const [confirm, setConfirm] = useState<AlbumFolder | null>(null)
 
   const data = load.status === 'ready' && load.kind === 'ALBUM' ? load.data : null
@@ -382,6 +430,20 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
   const live = target.kind === 'ALBUM' && !isTerminal(target.stage) && (current?.songsCurrent ?? 0) > 0
   // Every song filed: the server would answer 409 to any folder, so say why up front (as the song view does).
   const succeeded = target.kind === 'ALBUM' && target.stage === 'SUCCEEDED'
+  // Under an empty list: "Try again" is the whole-download retry (no taskId), which since 09-10-2026 looks for a
+  // whole-album sharer again; the album's stage travels on the target (taken when the pop-up opened: a stale guess
+  // ends in a 409, worded as the conflict line, and a refetch).
+  const stage = target.kind === 'ALBUM' ? target.stage : null
+  const canSearchAgain = data && stage ? searchAgainAllowed(data.status, data.reason, stage) : false
+  const action = load.status === 'error' || empty
+    ? { label: 'Reload', pending: false, onClick: refetch }
+    : canSearchAgain
+      ? { label: 'Try again', pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId)) }
+      : undefined
+  // NO_ALBUM_SEARCH gets no note: the sentence already says the album predates folder lists, nothing to restart.
+  const note = data?.status === 'NONE' && !canSearchAgain && data.reason !== 'NO_ALBUM_SEARCH'
+    ? succeeded ? ALBUM_SUCCEEDED_HINT : stage && !isTerminal(stage) ? LIVE_ALBUM_NOTE : null
+    : null
 
   const rowKey = (f: AlbumFolder) => `${f.username}|${f.folder}`
   const pickRow = (f: AlbumFolder) => {
@@ -408,7 +470,7 @@ function AlbumCandidates({ target, load, refetch, onClose, onPick }: ViewProps) 
       />
 
       {(message || empty) && (
-        <EmptyState message={message ?? 'The search found no folders holding this album.'} searching={searching} onRetry={refetch} />
+        <EmptyState message={message ?? 'The search found no folders holding this album.'} searching={searching} action={action} note={note} error={pickError} />
       )}
 
       {showTable && (
@@ -497,7 +559,7 @@ function ConfirmDialog({ open, message, onConfirm, onCancel }: { open: boolean; 
  *  album), as a sortable, filterable table in a pop-up. A native dialog, so Escape and focus handling
  *  are the browser's; there is deliberately NO click-outside dismiss (the X button closes it), so a
  *  stray click cannot wipe a sort or a filter. */
-export function ManualImportDialog({ target, onClose, onPick }: ManualImportDialogProps) {
+export function ManualImportDialog({ target, onClose, onPick, onRetry }: ManualImportDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const { load, refetch } = useCandidates(target)
 
@@ -519,8 +581,8 @@ export function ManualImportDialog({ target, onClose, onPick }: ManualImportDial
     >
       {/* Keyed per target so the sort, filter and confirm start clean every time it opens. */}
       {target.kind === 'ALBUM'
-        ? <AlbumCandidates key={`ALBUM:${target.downloadId}`} target={target} load={load} refetch={refetch} onClose={onClose} onPick={onPick} />
-        : <SongCandidates key={`SONG:${target.downloadId}:${target.taskId ?? ''}`} target={target} load={load} refetch={refetch} onClose={onClose} onPick={onPick} />}
+        ? <AlbumCandidates key={`ALBUM:${target.downloadId}`} target={target} load={load} refetch={refetch} onClose={onClose} onPick={onPick} onRetry={onRetry} />
+        : <SongCandidates key={`SONG:${target.downloadId}:${target.taskId ?? ''}`} target={target} load={load} refetch={refetch} onClose={onClose} onPick={onPick} onRetry={onRetry} />}
     </dialog>
   )
 }
