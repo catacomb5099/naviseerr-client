@@ -945,20 +945,38 @@ function findMockSong(downloadId: string, taskId: string): DownloadSongView | un
   return getMockDownloadDetail(downloadId).songs.find(s => s.taskId === taskId)
 }
 
+// Two fixture songs with no list, so mock mode shows those sentences too (09-10-2026): the album's first song came
+// from the album search's folder and was never searched on its own; the playlist's first song was searched before
+// lists were kept.
+const MOCK_NO_LIST: Record<string, 'NO_OWN_SEARCH' | 'BEFORE_CACHE'> = {
+  [`${FIXTURE_ALBUM_ID}-song-1`]: 'NO_OWN_SEARCH',
+  [`${FIXTURE_PARTIAL_ID}-song-1`]: 'BEFORE_CACHE',
+}
+
 /** Mirrors GET /downloads/{id}/tasks/{taskId}/candidates. A song still searching answers SEARCHING; a
- *  song that failed for want of candidates answers NONE/NO_RESULTS; the rest get the list, with the
- *  row that matches the song's own file marked current (the server's first pick when no pick was
- *  made yet). 404 for unknown ids. */
+ *  song whose search found nothing answers NONE/NO_RESULTS, one whose search never completed
+ *  NONE/SEARCH_FAILED, SOULSEEK_OFFLINE or CANCELLED (no search id: slskd never took one); the rest get the list,
+ *  with the row that matches the song's own file marked current (the server's first pick when no pick
+ *  was made yet). 404 for unknown ids. */
 export function getMockSongCandidates(downloadId: string, taskId: string): SongCandidatesResponse {
   const song = findMockSong(downloadId, taskId)
   if (!song) throw new ApiError('not found', 404, 'Not Found', { message: 'No such song in this download' })
   const query = song.title ?? 'Untitled'
-  const base = { taskId, query, searchedAt: iso(FIXTURE_BOOT - 30000), songStage: song.stage }
+  const base = { taskId, query, searchId: `mock-search-${taskId}`, searchedAt: iso(FIXTURE_BOOT - 30000), songStage: song.stage }
   if (song.stage === 'QUEUED' || song.stage === 'STARTING' || song.stage === 'SEARCHING') {
     return { ...base, status: 'SEARCHING', reason: null, searchedAt: null, current: null, candidates: [] }
   }
   if (song.stage === 'FAILED' && song.failureCode === 'NO_CANDIDATES') {
     return { ...base, status: 'NONE', reason: 'NO_RESULTS', current: null, candidates: [] }
+  }
+  if (song.stage === 'FAILED' && (song.failureCode === 'SEARCH_FAILED' || song.failureCode === 'SOULSEEK_OFFLINE' || song.failureCode === 'TIMED_OUT' || song.failureCode === 'CANCELLED')) {
+    const reason = song.failureCode === 'SOULSEEK_OFFLINE' || song.failureCode === 'CANCELLED' ? song.failureCode : 'SEARCH_FAILED'
+    return { ...base, status: 'NONE', reason, searchId: null, searchedAt: null, current: null, candidates: [] }
+  }
+  const noList = MOCK_NO_LIST[taskId]
+  if (noList) {
+    const current = noList === 'NO_OWN_SEARCH' && song.slskdUsername && song.slskdFilename ? { username: song.slskdUsername, filename: song.slskdFilename } : null
+    return { ...base, status: 'NONE', reason: noList, searchId: noList === 'NO_OWN_SEARCH' ? null : base.searchId, searchedAt: null, current, candidates: [] }
   }
   const list = mockCandidateList(song, taskId)
   // The server's own pick is the best-ranked row; a manual pick rewrote the song's file to one of these.
@@ -1061,17 +1079,25 @@ function mockFolder(spec: MockFolderSpec, songs: DownloadSongView[]): AlbumFolde
   }
 }
 
-/** Mirrors GET /downloads/{id}/album-candidates. The album fixture answers with three folders; another
- *  album from the simulator has no song list, so it answers NONE/NO_WHOLE_FOLDER; anything that is not
- *  an album is a 409 NOT_AN_ALBUM; unknown ids 404. */
+/** Mirrors GET /downloads/{id}/album-candidates. The album fixture answers with four folders; an album from
+ *  the simulator has no song list, so it answers NONE with the reason its outcome implies: SEARCH_FAILED when
+ *  slskd refused the search (no search id), CANCELLED, BEFORE_CACHE once it succeeded (a folder was found,
+ *  nothing kept), NO_WHOLE_FOLDER otherwise; anything that is not an album is a 409 NOT_AN_ALBUM; unknown
+ *  ids 404. */
 export function getMockAlbumCandidates(downloadId: string): AlbumCandidatesResponse {
   const { download, songs } = getMockDownloadDetail(downloadId)
   if (download.downloadType !== 'ALBUM') {
     throw new ApiError('conflict', 409, 'Conflict', { reason: 'NOT_AN_ALBUM', message: 'Only an album can be taken from one sharer\'s folder.' })
   }
-  const base = { downloadId, query: download.title ?? 'album', songCount: songs.length || download.songCount }
+  const base = { downloadId, query: download.title ?? 'album', searchId: `mock-search-${downloadId}`, songCount: songs.length || download.songCount }
   if (downloadId !== FIXTURE_ALBUM_ID) {
-    return { ...base, status: 'NONE', reason: 'NO_WHOLE_FOLDER', searchedAt: iso(FIXTURE_BOOT - 30000), folders: [] }
+    const searchedAt = download.finishedAt ?? iso(FIXTURE_BOOT - 30000)
+    if (download.failureCode === 'SEARCH_FAILED' || download.failureCode === 'SOULSEEK_OFFLINE') {
+      return { ...base, status: 'NONE', reason: 'SEARCH_FAILED', searchId: null, searchedAt, folders: [] }
+    }
+    if (download.failureCode === 'CANCELLED') return { ...base, status: 'NONE', reason: 'CANCELLED', searchedAt, folders: [] }
+    if (download.stage === 'SUCCEEDED') return { ...base, status: 'NONE', reason: 'BEFORE_CACHE', searchedAt, folders: [] }
+    return { ...base, status: 'NONE', reason: 'NO_WHOLE_FOLDER', searchedAt, folders: [] }
   }
   return { ...base, status: 'READY', reason: null, searchedAt: iso(FIXTURE_BOOT - 60000), folders: MOCK_ALBUM_FOLDERS.map(f => mockFolder(f, songs)) }
 }

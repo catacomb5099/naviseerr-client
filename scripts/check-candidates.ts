@@ -1,8 +1,9 @@
 /** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
 import {
   GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
-  slotLabel, slotRank, sortRows, statusCopy,
+  searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../src/lib/candidates'
+import { shortDate } from '../src/lib/utils'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -83,10 +84,43 @@ assert(filterRows([{ p: '@@a\\Music\\Oasis\\x.flac' }], 'oasis', r => [r.p]).len
 assert(statusCopy('SONG', 'READY', null, 'x') === null, 'READY has no message')
 assert(statusCopy('SONG', 'SEARCHING', null, null)!.startsWith('Still searching'), 'SEARCHING wording')
 assert(statusCopy('SONG', 'NONE', 'NO_RESULTS', 'Live Forever')!.includes('“Live Forever”'), 'NO_RESULTS names the query')
-assert(statusCopy('SONG', 'NONE', 'BEFORE_CACHE', null)!.includes('No file list was kept'), 'BEFORE_CACHE song')
-assert(statusCopy('ALBUM', 'NONE', 'BEFORE_CACHE', null)!.includes('folder lists'), 'BEFORE_CACHE album')
 assert(statusCopy('ALBUM', 'NONE', 'NO_WHOLE_FOLDER', null)!.includes('person icon on a song'), 'NO_WHOLE_FOLDER')
 assert(statusCopy('SONG', 'NONE', 'ALREADY_IN_LIBRARY', null)!.includes('already in your library'), 'ALREADY_IN_LIBRARY')
 assert(statusCopy('SONG', 'NONE', 'SOMETHING_NEW', null) !== null, 'an unknown reason still reads as a sentence')
+
+// Since 09-10-2026 the empty list says what really happened to the search, dated from `searchedAt`
+// (midday UTC, so the local day is 5 Oct in every time zone the check may run in).
+const NOON = '2026-10-05T12:00:00Z'
+const albumBefore = statusCopy('ALBUM', 'NONE', 'BEFORE_CACHE', 'Definitely Maybe', NOON)!
+assert(albumBefore.includes('“Definitely Maybe”') && albumBefore.includes(' on 5 Oct ') && albumBefore.includes('8 October 2026'),
+  `BEFORE_CACHE album names the query, the day and when lists began: ${albumBefore}`)
+assert(!statusCopy('ALBUM', 'NONE', 'BEFORE_CACHE', null, null)!.includes(' on '), 'no date, no dangling "on"')
+const songBefore = statusCopy('SONG', 'NONE', 'BEFORE_CACHE', null)!
+assert(songBefore.includes('before lists were kept') && songBefore.includes('or its search never completed'),
+  `BEFORE_CACHE song keeps both possibilities (the server cannot tell them apart): ${songBefore}`)
+assert(statusCopy('SONG', 'NONE', 'NO_RESULTS', 'Live Forever', NOON)!.includes('on 5 Oct'), 'NO_RESULTS is dated too')
+const albumFailed = statusCopy('ALBUM', 'NONE', 'SEARCH_FAILED', null, NOON)!
+assert(albumFailed.includes('refused') && !albumFailed.includes('Nobody shared'), 'a refused album search no longer reads as "nobody shared enough"')
+assert(statusCopy('ALBUM', 'NONE', 'NOTHING_TO_SEARCH', null)!.includes('already started'), 'NOTHING_TO_SEARCH')
+assert(statusCopy('ALBUM', 'NONE', 'CANCELLED', null, NOON)!.includes('album search was cancelled with the download on 5 Oct'), 'CANCELLED album is dated')
+assert(statusCopy('SONG', 'NONE', 'CANCELLED', null, NOON)!.includes('search for this song was cancelled on 5 Oct'), 'CANCELLED song does not speak of an album')
+assert(statusCopy('SONG', 'NONE', 'NO_OWN_SEARCH', null)!.includes('never searched for on its own'), 'NO_OWN_SEARCH')
+const songFailed = statusCopy('SONG', 'NONE', 'SEARCH_FAILED', null)!
+assert(songFailed.includes('never completed') && songFailed.includes('slskd'), 'SEARCH_FAILED song names slskd')
+assert(statusCopy('SONG', 'NONE', 'SOULSEEK_OFFLINE', null)!.includes('offline'), 'SOULSEEK_OFFLINE song')
+for (const reason of ['BEFORE_CACHE', 'NO_OWN_SEARCH', 'SEARCH_FAILED', 'SOULSEEK_OFFLINE', 'NOTHING_TO_SEARCH', 'CANCELLED']) {
+  for (const kind of ['SONG', 'ALBUM'] as const) {
+    const text = statusCopy(kind, 'NONE', reason, 'x', NOON)!
+    assert(!/Retry|Try again/.test(text) && !/undefined|null/.test(text), `${kind} ${reason} leaves the retrying to the button: ${text}`)
+  }
+}
+
+// The grey line names slskd's own search so a person can find it in slskd's Searches page.
+assert(searchLine(null, NOON) === null && searchLine(undefined, null) === null, 'no search id, no line (slskd never took one)')
+assert(searchLine('abc-123', null) === 'Soulseek search abc-123', 'id alone when the time is unknown')
+assert(/^Soulseek search abc-123 · 5 Oct \d{2}:\d{2}$/.test(searchLine('abc-123', NOON)!), `id, day and local time: ${searchLine('abc-123', NOON)}`)
+assert(searchLine('abc-123', 'not a date') === 'Soulseek search abc-123', 'an unreadable time is left out, not printed as NaN')
+assert(shortDate(new Date(2026, 9, 5), new Date(2026, 9, 9)) === '5 Oct', 'shortDate this year')
+assert(shortDate(new Date(2025, 8, 21), new Date(2026, 9, 9)) === '21 Sep 2025', 'shortDate another year carries it')
 
 console.log('check-candidates: ok')

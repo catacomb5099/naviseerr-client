@@ -1,5 +1,6 @@
 /** Pure helpers for the manual-import table: what a Soulseek file row shows, how rows sort and filter.
  *  Kept free of React so `scripts/check-candidates.ts` can exercise them. */
+import { shortDate } from './utils'
 
 /** The suffixes the server treats as lossless (SlskdSearchResultProcessor); such files carry no bitrate. */
 const LOSSLESS = new Set(['flac', 'wav', 'aif', 'aiff', 'ape', 'wv'])
@@ -123,13 +124,24 @@ export function filterRows<T>(rows: T[], text: string, haystack: (row: T) => (st
   return rows.filter(row => haystack(row).some(s => s != null && s.toLowerCase().includes(needle)))
 }
 
+/** The day lists have been kept since (V15 of the server), named in the sentences so a person knows why an older
+ *  download has none. */
+const LISTS_KEPT_SINCE = '8 October 2026'
+
+/** " on 5 Oct" from an ISO instant, "" when there is none or it cannot be read. */
+function onDate(searchedAt: string | null | undefined): string {
+  const date = searchedAt ? new Date(searchedAt) : null
+  return date && !Number.isNaN(date.getTime()) ? ` on ${shortDate(date)}` : ''
+}
+
 /** The dialog's one line when there is no table to show. `kind` picks the song or album wording;
- *  null means "there is a list" (status READY). */
+ *  null means "there is a list" (status READY). `searchedAt` dates the sentences that tell of a search. */
 export function statusCopy(
   kind: 'SONG' | 'ALBUM',
   status: string,
   reason: string | null,
   query: string | null,
+  searchedAt?: string | null,
 ): string | null {
   if (status === 'READY') return null
   if (status === 'SEARCHING') {
@@ -137,20 +149,49 @@ export function statusCopy(
       ? 'Still searching Soulseek for this song. The list fills in when the search finishes.'
       : 'Still searching Soulseek for this album. The list fills in when the search finishes.'
   }
+  const when = onDate(searchedAt)
   switch (reason) {
     case 'BEFORE_CACHE':
+      // The song sentence hedges: the server answers BEFORE_CACHE for every song with no completed search
+      // that it cannot name a cause for (and, before naviseerr #136, for every failed search), so a
+      // confident "searched before lists were kept" would be wrong for those rows.
       return kind === 'SONG'
-        ? 'No file list was kept for this song: it was searched before lists were kept, or its search ended without results. Retry it to get a list.'
-        : 'This album was downloaded before folder lists were kept.'
+        ? `No file list was kept for this song: it was searched before lists were kept (${LISTS_KEPT_SINCE}), or its search never completed.`
+        : `Naviseerr searched Soulseek for “${query ?? 'this album'}”${when} and found a sharer holding the album, but folder lists were only kept from ${LISTS_KEPT_SINCE}, so there is no list.`
     case 'NO_RESULTS':
-      return `Soulseek found nothing for “${query ?? 'this song'}”. Retry the song to search again.`
+      return `Soulseek found nothing for “${query ?? 'this song'}”${when}. Retry the song to search again.`
     case 'ALREADY_IN_LIBRARY':
       return 'This song was already in your library, so nothing was searched.'
+    case 'NO_OWN_SEARCH':
+      return 'This song was never searched for on its own: its file came from the album search\'s folder. Use the person icon on the album to see every folder found.'
+    case 'SEARCH_FAILED':
+      return kind === 'SONG'
+        ? 'The search for this song never completed: slskd refused it or did not answer, so there is no list.'
+        : 'Soulseek could not be asked for this album: slskd refused or did not answer the search, so each song searched on its own. Use the person icon on a song instead.'
+    case 'SOULSEEK_OFFLINE':
+      return 'The search for this song never completed: Soulseek was offline, so there is no list.'
     case 'NO_WHOLE_FOLDER':
       return 'Nobody shared enough of this album as one folder, so each song was searched on its own. Use the person icon on a song instead.'
+    case 'NOTHING_TO_SEARCH':
+      return 'Every song had already started on its own when the album search was due, so nothing was searched for the album as a whole. Use the person icon on a song instead.'
+    case 'CANCELLED':
+      return kind === 'SONG'
+        ? `The search for this song was cancelled${when}, so there is no list.`
+        : `The album search was cancelled with the download${when}.`
     case 'NO_ALBUM_SEARCH':
       return 'This album was downloaded before folder lists were kept.'
     default:
       return kind === 'SONG' ? 'No file list is available for this song.' : 'No folder list is available for this album.'
   }
+}
+
+/** The grey line under the header that lets a person find the search in slskd's own Searches page:
+ *  "Soulseek search <id> · 5 Oct 09:23" (local time), the id alone when the time is unknown, null when
+ *  slskd never took a search (nothing to look up: that is the point). */
+export function searchLine(searchId: string | null | undefined, searchedAt: string | null | undefined): string | null {
+  if (!searchId) return null
+  const date = searchedAt ? new Date(searchedAt) : null
+  if (!date || Number.isNaN(date.getTime())) return `Soulseek search ${searchId}`
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  return `Soulseek search ${searchId} · ${shortDate(date)} ${time}`
 }

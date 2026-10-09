@@ -38,6 +38,21 @@ and Radarr solve this with "manual import": a table of what was found, pick a ro
    included), cut from the LEFT so the end (artist\album) stays readable (`dir="rtl"` + `<bdi>`, measured in
    Chromium); the full path stays on hover and in the DOM. The filter box matches folder words too. No new
    column (the song table already scrolls sideways), no folder on the Downloads page's one-line song row.
+9. **An empty list says what really happened to the search, dated** (added 09-10-2026, with naviseerr's
+   `fix/ai-pick-list-says-what-happened`). The owner asked whether an album search had been made at all: the pop-up
+   said "downloaded before folder lists were kept" for his album and "searched before lists were kept, or its search
+   ended without results" for its songs, and when slskd refused an album search it said "nobody shared enough of this
+   album as one folder". The server now sends the real reason and slskd's own `searchId`; the pop-up words each
+   reason in one sentence with the day from `searchedAt` ("on 5 Oct") and the day lists began (8 October 2026):
+   refused by slskd (`SEARCH_FAILED`), Soulseek offline, never searched on its own because the album's folder gave
+   the song its file (`NO_OWN_SEARCH`), nothing left to search (`NOTHING_TO_SEARCH`), cancelled (a song and an album
+   each in their own words), before lists were kept. For a song, `BEFORE_CACHE` keeps both possibilities ("searched
+   before lists were kept, or its search never completed"): the server answers it for every song with no completed
+   search that it cannot name a cause for, and a server older than #136 answers it for every failed search, so a
+   confident dated sentence would be wrong for those rows (review, 09-10-2026). A grey line under the header, `Soulseek search <id> · 5 Oct 09:23` (local time), lets a person find the
+   search in slskd's Searches page; it is absent when slskd never took a search, which is then the fact. The
+   sentences no longer tell the person to retry: the in-dialog "Try again" button (next change) does that. Unknown
+   reasons keep falling through to the generic sentence, so the web app works against older servers.
 
 ## Consequences
 
