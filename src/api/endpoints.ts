@@ -364,7 +364,10 @@ export async function getActiveDownloads(signal?: AbortSignal): Promise<ActiveDo
  */
 export async function getStatus(signal?: AbortSignal): Promise<StatusResponse> {
   if (USE_MOCK_DATA) {
-    return Promise.resolve({ soulseek: { connected: true, loggedIn: true, state: 'Connected, LoggedIn', detail: null } })
+    return Promise.resolve({
+      soulseek: { connected: true, loggedIn: true, state: 'Connected, LoggedIn', detail: null },
+      library: { enabled: true, root: '/library', problem: null },
+    })
   }
   return apiClient<StatusResponse>('/status', { signal })
 }

@@ -7,14 +7,34 @@
  * `username` names the account when the server knows it (the one setup made up, or the one in .env),
  * so a taken or mistyped name can be recognised from the strip itself; empty on an older server or
  * when slskd cannot be reached, and the strip then reads as before.
+ * `libraryProblem` is the server's one sentence when finished songs cannot be filed into the music
+ * library (the folder is missing or cannot be written to): a second strip in the same amber, since
+ * the web app would otherwise say "Downloaded" while nothing reaches Navidrome or Jellyfin. Both
+ * strips sit in one sticky box, so they stack instead of sliding over each other when scrolled.
  * When the connectivity work's offline bar lands it should reuse this markup, so the two read as one
  * family.
  */
-export function SoulseekStatusBar({ loggedIn, username }: { loggedIn: boolean | null; username?: string | null }) {
-  if (loggedIn !== false) return null
+export function SoulseekStatusBar({ loggedIn, username, libraryProblem }: {
+  loggedIn: boolean | null
+  username?: string | null
+  libraryProblem?: string | null
+}) {
+  const notLoggedIn = loggedIn === false
+  if (!notLoggedIn && !libraryProblem) return null
+  const strip = 'bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black'
   return (
-    <div role="status" className="sticky top-0 z-50 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black">
-      Not connected to Soulseek{username ? ` as ${username}` : ''} — downloads will wait until it is
+    <div className="sticky top-0 z-50">
+      {notLoggedIn && (
+        <div role="status" className={strip}>
+          Not connected to Soulseek{username ? ` as ${username}` : ''} — downloads will wait until it is
+        </div>
+      )}
+      {libraryProblem && (
+        <div role="status" className={`${strip} border-t border-amber-700`}>
+          Downloads cannot be filed into your music library: {libraryProblem} Songs stay in Soulseek's download
+          folder until this is fixed (see the README's Troubleshooting).
+        </div>
+      )}
     </div>
   )
 }

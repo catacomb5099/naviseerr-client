@@ -105,6 +105,9 @@ export function useActiveDownloads(playSwoosh: () => void) {
   const [soulseekLoggedIn, setSoulseekLoggedIn] = useState<boolean | null>(null)
   // The account the server's Soulseek client logs in with; null until known (older server, slskd down).
   const [soulseekUsername, setSoulseekUsername] = useState<string | null>(null)
+  // One sentence when finished songs cannot be filed into the music library (folder missing or not
+  // writable); null when fine, unknown, or on an older server. Shown as a second strip.
+  const [libraryProblem, setLibraryProblem] = useState<string | null>(null)
 
   const timeoutRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -238,8 +241,11 @@ export function useActiveDownloads(playSwoosh: () => void) {
       // and the downloads feed should not wait for that. An aborted call (a newer poll took over)
       // leaves the last answer in place rather than hiding the strip for a beat.
       void getStatus(controller.signal).then(
-        s => { setSoulseekLoggedIn(s.soulseek.loggedIn); setSoulseekUsername(s.soulseek.username ?? null) },
-        () => { if (!controller.signal.aborted) { setSoulseekLoggedIn(null); setSoulseekUsername(null) } },
+        s => {
+          setSoulseekLoggedIn(s.soulseek.loggedIn); setSoulseekUsername(s.soulseek.username ?? null)
+          setLibraryProblem(s.library?.problem ?? null)
+        },
+        () => { if (!controller.signal.aborted) { setSoulseekLoggedIn(null); setSoulseekUsername(null); setLibraryProblem(null) } },
       )
       const response = await getActiveDownloads(controller.signal)
       failuresRef.current = 0
@@ -474,5 +480,6 @@ export function useActiveDownloads(playSwoosh: () => void) {
     inFlight,
     soulseekLoggedIn,
     soulseekUsername,
+    libraryProblem,
   }
 }
