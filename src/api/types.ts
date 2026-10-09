@@ -369,9 +369,11 @@ export interface SuggestedPlaylist {
 
 /** GET /status - is the server's Soulseek client logged in? `state` is slskd's own word ("None" before
  *  it has ever tried to connect, "Disconnected", "Connected, LoggedIn"), or UNREACHABLE when slskd itself
- *  cannot be reached, `detail` saying why. The strip keys on `loggedIn`. */
+ *  cannot be reached, `detail` saying why. The strip keys on `loggedIn`. `username` is the Soulseek account
+ *  the install logs in with (the one setup made up, or the one in .env); null when slskd cannot be reached,
+ *  absent on a server older than 09-10-2026. */
 export interface StatusResponse {
-  soulseek: { connected: boolean; loggedIn: boolean; state: string; detail: string | null }
+  soulseek: { connected: boolean; loggedIn: boolean; state: string; detail: string | null; username?: string | null }
 }
 
 // --- Manual import: the files Soulseek found for a song -------------------
