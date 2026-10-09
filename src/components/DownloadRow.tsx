@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Loader2, RotateCcw, Square, UserRound } from 'lucide-react'
+import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Download, Loader2, RotateCcw, Square, UserRound } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
 import { ManualImportTarget } from '../hooks/useCandidates'
@@ -17,6 +17,8 @@ interface DownloadRowProps {
   pollIntervalMs: number
   onCancel: (id: string, taskId?: string) => void | Promise<void>
   onRetry: (id: string, taskId?: string) => void | Promise<unknown>
+  /** "Download again" on a finished row: asks for the same item once more, on purpose. */
+  onDownloadAgain: (item: DownloadItem) => void | Promise<unknown>
   /** Opens the "choose a file" pop-up for a song (a single-song row or a child row). */
   onManualImport: (target: ManualImportTarget) => void
   inFlight: Set<string>
@@ -142,7 +144,7 @@ function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight
   )
 }
 
-export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onManualImport, inFlight }: DownloadRowProps) {
+export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloadAgain, onManualImport, inFlight }: DownloadRowProps) {
   const [iconFailed, setIconFailed] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [songs, setSongs] = useState<DownloadSongView[] | null>(null)
@@ -327,6 +329,20 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onManualI
               onClick={e => { e.stopPropagation(); onRetry(item.downloadId) }}
             >
               <RotateCcw className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+          {/* A finished download has nothing to retry, but the files may be gone since (deleted, moved,
+              a disk swap): this asks for the same item again, knowing a copy existed. A partly
+              downloaded row keeps Retry instead, which fetches only what failed. */}
+          {terminal && item.stage === 'SUCCEEDED' && (
+            <button
+              type="button"
+              className={ACTION_BUTTON}
+              aria-label={`Download ${item.title} again`}
+              title="Download again (you already have this)"
+              onClick={e => { e.stopPropagation(); void onDownloadAgain(item) }}
+            >
+              <Download className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
           {/* Songs and albums only (a playlist is many unrelated songs: pick those one by one). Shown at

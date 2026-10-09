@@ -12,7 +12,7 @@ import { ActiveDownloadView } from '../api/types'
 import { ActOutcome } from '../hooks/useActiveDownloads'
 import { useAllDownloads } from '../hooks/useAllDownloads'
 import { ManualImportTarget } from '../hooks/useCandidates'
-import { DownloadMeta, pageItems, parseTypeFilter } from '../lib/downloadLibrary'
+import { DownloadItem, DownloadMeta, pageItems, parseTypeFilter } from '../lib/downloadLibrary'
 import { DownloadCardState } from '../lib/downloadPanel'
 
 interface DownloadsPageProps {
@@ -24,6 +24,8 @@ interface DownloadsPageProps {
   onRetry: (id: string, taskId?: string) => void | Promise<unknown>
   /** useActiveDownloads.pick: runs a manual pick with the feed's own guard, card swap and poll. */
   onPick: (id: string, key: string, call: () => Promise<ActiveDownloadView>) => Promise<ActOutcome>
+  /** "Download again" on a finished row: a new, forced request for the same item. */
+  onDownloadAgain: (item: DownloadItem) => void | Promise<unknown>
   inFlight: Set<string>
   onNavigateHome: () => void
 }
@@ -52,7 +54,7 @@ const EMPTY_BY_FILTER: Record<DownloadFilter, string> = {
   PLAYLIST: 'No playlists downloaded yet',
 }
 
-export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry, onPick, inFlight, onNavigateHome }: DownloadsPageProps) {
+export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry, onPick, onDownloadAgain, inFlight, onNavigateHome }: DownloadsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageNumber = parsePageNumber(searchParams.get('page'))
   // The pill lives in the URL next to the page, so a filtered page can be linked to and comes back
@@ -131,6 +133,7 @@ export function DownloadsPage({ metas, cards, pollIntervalMs, onCancel, onRetry,
                   pollIntervalMs={pollIntervalMs}
                   onCancel={onCancel}
                   onRetry={onRetry}
+                  onDownloadAgain={onDownloadAgain}
                   onManualImport={setManual}
                   inFlight={inFlight}
                 />

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import {
-  getActiveDownloads, getStatus, resolveDownloads, downloadSong, downloadCollection, cancelDownload, retryDownload,
+  DownloadRequestOptions, getActiveDownloads, getStatus, resolveDownloads, downloadSong, downloadCollection,
+  cancelDownload, retryDownload,
 } from '../api/endpoints'
 import { ActiveDownloadsResponse, ActiveDownloadView, DownloadType } from '../api/types'
 import {
@@ -360,9 +361,10 @@ export function useActiveDownloads(playSwoosh: () => void) {
     id: string,
     type: DownloadType,
     meta: DownloadMetaInput,
+    opts?: DownloadRequestOptions,
   ): Promise<RequestOutcome> => {
     try {
-      const result = type === 'SONG' ? await downloadSong(id) : await downloadCollection(id, type)
+      const result = type === 'SONG' ? await downloadSong(id, opts) : await downloadCollection(id, type, opts)
       // Optimistic, and under the download's REAL id - the 202 body carries it, so there is no
       // temporary identity for the first feed response to reconcile against. The card is honest
       // about what the server has actually promised: accepted, not yet started. The 202 carries no
