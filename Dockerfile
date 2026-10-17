@@ -1,6 +1,8 @@
 # Two stages: Node builds the app, then a small Caddy image serves the built files and forwards
 # /api/* to the naviseerr server (see Caddyfile). Node and the sources never reach the final image.
-FROM node:24-alpine AS build
+# The build stage runs on the builder's own CPU: its output is plain web files, the same for amd64 and
+# arm64, so only the small Caddy stage is per-architecture and nothing builds under emulation.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json .npmrc ./
