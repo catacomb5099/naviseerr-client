@@ -5,3 +5,8 @@ dist
 .gitignore
 *.md
 docs
+.idea
+.claude
+.local
+.check
+.DS_Store

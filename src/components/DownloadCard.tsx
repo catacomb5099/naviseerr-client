@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CircleCheck, AlertCircle, Search, ArrowDown, Clock, X } from 'lucide-react'
+import { CircleCheck, AlertCircle, Ban, Search, ArrowDown, Clock, RotateCcw, Square, X } from 'lucide-react'
 import {
-  DownloadCardState, isIndeterminate, isTerminal, showsElapsed, stageLabel,
+  DownloadCardState, displayTitle, isCancelled, isIndeterminate, isTerminal, showsElapsed, stageLabel,
 } from '../lib/downloadPanel'
+import { collectionSummary } from '../lib/collectionProgress'
+import { CollectionProgress, CollectionSummary } from './CollectionProgress'
 
 interface DownloadCardProps {
   card: DownloadCardState
   exiting: boolean
   pollIntervalMs: number
   onDismiss: () => void
+  onCancel: () => void
+  onRetry: () => void
+  inFlight: boolean
 }
 
 /**
@@ -29,7 +34,7 @@ function useNow(active: boolean): number {
   return now
 }
 
-export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: DownloadCardProps) {
+export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCancel, onRetry, inFlight }: DownloadCardProps) {
   const fillRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef(0)
 
@@ -37,12 +42,15 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
   // `!card.progressPercent`, which made a genuine 0% download read as searching and collapsed four
   // distinct stages - queued, starting, searching, waiting for a transfer slot - into one label.
   const terminal = isTerminal(card.stage)
-  const indeterminate = isIndeterminate(card.stage)
-  const now = useNow(showsElapsed(card.stage))
+  const collection = card.downloadType !== 'SONG'
+  // A collection's bar is the split one below; the per-song bars are for a single song only.
+  const indeterminate = !collection && isIndeterminate(card.stage)
+  // The elapsed counter is a song-only label, so a collection card does not tick for nothing.
+  const now = useNow(!collection && showsElapsed(card.stage))
   const elapsedSeconds = Math.max(0, Math.round((now - Date.parse(card.stageEnteredAt)) / 1000))
 
   useEffect(() => {
-    if (card.stage !== 'DOWNLOADING') return
+    if (collection || card.stage !== 'DOWNLOADING') return
     const fill = fillRef.current
     if (!fill) return
 
@@ -58,7 +66,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
     })
     shownRef.current = target
     return () => cancelAnimationFrame(frame)
-  }, [card.progressPercent, card.stage, pollIntervalMs])
+  }, [collection, card.progressPercent, card.stage, pollIntervalMs])
 
   let glyph: ReactNode
   let subColor = 'text-zinc-400'
@@ -69,8 +77,17 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
       subColor = 'text-green-500'
       break
     case 'FAILED':
-      glyph = <AlertCircle className="w-4 h-4 text-red-500" aria-hidden="true" />
-      subColor = 'text-red-500'
+      if (isCancelled(card)) {
+        glyph = <Ban className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+        subColor = 'text-zinc-400'
+      } else {
+        glyph = <AlertCircle className="w-4 h-4 text-red-500" aria-hidden="true" />
+        subColor = 'text-red-500'
+      }
+      break
+    case 'PARTIAL_SUCCESS':
+      glyph = <AlertCircle className="w-4 h-4 text-amber-500" aria-hidden="true" />
+      subColor = 'text-amber-500'
       break
     case 'QUEUED':
       glyph = <Clock className="w-4 h-4 text-zinc-400" aria-hidden="true" />
@@ -82,19 +99,44 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
     default:
       glyph = <ArrowDown className="w-4 h-4 text-zinc-300" aria-hidden="true" />
   }
+  // A collection's songs are each at their own stage, so one stage glyph would be a lie.
+  if (collection && !terminal) glyph = <ArrowDown className="w-4 h-4 text-zinc-300" aria-hidden="true" />
 
   const subLabel = stageLabel(card, elapsedSeconds)
+  const title = displayTitle(card)
+  const summaryId = `download-card-summary-${card.downloadId}`
 
+  // flex-none: the panel list is a flex column with a max height, and a flex item with overflow
+  // hidden may shrink below its content. Without it a full panel squashes every card into the
+  // space instead of scrolling.
   return (
-    <div className={`overflow-hidden transition-[max-height] duration-150 ${exiting ? 'max-h-0' : 'max-h-16'}`}>
+    <div className={`flex-none overflow-hidden transition-[max-height] duration-150 ${exiting ? 'max-h-0' : 'max-h-16'}`}>
       <div
         className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-800 ${exiting ? 'animate-download-card-exit' : 'animate-download-card-enter'}`}
       >
         <span className="w-5 flex-none flex items-center justify-center">{glyph}</span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-white truncate">{card.songName}</p>
-          <p className={`text-[11px] mt-0.5 ${subColor}`}>{subLabel}</p>
-          {card.stage === 'DOWNLOADING' && (
+          <p className="text-xs text-white truncate">{title}</p>
+          {collection ? (
+            <>
+              <CollectionSummary id={summaryId} tokens={collectionSummary(card)} className="text-[11px] mt-0.5" />
+              <div className="mt-1.5">
+                <CollectionProgress
+                  songCount={card.songCount}
+                  songsSucceeded={card.songsSucceeded}
+                  songsFailed={card.songsFailed}
+                  songsCancelled={card.songsCancelled}
+                  stage={card.stage}
+                  size="panel"
+                  summaryId={summaryId}
+                  animate={!terminal}
+                />
+              </div>
+            </>
+          ) : (
+            <p className={`text-[11px] mt-0.5 ${subColor}`}>{subLabel}</p>
+          )}
+          {!collection && card.stage === 'DOWNLOADING' && (
             <div className="h-[3px] bg-zinc-700 rounded-full overflow-hidden mt-1.5">
               <div
                 ref={fillRef}
@@ -113,14 +155,38 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss }: Downl
             </div>
           )}
         </div>
-        {terminal && (
+        {!terminal && (
           <button
-            className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
-            aria-label={`Dismiss ${card.songName}`}
-            onClick={onDismiss}
+            type="button"
+            className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+            aria-label={`Cancel ${title}`}
+            disabled={inFlight}
+            onClick={onCancel}
           >
-            <X className="w-3.5 h-3.5" aria-hidden="true" />
+            <Square className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
+        )}
+        {terminal && (
+          <>
+            {(card.stage === 'FAILED' || card.stage === 'PARTIAL_SUCCESS') && (
+              <button
+                type="button"
+                className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+                aria-label={`Retry ${title}`}
+                disabled={inFlight}
+                onClick={onRetry}
+              >
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            )}
+            <button
+              className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+              aria-label={`Dismiss ${title}`}
+              onClick={onDismiss}
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          </>
         )}
       </div>
     </div>

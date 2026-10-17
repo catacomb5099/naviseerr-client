@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Artist } from '../api/types'
 import { CardLayout } from './cardLayout'
 
@@ -11,14 +12,18 @@ export function ArtistCard({ artist, layout = 'carousel' }: ArtistCardProps) {
   const [iconFailed, setIconFailed] = useState(false)
   const isGrid = layout === 'grid'
 
+  // The whole card is one link to the artist's own page, so the browser owns history and back.
   return (
-    <div className={`text-center ${isGrid ? 'w-full' : 'flex-shrink-0 w-32 md:w-40'}`}>
-      {/* Circular Artist Icon */}
-      <div className={isGrid ? 'w-full aspect-square mx-auto mb-3' : 'w-32 md:w-40 h-32 md:h-40 mx-auto mb-3'}>
+    <Link
+      to={`/artist/${encodeURIComponent(artist.id)}`}
+      className={`block text-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${isGrid ? 'w-full' : 'flex-shrink-0 w-32 md:w-40'}`}
+    >
+      {/* Only phrasing content (span/img) is valid inside a link; the name below is the label. */}
+      <span className={`block mx-auto mb-3 ${isGrid ? 'w-full aspect-square' : 'w-32 md:w-40 h-32 md:h-40'}`}>
         {artist.iconUrl && !iconFailed ? (
           <img
             src={artist.iconUrl}
-            alt={artist.name}
+            alt=""
             loading="lazy"
             decoding="async"
             referrerPolicy="no-referrer"
@@ -26,17 +31,17 @@ export function ArtistCard({ artist, layout = 'carousel' }: ArtistCardProps) {
             onError={() => setIconFailed(true)}
           />
         ) : (
-          <div className="w-full h-full bg-zinc-800 rounded-full"></div>
+          <span className="block w-full h-full bg-zinc-800 rounded-full"></span>
         )}
-      </div>
+      </span>
 
       {/* Artist Name */}
-      <h3 className={`text-white font-medium truncate mb-1 ${isGrid ? 'text-lg' : ''}`}>
+      <span className={`block text-white font-medium truncate mb-1 ${isGrid ? 'text-lg' : ''}`}>
         {artist.name}
-      </h3>
+      </span>
 
       {/* Static Label */}
-      <p className={`text-zinc-500 uppercase ${isGrid ? 'text-sm' : 'text-xs'}`}>Artist</p>
-    </div>
+      <span className={`block text-zinc-500 uppercase ${isGrid ? 'text-sm' : 'text-xs'}`}>Artist</span>
+    </Link>
   )
 }

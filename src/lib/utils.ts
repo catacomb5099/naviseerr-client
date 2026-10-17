@@ -1,18 +1,46 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { Artist } from '../api/types'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 /**
- * Resolve artist IDs to artist names
- * @param artistIds - Array of artist IDs
- * @param artists - Array of all artists from search results
- * @returns Array of artist names
+ * What a failed API call says on the page. A 502 or 503 means something behind the server is down for
+ * now (the YouTube Music helper, or the server itself behind the web app's proxy), so it says that in
+ * plain words instead of "Bad Gateway". Other statuses keep the status text.
  */
-export function getArtistNames(artistIds: string[], artists: Artist[]): string[] {
-  const artistMap = new Map(artists.map(a => [a.id, a.name]))
-  return artistIds.map(id => artistMap.get(id) || 'Unknown Artist')
+export function apiErrorMessage(url: string, status: number, statusText: string): string {
+  if (status !== 502 && status !== 503) return `API request failed: ${statusText}`
+  return url.includes('/search/')
+    ? 'Search is not available right now. Try again in a minute.'
+    : 'The server is not available right now. Try again in a minute.'
+}
+
+/** "3:05" - a track length. Floors the seconds too: the server can send fractional durations. */
+export function formatDuration(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
+}
+
+// Spelled out rather than Intl: 'en' puts the month first and 'en-GB' abbreviates September as "Sept".
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "5 Oct" in the local calendar, with the year once it is not `now`'s ("21 Sep 2025"). */
+export function shortDate(date: Date, now: Date = new Date()): string {
+  const year = date.getFullYear() === now.getFullYear() ? '' : ` ${date.getFullYear()}`
+  return `${date.getDate()} ${MONTHS[date.getMonth()]}${year}`
+}
+
+/** "1.2M", "998K" - how YouTube itself abbreviates a play count. */
+const COMPACT = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+
+/** "1.2M plays"; null when the count is unknown, so callers render nothing rather than "0 plays". */
+export function formatPlays(count: number | null | undefined): string | null {
+  return count == null ? null : `${COMPACT.format(count)} plays`
+}
+
+/** "19.3M views": how often one video or upload was watched, a smaller number than YouTube Music's
+ *  combined plays, so it is never labelled as plays. Null when unknown, like formatPlays. */
+export function formatViews(count: number | null | undefined): string | null {
+  return count == null ? null : `${COMPACT.format(count)} views`
 }

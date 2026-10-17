@@ -1,17 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getActiveDownloads, resolveDownloads, download } from '../api/endpoints'
-import { ActiveDownloadsResponse, ActiveDownloadView, Download } from '../api/types'
+import { ApiError } from '../api/client'
 import {
-  DownloadCardState, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, sortCards,
+  DownloadRequestOptions, getActiveDownloads, getStatus, resolveDownloads, downloadSong, downloadCollection,
+  cancelDownload, retryDownload,
+} from '../api/endpoints'
+import { ActiveDownloadsResponse, ActiveDownloadView, DownloadType } from '../api/types'
+import {
+  DownloadCardState, RequestOutcome, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, replaceCard, sortCards,
 } from '../lib/downloadPanel'
+import { DownloadMetaInput } from '../lib/downloadLibrary'
+import { ACTIVE_POLL_MS, nextPollDelayMs } from '../lib/downloadPolling'
 
-// v2: the card shape changed from status+phase to a single stage, and dismissed ids gained a
-// timestamp. A v1 snapshot is discarded rather than migrated - it is at most a few minutes of
-// download cards, and reconciliation would rebuild anything still live anyway.
-const STORAGE_KEY = 'naviseerr.downloads.v2'
-const STORAGE_VERSION = 2
+/** What one cancel/retry/pick did: 'ok' the server took it, 'conflict' it answered 409 with the settled
+ *  card (nothing changed), 'gone' the download no longer exists, 'failed' anything else, 'busy' the same
+ *  action was already in flight. */
+export type ActOutcome = 'ok' | 'conflict' | 'gone' | 'failed' | 'busy'
+
+// v3: songName became title/artists/imageUrl plus a download type and song tallies. An older
+// snapshot is discarded rather than migrated - it is at most a few minutes of download cards, and
+// reconciliation would rebuild anything still live anyway.
+const STORAGE_KEY = 'naviseerr.downloads.v3'
+const STORAGE_VERSION = 3
 const EXIT_ANIMATION_MS = 360
-const DEFAULT_POLL_MS = 5000
 const DEFAULT_RETENTION_MS = 600000
 
 interface DismissedEntry {
@@ -45,6 +55,10 @@ function loadSnapshot(): Snapshot | null {
   }
 }
 
+function isView(x: unknown): x is ActiveDownloadView {
+  return typeof x === 'object' && x !== null && 'downloadId' in x && 'stage' in x
+}
+
 function saveSnapshot(snapshot: Snapshot) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
@@ -68,17 +82,32 @@ export function useActiveDownloads(playSwoosh: () => void) {
 
   const [cards, setCards] = useState<Record<string, DownloadCardState>>(() => {
     const result: Record<string, DownloadCardState> = {}
-    initial?.cards.forEach(c => { result[c.downloadId] = c })
+    // A snapshot written before songsCancelled existed has no such field; the type says number.
+    initial?.cards.forEach(c => { result[c.downloadId] = { ...c, songsCancelled: c.songsCancelled ?? 0 } })
     return result
   })
   const [exiting, setExiting] = useState<Set<string>>(new Set())
   const [minimized, setMinimized] = useState<boolean>(initial?.minimized ?? false)
   const dismissedRef = useRef<Map<string, number>>(
     new Map((initial?.dismissed ?? []).map(d => [d.id, d.at])))
-  const pollIntervalRef = useRef<number>(DEFAULT_POLL_MS)
+  const pollIntervalRef = useRef<number>(ACTIVE_POLL_MS)
   const retentionRef = useRef<number>(DEFAULT_RETENTION_MS)
-  const [pollIntervalMs, setPollIntervalMs] = useState<number>(DEFAULT_POLL_MS)
+  const [pollIntervalMs, setPollIntervalMs] = useState<number>(ACTIVE_POLL_MS)
+  // The two inputs that pick the polling speed (see lib/downloadPolling): did the server's last
+  // answer list anything still running, and when did the user last click download here.
+  const serverHasLiveRef = useRef(false)
+  const lastRequestedAtRef = useRef<number | null>(null)
+  // Polls in a row the server did not answer; drives the back-off in lib/downloadPolling.
+  const failuresRef = useRef(0)
   const [terminalRetentionMs, setTerminalRetentionMs] = useState<number>(DEFAULT_RETENTION_MS)
+  // Asked alongside each feed poll. null = not known (before the first answer, or a server without
+  // GET /status), and the strip stays hidden rather than crying wolf.
+  const [soulseekLoggedIn, setSoulseekLoggedIn] = useState<boolean | null>(null)
+  // The account the server's Soulseek client logs in with; null until known (older server, slskd down).
+  const [soulseekUsername, setSoulseekUsername] = useState<string | null>(null)
+  // One sentence when finished songs cannot be filed into the music library (folder missing or not
+  // writable); null when fine, unknown, or on an older server. Shown as a second strip.
+  const [libraryProblem, setLibraryProblem] = useState<string | null>(null)
 
   const timeoutRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -88,6 +117,8 @@ export function useActiveDownloads(playSwoosh: () => void) {
   const staleReconciledAtRef = useRef<number>(Date.now())
   const cardsRef = useRef<Record<string, DownloadCardState>>(cards)
   const exitingRef = useRef<Set<string>>(exiting)
+  const inFlightRef = useRef<Set<string>>(new Set())
+  const [inFlight, setInFlight] = useState<Set<string>>(new Set())
 
   useEffect(() => { cardsRef.current = cards }, [cards])
   useEffect(() => { exitingRef.current = exiting }, [exiting])
@@ -139,7 +170,12 @@ export function useActiveDownloads(playSwoosh: () => void) {
     setCards(prev => {
       const next = { ...prev }
       for (const row of rows) {
-        if (dismissedRef.current.has(row.downloadId)) continue
+        if (dismissedRef.current.has(row.downloadId)) {
+          // A finished row for a dismissed card stays dismissed. A LIVE row for one can only mean the
+          // download was retried (from this tab or another), and a retried download gets its card back.
+          if (isTerminal(row.stage)) continue
+          dismissedRef.current.delete(row.downloadId)
+        }
         next[row.downloadId] = mergeCard(prev[row.downloadId], row)
       }
       // Anything not in `rows` is left exactly as it was. A download the runner has not admitted
@@ -201,11 +237,23 @@ export function useActiveDownloads(playSwoosh: () => void) {
     const controller = new AbortController()
     abortRef.current = controller
     try {
+      // Not awaited with the feed: while slskd is down the server takes up to 3 s to answer /status,
+      // and the downloads feed should not wait for that. An aborted call (a newer poll took over)
+      // leaves the last answer in place rather than hiding the strip for a beat.
+      void getStatus(controller.signal).then(
+        s => {
+          setSoulseekLoggedIn(s.soulseek.loggedIn); setSoulseekUsername(s.soulseek.username ?? null)
+          setLibraryProblem(s.library?.problem ?? null)
+        },
+        () => { if (!controller.signal.aborted) { setSoulseekLoggedIn(null); setSoulseekUsername(null); setLibraryProblem(null) } },
+      )
       const response = await getActiveDownloads(controller.signal)
+      failuresRef.current = 0
       pollIntervalRef.current = response.pollIntervalMs
       retentionRef.current = response.terminalRetentionMs
       setPollIntervalMs(response.pollIntervalMs)
       setTerminalRetentionMs(response.terminalRetentionMs)
+      serverHasLiveRef.current = response.downloads.some(row => !isTerminal(row.stage))
 
       // Computed BEFORE applying, so it reads the state the response is about to overwrite.
       const stale = staleIds(response)
@@ -216,21 +264,42 @@ export function useActiveDownloads(playSwoosh: () => void) {
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
+      failuresRef.current++
       console.error('Failed to poll active downloads:', err)
     }
   }, [applyRows, staleIds, reconcile])
 
-  const scheduleNext = useCallback((delayMs: number) => {
+  /**
+   * Books the next poll at whichever speed fits right now: fast while something is downloading or
+   * was just requested, slow when there is nothing to show, backing off while the server does not
+   * answer. A hidden tab, or an offline browser, books nothing at all - the visibilitychange and
+   * online listeners poll and restart the loop when the tab or the network comes back.
+   */
+  const scheduleNext = useCallback(() => {
     if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    if (document.hidden) return
+    const delayMs = nextPollDelayMs({
+      serverHasLive: serverHasLiveRef.current,
+      lastRequestedAt: lastRequestedAtRef.current,
+      now: Date.now(),
+      serverPollIntervalMs: pollIntervalRef.current,
+      consecutiveFailures: failuresRef.current,
+      browserOffline: navigator.onLine === false,
+    })
+    if (delayMs === null) return
     timeoutRef.current = window.setTimeout(async () => {
-      if (document.hidden) {
-        scheduleNext(pollIntervalRef.current)
-        return
-      }
+      // Went hidden or offline since this was booked: stop here, the listeners restart us on return.
+      if (document.hidden || navigator.onLine === false) return
       await poll()
-      scheduleNext(pollIntervalRef.current)
+      scheduleNext()
     }, delayMs)
   }, [poll])
+
+  /** One request now, then carry on at whatever speed the answer calls for. */
+  const pollNow = useCallback(async () => {
+    await poll()
+    scheduleNext()
+  }, [poll, scheduleNext])
 
   useEffect(() => {
     if (startedRef.current) return
@@ -249,18 +318,11 @@ export function useActiveDownloads(playSwoosh: () => void) {
       await reconcile(restored
         .filter(card => !isTerminal(card.stage))
         .map(card => card.downloadId))
-      await poll()
-      scheduleNext(pollIntervalRef.current)
+      await pollNow()
     }
     void boot()
 
-    const onVisibilityChange = () => {
-      if (!document.hidden) poll()
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange)
-
     return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
       abortRef.current?.abort()
     }
@@ -269,12 +331,31 @@ export function useActiveDownloads(playSwoosh: () => void) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Its own effect, NOT inside the run-once one above: StrictMode runs that effect's cleanup and
+  // then skips the re-run, which used to leave this listener removed for good in development.
+  // A hidden tab books no timer, so this listener is the only thing that restarts polling.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (!document.hidden) void pollNow()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [pollNow])
+
+  // Same shape: an offline browser books no timer, so the network coming back has to ask at once.
+  useEffect(() => {
+    const onOnline = () => { void pollNow() }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [pollNow])
+
   useEffect(() => {
     const handle = window.setInterval(() => {
       const list = Object.values(cards)
       const ttl = dismissTtlMs(list.length, retentionRef.current)
       list.forEach(card => {
-        if (isTerminal(card.stage) && !exitingRef.current.has(card.downloadId)) {
+        if (isTerminal(card.stage) && !exitingRef.current.has(card.downloadId)
+          && !inFlightRef.current.has(card.downloadId)) {
           if (Date.now() - card.lastChangedAt >= ttl) {
             dismiss(card.downloadId)
           }
@@ -284,33 +365,105 @@ export function useActiveDownloads(playSwoosh: () => void) {
     return () => window.clearInterval(handle)
   }, [cards, dismiss])
 
-  const requestDownload = useCallback(async (songName: string): Promise<Download | null> => {
+  const requestDownload = useCallback(async (
+    id: string,
+    type: DownloadType,
+    meta: DownloadMetaInput,
+    opts?: DownloadRequestOptions,
+  ): Promise<RequestOutcome> => {
     try {
-      const result = await download(songName)
+      const result = type === 'SONG' ? await downloadSong(id, opts) : await downloadCollection(id, type, opts)
       // Optimistic, and under the download's REAL id - the 202 body carries it, so there is no
       // temporary identity for the first feed response to reconcile against. The card is honest
-      // about what the server has actually promised: accepted, not yet started.
+      // about what the server has actually promised: accepted, not yet started. The 202 carries no
+      // name, so title/artists/artwork come from what the client knew when it clicked.
       setCards(prev => ({
         ...prev,
         [result.downloadId]: {
           downloadId: result.downloadId,
-          songName: result.songName,
+          youtubeId: result.youtubeId,
+          downloadType: result.downloadType,
+          title: meta.title,
+          artists: meta.artistNames,
+          imageUrl: meta.iconURL,
           stage: 'QUEUED',
           progressPercent: null,
+          songCount: 0,
+          songsSucceeded: 0,
+          songsFailed: 0,
+          songsCancelled: 0,
           failureCode: null,
+          requestedAt: result.createdAt,
           stageEnteredAt: result.createdAt,
           updatedAt: result.createdAt,
           lastChangedAt: Date.now(),
           lastSeenAt: Date.now(),
         },
       }))
-      poll()
-      return result
+      // Ask straight away, and stay on the fast speed for a while even if the server has not
+      // listed the download yet - see FAST_WINDOW_AFTER_REQUEST_MS.
+      lastRequestedAtRef.current = Date.now()
+      void pollNow()
+      return { status: 'accepted', download: result }
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409 && isView(err.body)) {
+        // The server already has this one and its card is the answer. Pulling it into the feed is what
+        // greys every button for the item at once and shows the download in the panel; a card the user
+        // dismissed earlier comes back, since they just asked for it again. replaceCard, not applyRows:
+        // the row's updatedAt can be hours old, and a finished card seeded from it would be past its
+        // dismiss TTL on arrival. The clock starts at the click, as it does after cancel or retry.
+        const existing = err.body
+        dismissedRef.current.delete(existing.downloadId)
+        setCards(prev => ({ ...prev, [existing.downloadId]: replaceCard(prev[existing.downloadId], existing) }))
+        void pollNow()
+        return { status: 'exists', existing }
+      }
       console.error('Download request failed:', err)
-      return null
+      return { status: 'failed' }
     }
-  }, [poll])
+  }, [pollNow])
+
+  /**
+   * One retry, cancel or pick. `key` is the task id for a song, else the download id, so two songs of
+   * one album can be cancelled at once while the whole-download button stays single-flight. The server
+   * refuses a duplicate anyway (409); this stops the duplicate being sent at all. Answers with what
+   * happened so a dialog can close on 'ok' or explain a 'conflict'; the row buttons ignore it.
+   */
+  const act = useCallback(async (id: string, key: string, call: () => Promise<ActiveDownloadView>): Promise<ActOutcome> => {
+    if (inFlightRef.current.has(key)) return 'busy'
+    inFlightRef.current.add(key); setInFlight(new Set(inFlightRef.current))
+    try {
+      const view = await call()
+      dismissedRef.current.delete(id)   // a dismissed card that the user acts on comes back
+      setCards(prev => ({ ...prev, [id]: replaceCard(prev[id], view) }))
+      lastRequestedAtRef.current = Date.now()   // the 30 s fast-poll window, as after a new request
+      void pollNow()
+      return 'ok'
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409 && isView(err.body)) {
+        applyRows([err.body]); void pollNow()   // the server's answer is settled; show it
+        return 'conflict'
+      } else if (err instanceof ApiError && err.status === 404) {
+        dismiss(id, { silent: true })
+        return 'gone'
+      } else {
+        console.error('Download action failed:', err)
+        return 'failed'
+      }
+    } finally {
+      inFlightRef.current.delete(key); setInFlight(new Set(inFlightRef.current))
+    }
+  }, [applyRows, dismiss, pollNow])
+
+  const cancel = useCallback((id: string, taskId?: string) =>
+    act(id, taskId ?? id, () => cancelDownload(id, taskId)), [act])
+
+  const retry = useCallback((id: string, taskId?: string) =>
+    act(id, taskId ?? id, () => retryDownload(id, taskId)), [act])
+
+  /** A manual pick (one song's file, or a whole album's folder): the same guard, card swap and poll as
+   *  retry, keyed by the song so one song can be re-picked while another is being cancelled. */
+  const pick = useCallback((id: string, key: string, call: () => Promise<ActiveDownloadView>) => act(id, key, call), [act])
 
   return {
     cards: sortCards(Object.values(cards)),
@@ -321,5 +474,12 @@ export function useActiveDownloads(playSwoosh: () => void) {
     setMinimized,
     dismiss,
     requestDownload,
+    cancel,
+    retry,
+    pick,
+    inFlight,
+    soulseekLoggedIn,
+    soulseekUsername,
+    libraryProblem,
   }
 }
