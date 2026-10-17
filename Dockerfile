@@ -20,6 +20,7 @@ RUN npm run build
 FROM caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
+LABEL org.opencontainers.image.licenses=AGPL-3.0-only
 EXPOSE 80
 # `docker compose ps` says "healthy" once Caddy serves the app; before this the web app was the one
 # part of the all-in-one install with no health state. BusyBox wget, so nothing extra is installed.
