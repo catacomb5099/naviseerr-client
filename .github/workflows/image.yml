@@ -1,15 +1,16 @@
 # Publishes this repo's Docker image to GitHub Packages: ghcr.io/${{ github.repository }}.
-#   push to main    -> :develop and :<version>-develop.<run number> (built on every change, may break)
-#   pull request    -> builds for amd64 only and pushes nothing, so a broken
-#                      Dockerfile shows up before it is merged
+#   you press Run workflow -> :develop and :<version>-develop.<run number> (only when you choose, may break).
+#                             GitHub: Actions → image → Run workflow. Terminal:
+#                             gh workflow run image --repo catacomb5099/naviseerr-client
+#   pull request           -> builds for amd64 only and pushes nothing, so a broken
+#                             Dockerfile shows up before it is merged
 # This repo has one branch and no stable releases: every image is a develop build. naviseerr's own
 # releases name the exact develop build they were tested with.
 # "Version" is the version this project is working towards: `version` in package.json.
 name: image
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
   pull_request:
 
 permissions:
@@ -37,7 +38,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -56,8 +57,8 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: ${{ github.event_name == 'push' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
-          push: ${{ github.event_name == 'push' }}
+          platforms: ${{ github.event_name != 'pull_request' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
