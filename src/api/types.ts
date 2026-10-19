@@ -421,6 +421,34 @@ export interface SetupStatus {
   libraryRoot: string | null
 }
 
+/** The two music apps naviseerr can ask to rescan. */
+export type MediaServerKind = 'navidrome' | 'jellyfin'
+
+/** One configured music app's last outcome, from the server's rescan notifier (the same object as GET /status's
+ *  library.mediaServers[]): `problem` null = the last rescan request was accepted; `lastRescanAt` null before the first. */
+export interface MediaServerStatus {
+  name: string
+  url: string
+  problem: string | null
+  lastRescanAt: string | null
+}
+
+/** GET/PUT /settings/media-servers (19-10-2026): which music app naviseerr asks to rescan the moment a song or playlist
+ *  lands. `navidrome` / `jellyfin` null when neither the app nor the install file configures that server; `fromInstallFile`
+ *  true while the values come from the install file's env lines because nothing was saved in the app. Secrets never come
+ *  back (`passwordSet` / `apiKeySet`). `message` is the "Save and test" sentence (PUT only). */
+export interface MediaServersSettings {
+  navidrome: { url: string; username: string; passwordSet: boolean; fromInstallFile: boolean } | null
+  jellyfin: { url: string; apiKeySet: boolean; fromInstallFile: boolean } | null
+  status: MediaServerStatus[]
+  message?: string | null
+}
+
+/** The PUT body: exactly one app. An empty `password` / `apiKey` keeps the one already stored. */
+export type MediaServerChange =
+  | { navidrome: { url: string; username: string; password: string } }
+  | { jellyfin: { url: string; apiKey: string } }
+
 /** GET/PUT /settings/soulseek (19-10-2026): the Soulseek account this install logs in with. `generated` is true
  *  for a name setup made up (naviseerr-xxxxxx), and only then is `password` filled, so it can be written down from
  *  the app (it cannot be reset); a name a person chose never has its password echoed. `loggedIn` is slskd's answer,

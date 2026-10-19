@@ -2,12 +2,13 @@ import { ArrowLeft } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { AuthentikStep } from '../components/setup/AuthentikStep'
+import { MediaServerStep } from '../components/setup/MediaServerStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
 
 /**
  * Settings: one section per thing a person may change about their install, in the first-run setup's
- * order and built from its step components (without `onDone`, each section saves itself): Soulseek and
- * the login today (19-10-2026). Reached from the gear on every page, the amber "Not connected to
+ * order and built from its step components (without `onDone`, each section saves itself): Soulseek, the
+ * music app and the login today (19-10-2026). Reached from the gear on every page, the amber "Not connected to
  * Soulseek" strip's Fix link, and directly at /settings#<section>.
  */
 export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void }) {
@@ -24,6 +25,14 @@ export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void })
           they wait while it is not logged in.
         </p>
         <SoulseekStep />
+      </section>
+      <section id="music-app" aria-labelledby="music-app-heading" className="mt-10 max-w-2xl space-y-3">
+        <h3 id="music-app-heading" className="text-lg font-semibold">Music app</h3>
+        <p className="text-sm text-zinc-400">
+          Which app plays your music, Navidrome or Jellyfin. naviseerr asks it to rescan the moment a song or playlist lands,
+          so new music shows up right away instead of at its next scheduled scan.
+        </p>
+        <MediaServerStep />
       </section>
       <section id="login" aria-labelledby="login-heading" className="mt-10 max-w-2xl space-y-3">
         <h3 id="login-heading" className="text-lg font-semibold">Login</h3>
