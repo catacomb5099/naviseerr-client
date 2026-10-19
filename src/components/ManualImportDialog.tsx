@@ -103,9 +103,10 @@ const SONG_COLUMNS: Column<SongCandidate>[] = [
   },
   { key: 'size', label: 'Size', align: 'right', firstDir: 'desc', sortValue: c => c.size, render: c => formatBytes(c.size) },
   { key: 'speed', label: 'Speed', align: 'right', firstDir: 'desc', sortValue: c => c.uploadSpeed, render: c => formatSpeed(c.uploadSpeed) },
-  // Cut with the whole name on hover: a 20-character Soulseek name (real ones run to 30) pushed the Match badge under the
-  // pinned button at 1280 px (measured 19-10-2026: 39 px over without this and the two cuts above).
-  { key: 'sharer', label: 'Sharer', sortValue: c => c.username, render: c => <span title={c.username} className="block max-w-[7.5rem] truncate">{c.username}</span> },
+  // Capped at 7.5 rem (a 20-character Soulseek name, real ones run to 30, pushed the Match badge under the pinned button
+  // at 1280 px) and wrapping inside the cap. break-words, not WRAP: with the cap, break-word keeps the column at that
+  // width and only folds a longer name; anywhere would let the column shrink to its narrowest character.
+  { key: 'sharer', label: 'Sharer', sortValue: c => c.username, render: c => <span className="block max-w-[7.5rem] whitespace-normal break-words">{c.username}</span> },
   { key: 'slot', label: 'Slot / Queue', sortValue: c => slotRank(c), render: c => slotLabel(c) },
   {
     key: 'match', label: 'Match', sortValue: c => gradeRank(c.grade),

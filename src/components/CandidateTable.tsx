@@ -54,7 +54,8 @@ const STICKY = 'sticky right-0 shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.7)]'
 const HEADER_BUTTON = 'inline-flex items-center gap-1 rounded hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 
 /** A sortable table of Soulseek files or folders. One semantic <table> in a sideways-scrolling box, so
- *  every column stays readable on a phone; the headers are real buttons carrying aria-sort. */
+ *  every column stays readable on a phone; the headers are real buttons carrying aria-sort. The box is
+ *  positioned so the hidden ", sort" labels stay inside it (otherwise they widen the dialog sideways). */
 export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurrent, renderAction, loading, renderExpanded, expandLabel }: CandidateTableProps<T>) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const idPrefix = useId()
@@ -84,7 +85,7 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
   }
 
   return (
-    <div className="overflow-x-auto overscroll-x-contain rounded-lg border border-zinc-800">
+    <div className="relative overflow-x-auto overscroll-x-contain rounded-lg border border-zinc-800">
       <table className="w-full text-sm whitespace-nowrap">
         <thead className="bg-zinc-900/80 text-xs uppercase tracking-wide text-zinc-400">
           <tr>

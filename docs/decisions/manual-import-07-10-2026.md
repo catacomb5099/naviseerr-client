@@ -146,7 +146,7 @@ Decisions:
    Nothing is shortened, nothing sits behind a hover: the `title` attributes and `lastFolders` are gone (deleted from
    `src/lib/candidates.ts`, with its asserts). The separate Folder column is gone too, since the same information now
    sits under every name.
-2. **Sorting by folder stays**, as a second button in the File header ("File", then a smaller "Folder"): `Column.alsoSort`
+2. **Sorting by folder stays**, as a second button in the File header ("File", then "Folder", the same size): `Column.alsoSort`
    on `CandidateTable`, and `aria-sort` on the header marks either. Flip: drop `alsoSort` from the `file` column and the
    list sorts by name only.
 3. **How the wrapping works**: `white-space: normal` plus `overflow-wrap: anywhere` on the File cell (`WRAP` in
@@ -160,8 +160,13 @@ Decisions:
 4. **Album table: the Folder column shows the whole path, wrapping**, same rule, at least 18 rem from `md` and 8.5 rem on
    a phone (the chevron and padding take 52 px; 52 + 136 ends before the button). The unfolded files keep the name only
    (their folder is the row above), now wrapping when long, no hover path.
-5. Rows get taller for long paths (the longest real one, 221 characters, takes five lines at 1280); that is the point.
+5. Rows get taller for long paths (the longest real one, 221 characters, takes four lines at 1280); that is the point.
    The dialog already scrolls vertically.
+6. **The Sharer cell wraps too** (`break-words` inside its 7.5 rem cap: the column keeps its width and only a longer
+   name folds onto a second line; `anywhere` would let that column shrink to one character), and the table box is
+   `relative`, so the hidden ", sort" labels in the header buttons stay inside it: before, their containing block was
+   the dialog's scroller, which they widened by 500 px on a phone (231 px at 768), so a sideways swipe on the text above
+   the table slid the whole pop-up. Both from the review of the fix.
 
 ## Addendum of 19-10-2026: type your own Soulseek search (song pop-up)
 
