@@ -13,10 +13,24 @@
 :80 {
 	encode
 
+	# Browser hardening on every answer (what Navidrome's and Jellyfin's reverse-proxy guides add, and
+	# what Spring Security would add if the server used it): browsers never guess a file's type, the
+	# app cannot be shown inside another site's frame (clickjacking), outside links learn the site but
+	# not the page, and no page may ask for the camera, microphone or location.
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
 	# The server: /api/search/x reaches naviseerr as /search/x. Caddy keeps encoded characters
 	# such as %2F (AC/DC) intact, which nginx's usual prefix strip does not. naviseerr is looked
 	# up on every request, so the web app starts even while the server is still down.
 	handle_path /api/* {
+		# API answers are never kept by the browser or a proxy on the way (the server says so on its own
+		# 401s; this covers the rest). "?" sets it only when the server sent none.
+		header ?Cache-Control "no-store"
 		# The server sees /auth/... without the /api stripped here; this header tells it the public
 		# path, so the Redirect URL it shows for Authentik (Settings -> Login) is the one browsers reach.
 		reverse_proxy naviseerr:8080 {
