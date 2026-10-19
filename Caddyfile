@@ -1,11 +1,21 @@
+# A reverse proxy in front of the web app (TrueNAS, Nginx Proxy Manager, another Caddy doing HTTPS) sits on
+# your network or Docker network: trust its X-Forwarded-* headers, so naviseerr learns the request came over
+# HTTPS and marks the login cookie Secure. Without this Caddy overwrites them with its own plain-HTTP view.
+{
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
 # Plain HTTP inside the container (no hostname, so Caddy does not try to set up HTTPS);
 # compose maps it to a port on your machine.
 :80 {
 	encode
 
 	# Optional: your own login in front of the whole app, API included (Authentik, Authelia...). Mount a
-	# snippet at /etc/caddy/conf.d/<name>.caddy (the naviseerr README, "Using your own login", has one for
-	# Authentik). No file there = nothing changes: an empty match is not an error for Caddy.
+	# snippet at /etc/caddy/conf.d/<name>.caddy (the naviseerr repo's docs/decisions/login-19-10-2026.md
+	# explains it, its README has a ready one for Authentik). No file there = nothing changes: an empty
+	# match is not an error for Caddy.
 	import /etc/caddy/conf.d/*.caddy
 
 	# The server: /api/search/x reaches naviseerr as /search/x. Caddy keeps encoded characters

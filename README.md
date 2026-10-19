@@ -96,9 +96,15 @@ image is built (`/api`), so it cannot be changed when the container starts.
 
 **Your own login in front of the app (19-10-2026):** the Caddyfile imports `/etc/caddy/conf.d/*.caddy`.
 Mount a snippet there (one file, any name ending in `.caddy`) and Caddy applies it to the whole app, the
-`/api` proxy included; with nothing mounted, nothing changes. The naviseerr README's "Using your own
-login (Authentik)" section has the snippet and the compose lines, and says to switch the server's own
-login off with `AUTH_REQUIRED=false` at the same time.
+`/api` proxy included; with nothing mounted, nothing changes. The naviseerr repo explains it in
+`docs/decisions/login-19-10-2026.md` and its README has a ready snippet for Authentik, with the compose
+lines that also switch the server's own login off (`AUTH_REQUIRED`) at the same time.
+
+**Behind another reverse proxy** (TrueNAS, Nginx Proxy Manager, a Caddy doing HTTPS): the Caddyfile
+trusts `X-Forwarded-*` headers from private addresses (`trusted_proxies static private_ranges`), so the
+server sees that the request came over HTTPS and marks the login cookie Secure. A proxy on a public
+address is not trusted; the cookie then stays plain, which only matters when the same name is also
+reachable over plain HTTP.
 
 ## Project Structure
 
