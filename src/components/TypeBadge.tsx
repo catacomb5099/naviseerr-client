@@ -10,6 +10,8 @@ const ICON = { SONG: Music, ALBUM: Disc3, PLAYLIST: ListMusic, CURATED: ListMusi
 interface TypeBadgeProps {
   type: DownloadType | 'RADIO'
   className?: string
+  /** Icon only on phones (the word stays for screen readers): for rows where the title needs the width. */
+  compact?: boolean
 }
 
 /**
@@ -17,17 +19,17 @@ interface TypeBadgeProps {
  * the collection page and in the downloads table, so the two can never drift apart: a user who
  * learns the badge in one place reads it in the other.
  */
-export function TypeBadge({ type, className }: TypeBadgeProps) {
+export function TypeBadge({ type, className, compact = false }: TypeBadgeProps) {
   const Icon = ICON[type]
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300',
+        'inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-zinc-300 sm:text-[10px]',
         className,
       )}
     >
-      <Icon className="w-2.5 h-2.5" aria-hidden="true" />
-      {LABEL[type]}
+      <Icon className={compact ? 'w-3.5 h-3.5 sm:w-2.5 sm:h-2.5' : 'w-2.5 h-2.5'} aria-hidden="true" />
+      <span className={compact ? 'sr-only sm:not-sr-only' : undefined}>{LABEL[type]}</span>
     </span>
   )
 }

@@ -24,7 +24,8 @@ interface DownloadRowProps {
   inFlight: Set<string>
 }
 
-const ACTION_BUTTON = 'p-2 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600'
+// 40 px on phones (a thumb), the old padding-only size with a mouse.
+const ACTION_BUTTON = 'inline-flex h-10 w-10 items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 sm:h-auto sm:w-auto sm:p-2'
 
 function stageColor(item: DownloadItem): string {
   if (item.stage === 'SUCCEEDED') return 'text-green-500'
@@ -77,12 +78,13 @@ interface SongRowProps {
   onActed: () => void
 }
 
-const SONG_ACTION = 'p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600'
+const SONG_ACTION = 'inline-flex h-10 w-10 items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 sm:h-auto sm:w-auto sm:p-1'
 
 function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight, onActed }: SongRowProps) {
   const status = songStatus(song)
+  const statusLine = <>{status.glyph}{status.word}</>
   return (
-    <li className="flex items-center gap-3 h-12">
+    <li className="flex items-center gap-3 min-h-12 py-1.5 sm:h-12 sm:py-0">
       {song.imageUrl ? (
         <img src={song.imageUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"
           className="w-8 h-8 rounded-sm object-cover flex-none" />
@@ -90,17 +92,16 @@ function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight
         <div className="w-8 h-8 rounded-sm bg-zinc-800 flex-none" />
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white truncate">{song.title ?? 'Untitled'}</p>
-        <p className="text-xs text-zinc-400 truncate">
+        <p className="text-base sm:text-sm text-white truncate">{song.title ?? 'Untitled'}</p>
+        <p className="text-sm sm:text-xs text-zinc-400 truncate">
           <ArtistNames names={song.artists} ids={song.artistIds ?? []} />
           {/* Who the file comes from, once a file was chosen: how a manual pick shows on the row. */}
           {song.slskdUsername && <span className="text-zinc-500" title={song.slskdFilename ?? undefined}> · from {song.slskdUsername}</span>}
         </p>
+        {/* On a phone the status sits under the title, so the title keeps the width (YouTube Music / Spotify rows). */}
+        <p className={`flex sm:hidden items-center gap-1.5 text-xs ${status.color}`}>{statusLine}</p>
       </div>
-      <span className={`flex items-center gap-1.5 text-xs ${status.color}`}>
-        {status.glyph}
-        {status.word}
-      </span>
+      <span className={`hidden sm:flex items-center gap-1.5 text-xs ${status.color}`}>{statusLine}</span>
       {!isTerminal(song.stage) && (
         <button
           type="button"
@@ -130,14 +131,15 @@ function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight
       )}
       <button
         type="button"
-        className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+        className={SONG_ACTION}
         aria-label={`Choose file for ${song.title ?? 'song'}`}
         title="Choose the file yourself"
         onClick={e => { e.stopPropagation(); onManualImport({ kind: 'SONG', downloadId, taskId: song.taskId, title: song.title ?? 'Untitled' }) }}
       >
         <UserRound className="w-3.5 h-3.5" aria-hidden="true" />
       </button>
-      <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
+      {/* No duration on phones: the streaming apps' phone lists show none, and the title needs the room. */}
+      <span className="hidden sm:inline w-12 text-right text-xs text-zinc-400 tabular-nums">
         {song.durationSeconds !== null && formatDuration(song.durationSeconds)}
       </span>
     </li>
@@ -217,11 +219,11 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
           A plain div, not role=button, so the heading, image and progressbar inside stay in the
           accessibility tree. */}
       <div
-        className={`flex items-center gap-4 py-3 ${collection ? 'cursor-pointer hover:bg-white/5 rounded-md' : ''}`}
+        className={`flex items-center gap-3 sm:gap-4 py-3 ${collection ? 'cursor-pointer hover:bg-white/5 rounded-md' : ''}`}
         onClick={collection ? toggle : undefined}
       >
         {/* Chevron for a collection, empty for a song, so every row's art starts at the same x. */}
-        <div className="w-6 flex-none flex items-center justify-center">
+        <div className="w-10 sm:w-6 flex-none flex items-center justify-center">
           {collection && (
             <button
               type="button"
@@ -229,7 +231,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
               aria-controls={songsId}
               aria-label={`Show songs in ${item.title}`}
               onClick={e => { e.stopPropagation(); toggle() }}
-              className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              className="w-10 h-10 sm:w-6 sm:h-6 flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
             >
               <ChevronRight
                 className={`w-4 h-4 transition-transform duration-150 motion-reduce:transition-none ${expanded ? 'rotate-90' : ''}`}
@@ -239,7 +241,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
           )}
         </div>
 
-        <div className="w-16 h-16 flex-shrink-0">
+        <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
           {item.iconURL && !iconFailed ? (
             <img
               src={item.iconURL}
@@ -257,7 +259,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
 
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-medium leading-6 truncate">
-            <TypeBadge type={item.downloadType} className="mr-2 align-middle" />
+            <TypeBadge type={item.downloadType} compact className="mr-2 align-middle" />
             {item.title}
           </h3>
           <p className="text-sm text-zinc-400 leading-5 truncate">
@@ -266,10 +268,10 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
           </p>
           {collection ? (
             <>
-              <CollectionSummary id={summaryId} tokens={collectionSummary(item)} className="text-xs leading-4" />
+              <CollectionSummary id={summaryId} tokens={collectionSummary(item)} className="text-sm leading-5 sm:text-xs sm:leading-4" />
               {/* Fixed height like the song slot below: the bar appears once the count is known and
                   the row must not grow when it does. */}
-              <div className="mt-1.5 h-1.5 min-w-40 max-w-sm">
+              <div className="mt-1.5 h-1.5 sm:min-w-40 max-w-sm">
                 <CollectionProgress
                   songCount={item.songCount}
                   songsSucceeded={item.songsSucceeded}
@@ -284,7 +286,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
             </>
           ) : (
             <>
-              <p className={`text-xs leading-4 truncate ${stageColor(item)}`}>{itemStageLabel(item)}</p>
+              <p className={`text-sm leading-5 sm:text-xs sm:leading-4 truncate ${stageColor(item)}`}>{itemStageLabel(item)}</p>
               {/* Reserved whether or not it is filled: the row must not change height when a download
                   enters or leaves DOWNLOADING, or the whole list shifts under the pointer. */}
               <div className={`mt-1.5 h-[3px] ${animating ? 'bg-zinc-700 rounded-full overflow-hidden' : ''}`}>
@@ -306,9 +308,10 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
 
         {/* One fixed-width column for the action buttons and the Open link, rendered for every row,
             so the content to its left ends at the same x whether or not a row has any. Wide enough
-            for Cancel/Retry, the person button and Play or Open. Stops propagation like the chevron:
+            for Cancel/Retry, the person button and Play or Open. On phones it takes only the width
+            its buttons need, so the title keeps the rest. Stops propagation like the chevron:
             a click here must not also expand the row. */}
-        <div className="w-24 flex-none flex items-center justify-end gap-1">
+        <div className="sm:w-24 flex-none flex items-center justify-end gap-1">
           {!terminal && (
             <button
               type="button"
@@ -374,7 +377,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
               to={openPath}
               aria-label={`Open ${item.title}`}
               onClick={e => e.stopPropagation()}
-              className="w-6 h-6 flex-none flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              className="w-10 h-10 sm:w-6 sm:h-6 flex-none flex items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
             >
               <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
             </Link>
@@ -383,7 +386,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
       </div>
 
       {collection && expanded && (
-        <div id={songsId} className="ml-3 mb-3 pl-10 bg-zinc-900/40 border-l-2 border-zinc-800 rounded-r-md">
+        <div id={songsId} className="ml-3 mb-3 pl-4 sm:pl-10 bg-zinc-900/40 border-l-2 border-zinc-800 rounded-r-md">
           {songs === null || songs.length === 0 ? (
             <p className="h-12 flex items-center text-sm text-zinc-400">
               {loadFailed && songs === null ? (
