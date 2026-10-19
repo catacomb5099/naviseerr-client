@@ -390,9 +390,13 @@ export async function getSession(): Promise<SessionResponse> {
   }
 }
 
-/** The first account, once: 201 `{username}`; 409 when one exists already. POST /auth/setup */
-export function setupAccount(username: string, password: string): Promise<{ username: string }> {
-  return apiClient<{ username: string }>('/auth/setup', { method: 'POST', body: JSON.stringify({ username, password }) })
+/**
+ * The first account, once, with the setup code the server printed in its log at start: 201 `{username}`;
+ * 401 wrong code; 409 when an account exists already; 429 too many tries. POST /auth/setup
+ */
+export function setupAccount(username: string, password: string, setupCode: string): Promise<{ username: string }> {
+  if (USE_MOCK_DATA) return Promise.resolve({ username })
+  return apiClient<{ username: string }>('/auth/setup', { method: 'POST', body: JSON.stringify({ username, password, setupCode }) })
 }
 
 /** 200 `{username}` and the session cookie; 401 wrong name or password; 429 too many tries. POST /auth/login */

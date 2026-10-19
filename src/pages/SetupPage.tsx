@@ -31,6 +31,7 @@ export function SetupPage() {
 }
 
 function AccountStep({ onDone }: StepProps) {
+  const [setupCode, setSetupCode] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -45,9 +46,10 @@ function AccountStep({ onDone }: StepProps) {
     setBusy(true)
     setError(null)
     try {
-      const made = await setupAccount(name, password)
+      const made = await setupAccount(name, password, setupCode.trim())
       onDone(made.username)
     } catch (err) {
+      // The server's own sentence: "Wrong setup code", "Too many attempts, wait a minute".
       setError(serverMessage(err))
       setBusy(false)
       // "An account already exists": somebody else made it first. Ask again and the gate shows the login.
@@ -61,9 +63,21 @@ function AccountStep({ onDone }: StepProps) {
         This Naviseerr has no account yet. Choose the name and password you will log in with.
       </p>
       <form onSubmit={submit} className="space-y-4">
+        {/* The one-time code the server printed at start: only whoever can read the server's log can make
+            the account, so an install reachable from the internet is not claimed by its first visitor
+            (Jupyter and Grafana hand out a first-run token the same way). */}
+        <div className="space-y-1.5">
+          <label htmlFor="setup-code" className="text-sm text-zinc-300">Setup code</label>
+          <Input id="setup-code" autoComplete="one-time-code" autoFocus required maxLength={40} spellCheck={false}
+            placeholder="xxxx-xxxx-xxxx" value={setupCode} onChange={e => setSetupCode(e.target.value)} />
+          <p className="text-xs text-zinc-500">
+            Find it in the server log: <code className="text-zinc-400">docker compose logs naviseerr</code>.
+            The Docker install also saves it as <code className="text-zinc-400">config/setup-code.txt</code> in its data folder.
+          </p>
+        </div>
         <div className="space-y-1.5">
           <label htmlFor="setup-username" className="text-sm text-zinc-300">Username</label>
-          <Input id="setup-username" autoComplete="username" autoFocus required maxLength={30} value={username}
+          <Input id="setup-username" autoComplete="username" required maxLength={30} value={username}
             onChange={e => setUsername(e.target.value)} />
         </div>
         <div className="space-y-1.5">
