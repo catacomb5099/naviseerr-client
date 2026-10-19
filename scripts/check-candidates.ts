@@ -1,7 +1,7 @@
 /** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
 import {
   GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
-  searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
+  qualityText, searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../src/lib/candidates'
 import { shortDate } from '../src/lib/utils'
 
@@ -33,6 +33,11 @@ assert(qualityLabel({ extension: 'mp3', bitrateKbps: 320 }) === '320 kbps', 'los
 assert(qualityLabel({ extension: 'm4a', bitrateKbps: null }) === '—', 'unknown bitrate shows a dash')
 assert(qualityRank({ extension: 'flac', bitrateKbps: null })! > qualityRank({ extension: 'mp3', bitrateKbps: 320 })!, 'lossless ranks above 320')
 assert(qualityRank({ extension: 'mp3', bitrateKbps: null }) === null, 'unknown quality ranks null (sorted last)')
+// One Quality cell says format and quality together (19-10-2026); a format with no known bit rate stands alone.
+assert(qualityText({ extension: 'flac', bitrateKbps: null }) === 'FLAC · Lossless', 'format and quality in one cell')
+assert(qualityText({ extension: 'mp3', bitrateKbps: 320 }) === 'MP3 · 320 kbps', 'lossy shows format and bit rate')
+assert(qualityText({ extension: 'm4a', bitrateKbps: null }) === 'M4A', 'unknown bit rate leaves the format alone')
+assert(qualityText({ extension: '', bitrateKbps: null }) === '—', 'nothing known is a dash')
 
 assert(formatBytes(31234567) === '29.8 MB', `formatBytes MB: ${formatBytes(31234567)}`)
 assert(formatBytes(412345678) === '393 MB', `formatBytes hundreds: ${formatBytes(412345678)}`)

@@ -45,6 +45,15 @@ export function qualityRank(c: { extension: string; bitrateKbps: number | null }
   return c.bitrateKbps != null && c.bitrateKbps > 0 ? c.bitrateKbps : null
 }
 
+/** Format and quality in one cell (19-10-2026, as Sonarr's Quality column names codec and resolution together):
+ *  "FLAC · Lossless", "MP3 · 320 kbps", "MP3" alone when the bit rate is unknown, "—" when neither is known. */
+export function qualityText(c: { extension: string; bitrateKbps: number | null }): string {
+  const format = c.extension.toUpperCase()
+  const label = qualityLabel(c)
+  if (!format) return label
+  return label === '—' ? format : `${format} · ${label}`
+}
+
 /** "31.2 MB", "412 MB", "1.2 GB"; "—" when unknown. */
 export function formatBytes(bytes: number | null | undefined): string {
   if (bytes == null || bytes < 0) return '—'

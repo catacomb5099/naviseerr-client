@@ -8,7 +8,7 @@ import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
   GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
-  searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
+  qualityText, searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../lib/candidates'
 import { formatDuration } from '../lib/utils'
 import { CandidateTable, Column, Sort } from './CandidateTable'
@@ -72,11 +72,12 @@ function PathCell({ path }: { path: string }) {
 
 const SONG_COLUMNS: Column<SongCandidate>[] = [
   { key: 'file', label: 'File', sortValue: c => basename(c.filename), render: c => <PathCell path={c.filename} /> },
-  { key: 'format', label: 'Format', sortValue: c => fmt(c), render: c => fmt(c).toUpperCase() || '—' },
   {
-    key: 'quality', label: 'Quality', align: 'right', firstDir: 'desc',
+    // Format and quality in one cell ("FLAC · Lossless", "MP3 · 320 kbps"), as Sonarr's Quality column names
+    // codec and resolution together; sorted lossless first, then by bit rate. The filter still matches the format word.
+    key: 'quality', label: 'Quality', firstDir: 'desc',
     sortValue: c => qualityRank({ extension: fmt(c), bitrateKbps: c.bitrateKbps }),
-    render: c => qualityLabel({ extension: fmt(c), bitrateKbps: c.bitrateKbps }),
+    render: c => qualityText({ extension: fmt(c), bitrateKbps: c.bitrateKbps }),
   },
   {
     key: 'length', label: 'Length', align: 'right', firstDir: 'desc', sortValue: c => c.lengthSeconds,

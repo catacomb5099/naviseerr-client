@@ -78,3 +78,14 @@ and Radarr solve this with "manual import": a table of what was found, pick a ro
 - `src/lib/candidates.ts` holds every pure helper (basename, format, quality label, sizes, sort, filter, status
   wording, whether Try again may run) with asserts in `scripts/check-candidates.ts`.
 - The sharer now shows on each song row inside a collection ("· from alice"), so a swap is visible at a glance.
+
+## Addendum of 19-10-2026: format and quality in one column
+
+The song table had a Format column ("FLAC", "MP3") beside a Quality column ("Lossless", "320 kbps"), two cells saying
+one thing. They are now one Quality cell reading "FLAC · Lossless", "MP3 · 320 kbps", "M4A · 256 kbps" (the format
+alone when slskd gave no bit rate), sorted as before (lossless first, then bit rate, unknown last), left-aligned like
+the other text columns. Sonarr's manual import does the same: its Quality column names codec and resolution together.
+The filter box still matches the format word (`SONG_HAYSTACK` keeps `fmt(c)`). The point is the room it frees: the
+Folder column of the next addendum fits a 1280 px window only without the separate Format column (measured: 1200 px
+with it folded, 1270 px with it kept, in a 1190 px box). Flip: restore the `format` column in `SONG_COLUMNS` and
+render `qualityLabel` alone; the table then scrolls about 95 px sideways on a laptop.
