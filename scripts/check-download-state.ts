@@ -126,6 +126,15 @@ assert(apiErrorMessage('http://x/search/daft%20punk', 502, 'Bad Gateway') === 'S
 assert(apiErrorMessage('/api/search/daft/tracks?limit=40', 503, '') === 'Search is not available right now. Try again in a minute.', 'category search 503')
 assert(apiErrorMessage('/api/downloads/active', 502, 'Bad Gateway') === 'The server is not available right now. Try again in a minute.', 'other call 502')
 assert(apiErrorMessage('/api/search/x', 404, 'Not Found') === 'API request failed: Not Found', 'other statuses unchanged')
+// A 502 that carries the server's own sentence (19-10-2026: it names YouTube Music) prints that sentence; a body
+// without one, a non-JSON body, or any other status changes nothing.
+const saidSo = { reason: 'YOUTUBE_MUSIC_UNAVAILABLE', message: 'YouTube Music is not answering right now. Try again in a minute.' }
+assert(apiErrorMessage('/api/search/x', 502, 'Bad Gateway', saidSo) === saidSo.message, "the server's sentence wins on a 502")
+assert(apiErrorMessage('/api/artists/UC1', 502, 'Bad Gateway', saidSo) === saidSo.message, 'on every route, not only search')
+assert(apiErrorMessage('/api/artists/UC1', 502, 'Bad Gateway', { message: '' }) === 'The server is not available right now. Try again in a minute.', 'an empty message falls back')
+assert(apiErrorMessage('/api/artists/UC1', 502, 'Bad Gateway', 'Bad Gateway') === 'The server is not available right now. Try again in a minute.', 'a non-JSON body falls back')
+assert(apiErrorMessage('/api/artists/UC1', 502, 'Bad Gateway', null) === 'The server is not available right now. Try again in a minute.', 'a null body falls back')
+assert(apiErrorMessage('/api/downloads/x', 404, 'Not Found', { message: 'No such download' }) === 'API request failed: Not Found', 'a 404 body is not printed here')
 assert(isCancelled({ stage: 'FAILED', failureCode: 'CANCELLED' }), 'a failed card with the cancelled code is cancelled')
 assert(!isCancelled({ stage: 'DOWNLOADING', failureCode: 'CANCELLED' }), 'a live album with one cancelled song is not itself cancelled')
 assert(!isCancelled({ stage: 'PARTIAL_SUCCESS', failureCode: 'CANCELLED' }), 'a partly downloaded album is not cancelled')

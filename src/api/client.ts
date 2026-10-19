@@ -33,6 +33,13 @@ export class ApiError extends Error {
   }
 }
 
+/** What the server said about a failed load when something behind it is down (a 502: YouTube Music not
+ *  answering, or rate-limiting it), for a page to print under its own "Couldn't load…" line; null for
+ *  any other failure, so the headline stands alone. */
+export function providerMessage(err: unknown): string | null {
+  return err instanceof ApiError && err.status === 502 ? err.message : null
+}
+
 export interface ApiOptions extends RequestInit {
   /** GET only: how long a successful answer is reused for the same URL. 0 (the default) shares only
    *  a request already in flight, for data that must stay live. */
@@ -73,7 +80,7 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
         ? await response.json().catch(() => undefined)
         : undefined
       throw new ApiError(
-        apiErrorMessage(url, response.status, response.statusText),
+        apiErrorMessage(url, response.status, response.statusText, body),
         response.status,
         response.statusText,
         body

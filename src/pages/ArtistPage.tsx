@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getArtist } from '../api/endpoints'
 import { useRetry } from '../hooks/useRetry'
-import { ApiError } from '../api/client'
+import { ApiError, providerMessage } from '../api/client'
 import { ArtistDetail, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { RequestOutcome } from '../lib/downloadPanel'
@@ -22,7 +22,7 @@ interface ArtistPageProps {
 }
 
 type Load =
-  | { status: 'error' }
+  | { status: 'error'; detail: string | null }
   | { status: 'notFound' }
   | { status: 'ready'; artist: ArtistDetail }
 
@@ -68,7 +68,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
       .catch(err => {
         if (cancelled) return
         const notFound = err instanceof ApiError && err.status === 404
-        setFetched({ key, status: notFound ? 'notFound' : 'error' })
+        setFetched(notFound ? { key, status: 'notFound' } : { key, status: 'error', detail: providerMessage(err) })
       })
     return () => { cancelled = true }
   }, [id, key, attempt])
@@ -100,7 +100,10 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
         )}
         {load.status === 'error' && (
           <div className="py-20 text-center text-zinc-400">
-            <p role="status">Couldn't load this artist.</p>
+            <p role="status">
+              Couldn't load this artist.
+              {load.detail && <span className="block mt-1 text-sm">{load.detail}</span>}
+            </p>
             <button type="button" onClick={retry} className={`mt-3 ${BUTTON}`}>
               Try again
             </button>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Loader2, Radio } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { startRadio } from '../api/endpoints'
-import { ApiError } from '../api/client'
+import { ApiError, providerMessage } from '../api/client'
 import { cn } from '../lib/utils'
 
 interface StartRadioButtonProps {
@@ -20,6 +20,8 @@ type State = 'idle' | 'pending' | 'failed' | 'none'
 export function StartRadioButton({ seedId, className }: StartRadioButtonProps) {
   const navigate = useNavigate()
   const [state, setState] = useState<State>('idle')
+  // The server's own sentence when YouTube Music is the reason it failed; null otherwise.
+  const [why, setWhy] = useState<string | null>(null)
 
   const start = async () => {
     setState('pending')
@@ -28,6 +30,7 @@ export function StartRadioButton({ seedId, className }: StartRadioButtonProps) {
       navigate(`/radio/${encodeURIComponent(radio.id)}`)
     } catch (err) {
       setState(err instanceof ApiError && err.status === 404 ? 'none' : 'failed')
+      setWhy(providerMessage(err))
     }
   }
 
@@ -44,7 +47,7 @@ export function StartRadioButton({ seedId, className }: StartRadioButtonProps) {
           : <Radio className="w-4 h-4" aria-hidden="true" />}
         {state === 'pending' ? 'Starting radio…' : 'Start radio'}
       </button>
-      {state === 'failed' && <p role="status" className="text-xs text-red-400">Couldn't start a radio — try again</p>}
+      {state === 'failed' && <p role="status" className="text-xs text-red-400">Couldn't start a radio — {why ?? 'try again'}</p>}
       {state === 'none' && <p role="status" className="text-xs text-zinc-400">YouTube Music has no radio for this one</p>}
     </div>
   )

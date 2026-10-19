@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getSongInfo } from '../api/endpoints'
 import { useRetry } from '../hooks/useRetry'
 import { useItemDownload } from '../hooks/useItemDownload'
-import { ApiError } from '../api/client'
+import { ApiError, providerMessage } from '../api/client'
 import { DownloadType, SongInfo } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { RequestOutcome } from '../lib/downloadPanel'
@@ -28,7 +28,7 @@ interface SongInfoDialogProps {
 }
 
 type Load =
-  | { status: 'error' }
+  | { status: 'error'; detail: string | null }
   | { status: 'notFound' }
   | { status: 'ready'; info: SongInfo }
 
@@ -69,7 +69,7 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
       .catch(err => {
         if (cancelled) return
         const notFound = err instanceof ApiError && err.status === 404
-        setFetched({ key, status: notFound ? 'notFound' : 'error' })
+        setFetched(notFound ? { key, status: 'notFound' } : { key, status: 'error', detail: providerMessage(err) })
       })
     return () => { cancelled = true }
   }, [videoId, key, cached, attempt])
@@ -127,7 +127,10 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
         )}
         {load.status === 'error' && (
           <div className="py-12 text-center text-zinc-400">
-            <p role="status">Couldn't load this song's details.</p>
+            <p role="status">
+              Couldn't load this song's details.
+              {load.detail && <span className="block mt-1 text-sm">{load.detail}</span>}
+            </p>
             <button type="button" onClick={retry} className={`mt-3 ${BUTTON}`}>
               Try again
             </button>

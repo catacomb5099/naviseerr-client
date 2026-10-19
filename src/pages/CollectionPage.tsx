@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2, Play } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCollection, getRadio, getSongViews } from '../api/endpoints'
+import { providerMessage } from '../api/client'
 import { useRetry } from '../hooks/useRetry'
 import { useDownloadCards } from '../hooks/useItemDownload'
 import { CollectionDetail, CollectionPageType, CollectionTrack, DownloadType } from '../api/types'
@@ -27,7 +28,7 @@ interface CollectionPageProps {
 }
 
 type Load =
-  | { status: 'error' }
+  | { status: 'error'; problem: string | null }
   | { status: 'ready'; detail: CollectionDetail }
 
 /** One button's request, keyed by what it posted (the collection id or a track id). Absent means
@@ -80,7 +81,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
     const request = type === 'RADIO' ? getRadio(id, opts) : getCollection(id, type, opts)
     request
       .then(detail => { if (!cancelled) setFetched({ key, status: 'ready', detail }) })
-      .catch(() => { if (!cancelled) setFetched({ key, status: 'error' }) })
+      .catch(err => { if (!cancelled) setFetched({ key, status: 'error', problem: providerMessage(err) }) })
     return () => { cancelled = true }
   }, [id, type, key, attempt])
 
@@ -258,7 +259,10 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
           )}
           {load.status === 'error' && (
             <div className="py-8 text-center text-zinc-400">
-              <p role="status">Couldn't load the songs.</p>
+              <p role="status">
+                Couldn't load the songs.
+                {load.problem && <span className="block mt-1 text-sm">{load.problem}</span>}
+              </p>
               <button
                 type="button"
                 onClick={retry}
