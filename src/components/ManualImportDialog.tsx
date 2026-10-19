@@ -56,7 +56,8 @@ const fmt = (c: SongCandidate) => formatOf(c.filename) || c.extension
 
 /** A file's name, the whole slskd path on hover. On a phone the Folder column is gone, so the file's last two
  *  folders stack under the name instead (a hidden ", in " keeps the two apart for screen readers). The cell is
- *  narrow enough on a phone to stay clear of the pinned Download button. */
+ *  10.5 rem at EVERY width (was 18 rem): on a phone that keeps it clear of the pinned Download button, and at 1280 px
+ *  it is what makes room for the Folder column (0 px to spare there), so long names cut sooner on a laptop too. */
 function FileCell({ path }: { path: string }) {
   const dir = folderOf(path)
   return (
@@ -69,9 +70,15 @@ function FileCell({ path }: { path: string }) {
 }
 
 /** The last two folders of a shared path, cut at the END with the ellipsis (Sonarr's Relative Path column), the
- *  whole path on hover. */
-function FolderCell({ dir, className }: { dir: string; className: string }) {
-  return <span title={dir} className={`block truncate ${className}`}>{lastFolders(dir)}</span>
+ *  whole path on hover. `leafOnPhone`: below md only the LAST folder, the one that tells editions apart, since a
+ *  136 px cell loses it behind the artist folder and a touch screen has no hover. */
+function FolderCell({ dir, className, leafOnPhone = false }: { dir: string; className: string; leafOnPhone?: boolean }) {
+  return (
+    <span title={dir} className={`block truncate ${className}`}>
+      {leafOnPhone && <span className="md:hidden">{lastFolders(dir, 1)}</span>}
+      <span className={leafOnPhone ? 'hidden md:inline' : undefined}>{lastFolders(dir)}</span>
+    </span>
+  )
 }
 
 const SONG_COLUMNS: Column<SongCandidate>[] = [
@@ -116,7 +123,7 @@ const ALBUM_COLUMNS: Column<AlbumFolder>[] = [
   // The folder first, as Sonarr and Lidarr list the path first and slskd heads each group with its folder; sorted by
   // the whole path. 8.5 rem on a phone: the chevron column and the cell padding take 52 px, 52 + 136 = 188 < 191 where
   // the pinned Download button starts in a 375 px window (measured 19-10-2026).
-  { key: 'folder', label: 'Folder', sortValue: f => f.folder, render: f => <FolderCell dir={f.folder} className="max-w-[8.5rem] md:max-w-[18rem]" /> },
+  { key: 'folder', label: 'Folder', sortValue: f => f.folder, render: f => <FolderCell dir={f.folder} className="max-w-[8.5rem] md:max-w-[18rem]" leafOnPhone /> },
   { key: 'sharer', label: 'Sharer', sortValue: f => f.username, render: f => f.username },
   { key: 'files', label: 'Files', align: 'right', firstDir: 'desc', sortValue: f => f.fileCount, render: f => `${f.fileCount}` },
   { key: 'size', label: 'Size', align: 'right', firstDir: 'desc', sortValue: f => f.totalSize, render: f => formatBytes(f.totalSize) },

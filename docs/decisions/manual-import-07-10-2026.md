@@ -111,13 +111,19 @@ Decisions:
    and Apple Music have nothing comparable (no source files). Flip: `keep` in `lastFolders`.
 2. **Song table: File, then Folder.** The file name is its own column again (`basename`, title = whole path); the
    Folder column is hidden below `md` (`Column.className` on `CandidateTable`, applied to header, skeleton and
-   cells), and the File cell then stacks the folder tail under the name as before, right-cut, 10.5 rem wide so it ends
-   before the pinned button (measured at 375 px with real paths). The Sharer cell is cut at 7.5 rem with the whole name
+   cells), and the File cell then stacks the folder tail under the name as before, right-cut. The File cell is 10.5 rem
+   wide at EVERY width (it was 18 rem): on a phone so it ends before the pinned button (measured at 375 px with real
+   paths), and at 1280 px because that is what makes room for the Folder column, so long file names are cut sooner on
+   a laptop too (7 of the first 12 Wonderwall names at 1280 px; the whole path stays on hover). If that is the wrong
+   trade, Length (78 px) is the column to drop, not the name. The Sharer cell is cut at 7.5 rem with the whole name
    on hover: real Soulseek names run to 20-30 characters and pushed the Match badge under the pinned button at 1280 px
    (39 px over before the cuts; the table now fits a 1280 px window with real paths, 15 px to spare).
 3. **Album table: Folder FIRST, then Sharer** (Sonarr/Lidarr put the path first; slskd heads the group with the
    folder); 8.5 rem on a phone (the chevron column and the cell padding take 52 px; 52 + 136 = 188, under the 191 px
-   where the pinned button starts in a 375 px window), 18 rem from `md`. The unfolded files keep name only, and the expand button keeps the leaf name.
+   where the pinned button starts in a 375 px window), 18 rem from `md`. Below `md` the cell shows only the LAST
+   folder (`lastFolders(dir, 1)`; review of 19-10-2026): in 136 px the two-folder tail read "…\Oasis\(1994) Def…",
+   the artist taking the room from the edition, and a touch screen has no hover; from `md` the two folders as in
+   the song table. The unfolded files keep name only, and the expand button keeps the leaf name.
 4. **The Format column is folded into Quality** (previous addendum, its own PR) so the song table fits a 1280 px window
    with the new column; without it the table scrolls about 95 px sideways there.
 5. The `dir="rtl"` + `<bdi>` left-cut of decision 8 goes (plain end-cut like Sonarr; the start of the tail is the
