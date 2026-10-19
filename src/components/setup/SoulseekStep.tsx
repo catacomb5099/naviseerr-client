@@ -5,7 +5,7 @@ import { SoulseekAccount } from '../../api/types'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import {
-  IDLE_POLL_MS, LOGIN_CHECK_MS, LOGIN_POLL_MS, SOULSEEK_NAME_RULES, loginState, loginStatusCopy, soulseekNameProblem,
+  IDLE_POLL_MS, LOGIN_POLL_MS, SOULSEEK_NAME_RULES, loginState, loginStatusCopy, soulseekNameProblem,
 } from '../../lib/soulseek'
 
 /**
@@ -44,8 +44,9 @@ export function SoulseekStep({ onDone }: { onDone?: () => void }) {
     return () => controller.abort()
   }, [])
 
-  // Asks the server whether Soulseek accepted the login: every 2 s for 30 s after a save, every 10 s otherwise.
-  const checking = savedAt !== null && loggedIn !== true && now - savedAt < LOGIN_CHECK_MS
+  // Asks the server whether Soulseek accepted the login: every 2 s while "Checking…" after a save, every 10 s otherwise.
+  const state = loginState(loggedIn, savedAt, now)
+  const checking = state === 'checking'
   useEffect(() => {
     if (!account) return
     const controller = new AbortController()
@@ -81,7 +82,6 @@ export function SoulseekStep({ onDone }: { onDone?: () => void }) {
   if (loadError) return <p role="alert" className="text-amber-400">{loadError}</p>
   if (!account) return <p className="text-zinc-400">Looking up your Soulseek account…</p>
 
-  const state = loginState(loggedIn, savedAt, now)
   const nameProblem = soulseekNameProblem(name)
   const statusColour = state === 'connected' ? 'text-green-400' : state === 'checking' ? 'text-zinc-300' : 'text-amber-400'
 
@@ -110,6 +110,13 @@ export function SoulseekStep({ onDone }: { onDone?: () => void }) {
       )}
 
       <p aria-live="polite" className={`text-sm ${statusColour}`}>{loginStatusCopy(state, account.username)}</p>
+      {account.setInComposeFile && (
+        <p className="text-sm text-amber-400">
+          Your compose file sets this account, so a change made here lasts only until the next restart. To keep it,
+          clear the two Soulseek values (<code className="font-mono">SOULSEEK_USERNAME</code> and{' '}
+          <code className="font-mono">SOULSEEK_PASSWORD</code>) on the <code className="font-mono">setup</code> line.
+        </p>
+      )}
 
       {!editing ? (
         <div className="flex flex-wrap gap-3">

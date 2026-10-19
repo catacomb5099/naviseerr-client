@@ -423,6 +423,8 @@ export interface SoulseekAccount {
   generated: boolean
   password: string | null
   loggedIn: boolean | null
+  /** The compose file sets the account and puts it back at the next start, undoing a change made here. */
+  setInComposeFile: boolean
 }
 
 // --- Manual import: the files Soulseek found for a song -------------------

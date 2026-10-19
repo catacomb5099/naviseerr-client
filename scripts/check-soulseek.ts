@@ -1,5 +1,5 @@
 /** Pins the Soulseek account step's rules and status line (src/lib/soulseek.ts). Runs from check-download-state.ts. */
-import { LOGIN_CHECK_MS, loginState, loginStatusCopy, soulseekNameProblem } from '../src/lib/soulseek'
+import { LOGIN_CHECK_MS, RECONNECT_GRACE_MS, loginState, loginStatusCopy, soulseekNameProblem } from '../src/lib/soulseek'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -25,6 +25,9 @@ assert(loginState(null, null, t0) === 'unknown', 'slskd not answering, nothing s
 assert(loginState(false, t0, t0 + LOGIN_CHECK_MS - 1) === 'checking', 'still checking just inside the window')
 assert(loginState(null, t0, t0 + 1_000) === 'checking', 'checking even while slskd is slow to answer')
 assert(loginState(false, t0, t0 + LOGIN_CHECK_MS) === 'not-accepted', 'the window closes at 30 s')
+assert(loginState(null, t0, t0 + LOGIN_CHECK_MS) === 'unknown', 'slskd never answering is not blamed on the login')
+assert(loginState(true, t0, t0 + RECONNECT_GRACE_MS - 1) === 'checking', 'logged in right after a save may still be the old account')
+assert(loginState(true, t0, t0 + RECONNECT_GRACE_MS) === 'connected', 'logged in once the server has asked for the new login')
 assert(loginStatusCopy('connected', 'alex') === 'Connected to Soulseek as alex.', 'connected names the account')
 assert(loginStatusCopy('not-accepted', 'alex').includes('did not accept this login'), 'the plain failure sentence')
 assert(loginStatusCopy('not-connected', 'alex').includes('as alex'), 'not connected names the account')

@@ -24,6 +24,11 @@ export const LOGIN_CHECK_MS = 30_000
 /** How often it asks during that window; outside it, the page still refreshes the line, less often. */
 export const LOGIN_POLL_MS = 2_000
 export const IDLE_POLL_MS = 10_000
+/**
+ * For 2 s after a save the server lets slskd reload its file before asking it to log out, so a client
+ * still logged in with the OLD account reads as logged in: that first poll is not "connected" yet.
+ */
+export const RECONNECT_GRACE_MS = 4_000
 
 export type LoginState = 'connected' | 'checking' | 'not-accepted' | 'not-connected' | 'unknown'
 
@@ -32,9 +37,12 @@ export type LoginState = 'connected' | 'checking' | 'not-accepted' | 'not-connec
  * `savedAt` null = nothing changed on this page; `loggedIn` null = slskd itself did not answer.
  */
 export function loginState(loggedIn: boolean | null, savedAt: number | null, now: number): LoginState {
-  if (loggedIn === true) return 'connected'
-  if (savedAt !== null) return now - savedAt < LOGIN_CHECK_MS ? 'checking' : 'not-accepted'
-  return loggedIn === null ? 'unknown' : 'not-connected'
+  const sinceSave = savedAt === null ? Infinity : now - savedAt
+  if (loggedIn === true) return sinceSave < RECONNECT_GRACE_MS ? 'checking' : 'connected'
+  if (sinceSave < LOGIN_CHECK_MS) return 'checking'
+  // slskd not answering is its own state, never blamed on the name or the password.
+  if (loggedIn === null) return 'unknown'
+  return savedAt === null ? 'not-connected' : 'not-accepted'
 }
 
 /** The one sentence under the account, per state. Plain words: nothing here is an error the person caused. */

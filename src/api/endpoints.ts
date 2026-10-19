@@ -472,7 +472,7 @@ export function authentikStartUrl(to: string): string {
  */
 export async function getSoulseekAccount(signal?: AbortSignal): Promise<SoulseekAccount> {
   if (USE_MOCK_DATA) {
-    return Promise.resolve({ username: 'naviseerr-ab12cd', generated: true, password: 'mock-password-24chars', loggedIn: false })
+    return Promise.resolve({ username: 'naviseerr-ab12cd', generated: true, password: 'mock-password-24chars', loggedIn: false, setInComposeFile: false })
   }
   return apiClient<SoulseekAccount>('/settings/soulseek', { signal })
 }
@@ -483,7 +483,7 @@ export async function getSoulseekAccount(signal?: AbortSignal): Promise<Soulseek
  * PUT /settings/soulseek {username, password}  (202; 400 {message} when the name breaks Soulseek's rules)
  */
 export async function putSoulseekAccount(username: string, password: string): Promise<SoulseekAccount> {
-  if (USE_MOCK_DATA) return Promise.resolve({ username, generated: false, password: null, loggedIn: null })
+  if (USE_MOCK_DATA) return Promise.resolve({ username, generated: false, password: null, loggedIn: null, setInComposeFile: false })
   return apiClient<SoulseekAccount>('/settings/soulseek', { method: 'PUT', body: JSON.stringify({ username, password }) })
 }
 
