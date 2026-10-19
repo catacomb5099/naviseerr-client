@@ -14,10 +14,10 @@ export function PageNavButton({ label, icon, onClick }: PageNavButtonProps) {
       variant="outline"
       onClick={onClick}
       aria-label={label}
-      className="h-10 flex-none bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+      className="h-11 sm:h-10 flex-none bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
     >
       {icon}
-      <span className="hidden sm:inline">{label}</span>
+      <span>{label}</span>
     </Button>
   )
 }

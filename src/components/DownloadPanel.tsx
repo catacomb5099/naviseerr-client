@@ -73,8 +73,8 @@ export function DownloadPanel({
         aria-label="Expand active downloads"
       >
         <DownloadIcon className="w-4 h-4 text-green-500" aria-hidden="true" />
-        <span className="text-xs">Active downloads</span>
-        <span className="text-[11px] bg-zinc-800 rounded-full px-2 py-0.5">{cards.length}</span>
+        <span className="text-sm sm:text-xs">Active downloads</span>
+        <span className="text-xs sm:text-[11px] bg-zinc-800 rounded-full px-2 py-0.5">{cards.length}</span>
         <ChevronUp className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
       </button>
     )
@@ -94,8 +94,8 @@ export function DownloadPanel({
         className="w-full flex items-center gap-2 px-3 py-3 sm:py-2.5 border-b border-zinc-800 text-left hover:bg-zinc-800"
       >
         <DownloadIcon className="w-4 h-4 text-green-500 flex-none" aria-hidden="true" />
-        <span className="text-xs text-white flex-1">Active downloads</span>
-        <span className="text-[11px] bg-zinc-800 rounded-full px-2 py-0.5 text-zinc-300">{cards.length}</span>
+        <span className="text-sm sm:text-xs text-white flex-1">Active downloads</span>
+        <span className="text-xs sm:text-[11px] bg-zinc-800 rounded-full px-2 py-0.5 text-zinc-300">{cards.length}</span>
         <span
           role="button"
           tabIndex={0}

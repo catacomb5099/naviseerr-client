@@ -285,7 +285,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                 // number, so it reads "views": a views number is never labelled as plays.
                 const plays = track.plays ?? formatViews(views[track.id])
                 return (
-                  <li key={track.position} className="h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
+                  <li key={track.position} className="h-16 sm:h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
                     {isAlbum ? (
                       <span className="w-8 text-right text-sm text-zinc-500 tabular-nums">{track.position}</span>
                     ) : thumb ? (
@@ -294,12 +294,12 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                       <div className="h-10 w-10 rounded bg-zinc-800" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-white truncate">{track.name}</p>
+                      <p className="text-base sm:text-sm font-medium text-white truncate">{track.name}</p>
                       {/* The error takes the artist line's slot so the 56px row does not grow. */}
                       {state === 'failed' ? (
-                        <p className="text-xs text-red-400 truncate">{REQUEST_FAILED_COPY}</p>
+                        <p className="text-sm sm:text-xs text-red-400 truncate">{REQUEST_FAILED_COPY}</p>
                       ) : (
-                        <p className="text-xs text-zinc-400 truncate">
+                        <p className="text-sm sm:text-xs text-zinc-400 truncate">
                           <ArtistNames names={track.artists} ids={track.artistIds} />
                         </p>
                       )}
@@ -310,7 +310,8 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                         {plays}
                       </span>
                     )}
-                    <span className="w-12 text-right text-xs text-zinc-400 tabular-nums">
+                    {/* No duration on phones either: YouTube Music and Spotify phone lists show none. */}
+                    <span className="hidden sm:inline w-12 text-right text-xs text-zinc-400 tabular-nums">
                       {track.durationSeconds != null && formatDuration(track.durationSeconds)}
                     </span>
                     <PlayOnYouTubeMusic videoId={track.id} title={track.name} artists={track.artists} />
@@ -318,7 +319,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                       type="button"
                       onClick={() => onInfo(track.id, plays)}
                       aria-label={`Details for ${track.name}`}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                      className="inline-flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                     >
                       <Info className="w-4 h-4" aria-hidden="true" />
                     </button>
@@ -330,7 +331,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                       aria-disabled={inert}
                       aria-label={trackLabel ? `${trackLabel}: ${track.name}` : `Download ${track.name}`}
                       title={trackLabel ? `${trackLabel} - open Downloads` : undefined}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white aria-disabled:hover:text-zinc-400 aria-disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                      className="inline-flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white aria-disabled:hover:text-zinc-400 aria-disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                     >
                       {trackLabel === 'Downloaded' || trackLabel === 'Partly downloaded' ? (
                         <Check className="w-4 h-4 text-green-500" aria-hidden="true" />

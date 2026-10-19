@@ -25,7 +25,7 @@ export function PlayOnYouTubeMusic({ videoId, title, artists, className = '' }: 
       title={found ? 'Play on YouTube Music' : 'Find on YouTube Music'}
       aria-label={found ? `Play ${name} on YouTube Music` : `Find ${name} on YouTube Music`}
       onClick={e => e.stopPropagation()}
-      className={`inline-flex h-8 w-8 flex-none items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${className}`}
+      className={`inline-flex h-10 w-10 sm:h-8 sm:w-8 flex-none items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${className}`}
     >
       <Play className="w-4 h-4" aria-hidden="true" />
     </a>

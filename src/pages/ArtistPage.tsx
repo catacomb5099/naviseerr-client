@@ -123,7 +123,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
               <div className="min-w-0 max-w-full">
                 {artist ? (
                   <>
-                    <h2 className="text-3xl md:text-5xl font-bold truncate">{artist.name}</h2>
+                    <h2 className="text-3xl md:text-5xl font-bold line-clamp-2">{artist.name}</h2>
                     {artist.subscribers && <p className="mt-2 text-zinc-400">{artist.subscribers} subscribers</p>}
                   </>
                 ) : (

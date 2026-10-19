@@ -25,7 +25,7 @@ export function DownloadFilterPills({ selected, onSelect }: DownloadFilterPillsP
           type="button"
           aria-pressed={selected === pill.value}
           onClick={() => onSelect(pill.value)}
-          className={`rounded-full h-8 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
+          className={`rounded-full h-10 sm:h-8 px-4 sm:px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
             selected === pill.value ? 'bg-white text-black' : 'bg-zinc-800 text-white hover:bg-zinc-700'
           }`}
         >

@@ -27,9 +27,9 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
 
   return (
     <Card className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 transition-colors">
-      <div className="p-4 flex items-center gap-4">
+      <div className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
         {/* Album Icon */}
-        <div className="w-16 h-16 flex-shrink-0">
+        <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
           {track.iconURL && !iconFailed ? (
             <img
               src={track.iconURL}
@@ -68,7 +68,7 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
           variant="ghost"
           size="sm"
           aria-label={`Details for ${track.name}`}
-          className="flex-shrink-0 px-2 text-zinc-400 hover:text-white hover:bg-white/10"
+          className="flex-shrink-0 h-10 w-10 px-0 sm:h-9 sm:w-auto sm:px-2 text-zinc-400 hover:text-white hover:bg-white/10"
         >
           <Info className="w-4 h-4" />
         </Button>
@@ -81,7 +81,7 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
           aria-disabled={!!label}
           aria-label={label ? `${label}: ${track.name}` : `Download ${track.name}`}
           title={label ? `${label} - open Downloads` : undefined}
-          className="flex-shrink-0 bg-green-600 hover:bg-green-500 text-white aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default"
+          className="flex-shrink-0 h-10 min-w-10 sm:h-9 sm:min-w-0 bg-green-600 hover:bg-green-500 text-white aria-disabled:bg-zinc-700 aria-disabled:hover:bg-zinc-700 aria-disabled:text-zinc-300 aria-disabled:cursor-default"
         >
           {label === null ? (
             <Download className="w-4 h-4" />
@@ -90,7 +90,8 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
               {card && card.stage !== 'SUCCEEDED' && card.stage !== 'PARTIAL_SUCCESS'
                 ? <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
                 : <Check className="w-4 h-4" aria-hidden="true" />}
-              <span className="text-xs">{label}</span>
+              {/* The icon says it on a phone (the aria-label carries the words); the title keeps the width. */}
+              <span className="hidden sm:inline text-xs">{label}</span>
             </>
           )}
         </Button>

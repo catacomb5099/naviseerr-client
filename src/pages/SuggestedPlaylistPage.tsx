@@ -36,7 +36,7 @@ type Load =
 
 const PULSE = 'bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
 const BUTTON = 'rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
-const ICON_BUTTON = 'inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
+const ICON_BUTTON = 'inline-flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
 
 /** "Cocteau Twins · Blue Bell Knoll (1988)" - who and where from, on one line. The names go through
  *  ArtistNames like every other row; plain text today, links the day the curator sends artist ids. */
@@ -154,7 +154,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
             <div className={`h-40 w-40 sm:h-48 sm:w-48 flex-shrink-0 rounded-md bg-zinc-800 shadow-lg ${load.status === 'loading' ? PULSE : ''}`} />
           )}
           <div className="min-w-0 flex flex-col gap-2">
-            <span className="self-start inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
+            <span className="self-start inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-xs sm:text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
               <Sparkles className="w-2.5 h-2.5" aria-hidden="true" />
               Made for you
             </span>
@@ -231,7 +231,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                 const inert = state === 'pending' || trackLabel !== null
                 const plays = formatPlays(track.popularity)
                 return (
-                  <li key={track.position} className="h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
+                  <li key={track.position} className="h-16 sm:h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
                     <span className="w-6 text-right text-sm text-zinc-500 tabular-nums">{track.position}</span>
                     {track.iconURL ? (
                       <img src={track.iconURL} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="h-10 w-10 rounded object-cover bg-zinc-800" />
@@ -239,11 +239,11 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                       <div className="h-10 w-10 rounded bg-zinc-800" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-white truncate">{track.name}</p>
+                      <p className="text-base sm:text-sm font-medium text-white truncate">{track.name}</p>
                       {state === 'failed' ? (
-                        <p className="text-xs text-red-400 truncate">{REQUEST_FAILED_COPY}</p>
+                        <p className="text-sm sm:text-xs text-red-400 truncate">{REQUEST_FAILED_COPY}</p>
                       ) : (
-                        <p className="text-xs text-zinc-400 truncate"><TrackLine track={track} /></p>
+                        <p className="text-sm sm:text-xs text-zinc-400 truncate"><TrackLine track={track} /></p>
                       )}
                     </div>
                     {plays && (

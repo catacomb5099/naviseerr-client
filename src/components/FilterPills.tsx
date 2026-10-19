@@ -24,7 +24,7 @@ export function FilterPills({ selected, onSelect }: FilterPillsProps) {
           onClick={() => onSelect(pill.value)}
           variant={selected === pill.value ? 'default' : 'outline'}
           className={`
-            cursor-pointer px-4 py-2 text-sm font-medium transition-colors
+            cursor-pointer px-4 py-2.5 sm:py-2 text-sm font-medium transition-colors
             ${
               selected === pill.value
                 ? 'bg-green-600 hover:bg-green-500 text-white border-green-600'

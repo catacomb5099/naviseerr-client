@@ -26,7 +26,7 @@ React-based music search and download client with Spotify-inspired UI.
 - A second amber strip says "Downloads cannot be filed into your music library" with the server's reason (the folder is missing, or cannot be written to) while that is so; finished songs wait in Soulseek's download folder until it is fixed, so "Downloaded" is never silently untrue
 - A third amber strip says "YouTube Music isn't answering — search won't work and new downloads will wait until it is back" while the server cannot reach YouTube Music (its helper is down, or YouTube is unreachable from it); it clears by itself within about a minute of YouTube Music answering again
 - On the Downloads page, the person icon on a song opens every audio file Soulseek returned for it (format, quality, length, size, sharer speed, queue, and Naviseerr's own verdict: Exact, Other version, Unverified or Not a match) as a sortable, filterable table; press Download on any row to fetch that file instead (a download already under way asks before it is replaced). The same icon on an album lists every sharer folder holding any of the album's songs, the ones Naviseerr's own search would take first and the rest marked "Not judged", each unfolding into its files, and takes the remaining songs from the folder you pick
-- Responsive design for mobile and desktop
+- Responsive design for mobile and desktop: on a phone the active-downloads panel is a bottom sheet that starts folded and leaves the page room, list rows give the title the width (smaller art, status under the title, no duration), every control is at least 40 px and captions are 12 px or larger
 - Docker deployment
 
 ## Tech Stack
