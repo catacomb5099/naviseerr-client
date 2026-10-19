@@ -170,3 +170,14 @@ Decisions (with naviseerr's `POST /downloads/{id}/tasks/{taskId}/search`, same d
    server answered is dropped (`alive` ref in `usePickState`; `replace` belongs to the dialog, which outlives the
    view, so the stale list would have landed in the next pop-up). "Try again" gets a hover text saying it runs
    Naviseerr's own wording and restarts the download, since it sits one line under the box that runs yours.
+
+## Addendum of 19-10-2026: type your own Soulseek search (album pop-up)
+
+The same box in the album pop-up (`AlbumCandidates`), with naviseerr's `POST /downloads/{id}/album-search`: one
+Soulseek search with the words as typed, then the folder table fills with every sharer folder that search found
+holding any of the album's songs, the ones Naviseerr's own album search would take first ("Match"), the rest "Not
+judged", each unfolding into its files, Download on any row taking the remaining songs from it. The same waiting line,
+the same errors. Hidden while Naviseerr's own album search runs, for an album every song of which is downloaded and
+filed, and for an album with no search on record (the server has no row to keep the folders on; it answers 409
+`NO_ALBUM_SEARCH`). The review items of the song addendum (the dropped stale answer, the Try again hover text, the
+60 s wait) apply here too; on a phone the Folder cell shows the folder's own name (the Folder-column addendum).

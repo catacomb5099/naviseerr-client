@@ -1122,6 +1122,18 @@ export function getMockAlbumCandidates(downloadId: string): AlbumCandidatesRespo
   return { ...base, status: 'READY', reason: null, searchedAt: iso(FIXTURE_BOOT - 60000), folders: MOCK_ALBUM_FOLDERS.map(f => mockFolder(f, songs)) }
 }
 
+/** Mirrors POST /downloads/{id}/album-search, as searchMockSongCandidates does for a song: the fixture folders under the
+ *  typed text after the wait, `offline` / `busy` / `xyzzy` as there. */
+export async function searchMockAlbumFolders(downloadId: string, text: string): Promise<AlbumCandidatesResponse> {
+  await new Promise(resolve => setTimeout(resolve, 1500))
+  if (/offline/i.test(text)) throw new ApiError('conflict', 409, 'Conflict', { reason: 'SOULSEEK_OFFLINE', message: 'Soulseek is offline right now, so the search could not run.' })
+  if (/busy/i.test(text)) throw new ApiError('busy', 429, 'Too Many Requests', { reason: 'SOULSEEK_BUSY', message: 'Soulseek is busy with other searches; try again in a moment.' })
+  const found = getMockAlbumCandidates(downloadId)
+  const base = { ...found, query: text, searchId: `mock-search-${Date.now().toString(36)}`, searchedAt: iso(Date.now()) }
+  if (/xyzzy/i.test(text)) return { ...base, status: 'NONE', reason: 'NO_RESULTS', folders: [] }
+  return { ...base, status: 'READY', reason: null, folders: [...found.folders].reverse().map(f => ({ ...f, isCurrent: false, songsCurrent: 0 })) }
+}
+
 /** Mirrors POST /downloads/{id}/album-pick: every song the folder holds that is not already downloaded
  *  restarts in place from that folder; finished songs are kept. 409 with the card when the folder is not
  *  in the list or has nothing left to replace. */

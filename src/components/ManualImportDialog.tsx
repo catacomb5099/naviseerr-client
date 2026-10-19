@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Search, X } from 'lucide-react'
-import { AlbumPick, CandidatePick, searchSongCandidates } from '../api/endpoints'
+import { AlbumPick, CandidatePick, searchAlbumFolders, searchSongCandidates } from '../api/endpoints'
 import { AlbumFolder, SongCandidate } from '../api/types'
 import { ActOutcome } from '../hooks/useActiveDownloads'
 import { CandidatesLoad, ManualImportTarget, messageOf, useCandidates } from '../hooks/useCandidates'
@@ -521,7 +521,10 @@ function FolderFiles({ folder }: { folder: AlbumFolder }) {
 
 /** The folder list for a whole album: one row per sharer, unfolding into the files it holds. */
 function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRetry }: ViewProps) {
-  const { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain } = usePickState(onPick, onClose, refetch, replace)
+  const {
+    sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain,
+    searching, searchError, search,
+  } = usePickState(onPick, onClose, refetch, replace)
   const [confirm, setConfirm] = useState<AlbumFolder | null>(null)
 
   const data = load.status === 'ready' && load.kind === 'ALBUM' ? load.data : null
@@ -538,7 +541,7 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
     : col), [songCount])
 
   const message = load.status === 'error' ? load.message : data ? statusCopy('ALBUM', data.status, data.reason, data.query, data.searchedAt) : null
-  const searching = data?.status === 'SEARCHING'
+  const stillSearching = data?.status === 'SEARCHING'
   const empty = data?.status === 'READY' && all.length === 0
   const showTable = load.status === 'loading' || (data?.status === 'READY' && all.length > 0)
   const filtering = filter.trim().length > 0
@@ -557,12 +560,17 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
   const action = load.status === 'error' || empty
     ? { label: 'Reload', pending: false, onClick: refetch }
     : canSearchAgain
-      ? { label: 'Try again', pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId)) }
+      ? { label: 'Try again', hint: TRY_AGAIN_HINT, pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId)) }
       : undefined
-  // NO_ALBUM_SEARCH gets no note: the sentence already says the album predates folder lists, nothing to restart.
-  const note = data?.status === 'NONE' && !canSearchAgain && data.reason !== 'NO_ALBUM_SEARCH'
-    ? succeeded ? ALBUM_SUCCEEDED_HINT : stage && !isTerminal(stage) ? LIVE_ALBUM_NOTE : null
-    : null
+  // The person's own search box (19-10-2026): same rule as the song view; an album with no search row has nowhere to keep folders.
+  const canSearch = data && stage ? manualSearchAllowed(data.status, data.reason, stage) : false
+  // NO_ALBUM_SEARCH gets no note: the sentence already says the album predates folder lists, nothing to restart. With the
+  // box on screen, "nothing found" gets the fewer-words hint, as in the song view.
+  const note = data?.reason === 'NO_RESULTS' && canSearch
+    ? NOTHING_FOUND_HINT
+    : data?.status === 'NONE' && !canSearchAgain && data.reason !== 'NO_ALBUM_SEARCH'
+      ? succeeded ? ALBUM_SUCCEEDED_HINT : stage && !isTerminal(stage) ? LIVE_ALBUM_NOTE : null
+      : null
 
   const rowKey = (f: AlbumFolder) => `${f.username}|${f.folder}`
   const pickRow = (f: AlbumFolder) => {
@@ -588,11 +596,25 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
         onClose={onClose}
       />
 
-      {(message || empty) && (
-        <EmptyState message={message ?? 'The search found no folders holding this album.'} searching={searching} action={action} note={note} error={pickError} />
+      {data && canSearch && (
+        <SoulseekSearch
+          key={data.query ?? ''}
+          initial={data.query ?? target.title}
+          searching={searching}
+          error={searchError}
+          onSearch={text => void search(text, async () => ({
+            status: 'ready', kind: 'ALBUM', data: await searchAlbumFolders(target.downloadId, text),
+          }))}
+        />
       )}
 
-      {showTable && (
+      {searching && <EmptyState message={searchingCopy(searching)} searching />}
+
+      {!searching && (message || empty) && (
+        <EmptyState message={message ?? 'The search found no folders holding this album.'} searching={stillSearching} action={action} note={note} error={pickError} />
+      )}
+
+      {!searching && showTable && (
         <div className="mt-4 space-y-2">
           <div className="flex items-baseline justify-between gap-3 flex-wrap text-xs">
             <p role="status" className="text-zinc-400 tabular-nums">
