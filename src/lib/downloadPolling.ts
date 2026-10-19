@@ -31,6 +31,8 @@ export interface PollingState {
   consecutiveFailures?: number
   /** The browser says it has no network: book nothing, the 'online' event polls. */
   browserOffline?: boolean
+  /** Nobody is signed in: book nothing, every poll would be a 401. Logging in polls. */
+  loggedOut?: boolean
 }
 
 /**
@@ -39,7 +41,7 @@ export interface PollingState {
  * asked every five seconds, and the first answer resets the speed.
  */
 export function nextPollDelayMs(state: PollingState): number | null {
-  if (state.browserOffline) return null
+  if (state.browserOffline || state.loggedOut) return null
   const justRequested = state.lastRequestedAt !== null
     && state.now - state.lastRequestedAt < FAST_WINDOW_AFTER_REQUEST_MS
   const base = state.serverHasLive || justRequested ? state.serverPollIntervalMs ?? ACTIVE_POLL_MS : IDLE_POLL_MS

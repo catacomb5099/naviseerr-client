@@ -392,6 +392,14 @@ export interface StatusResponse {
   youtubeMusic?: { reachable: boolean; detail: string | null }
 }
 
+/** GET /auth/session (19-10-2026). `mode` open = this install has no login on (Authentik not connected, or turned
+ *  off): everything works for everyone. `mode` authentik = a login is on; `authenticated` says whether this browser
+ *  holds a live session. Always 200. */
+export interface SessionResponse {
+  mode: 'open' | 'authentik'
+  authenticated?: boolean
+}
+
 /** GET/PUT /settings/login (19-10-2026): how this install connects to Authentik. `clientSecretSet` says whether a
  *  secret is stored (the secret itself never comes back); `enabled` whether the login is on (set by the first
  *  successful sign-in, cleared by Turn off); `redirectUrl` the address to paste into Authentik's Redirect URIs,
