@@ -43,6 +43,10 @@ export interface Playlist {
   artistIds?: (string | null)[]
   /** The search endpoint does not populate this (always 0); GET /collections/{id} does. */
   trackCount: number
+  /** How often the playlist itself was viewed, in YouTube Music's own wording ("375K views"), as its
+   *  search row shows it; shown as-is, never parsed. Null where YouTube Music shows a song count
+   *  instead (its own editorial playlists); absent from an older server. */
+  views?: string | null
 }
 
 export interface SearchResponse {

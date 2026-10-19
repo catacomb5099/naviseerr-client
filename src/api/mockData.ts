@@ -171,8 +171,11 @@ export const mockPlaylists: Playlist[] = [
     id: 'PLmock-jay-sean-essentials',
     iconURL: 'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png',
     name: 'Jay Sean Essentials',
-    artists: ['YouTube Music'],
-    trackCount: 4,
+    artists: ['Revive Music'],
+    trackCount: 0,
+    // Like the real server: a fan-made row carries YouTube's view count and no song count; one of YouTube
+    // Music's own ("YouTube Music", trackCount 51) would carry the song count and views: null, never both.
+    views: '375K views',
   },
 ]
 

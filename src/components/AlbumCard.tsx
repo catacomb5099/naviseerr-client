@@ -9,9 +9,10 @@ type AlbumCardProps = ({ kind: 'ALBUM'; item: Album } | { kind: 'PLAYLIST'; item
 }
 
 /** One card for both collection kinds: the art, the name, the artists, and a kind-specific third
- *  line (album year; playlist song count, or a static "Playlist" label when the search endpoint
- *  sends trackCount 0, which today is always). An album with no year keeps the line's height, so
- *  cards in a row line up. */
+ *  line (album year; a playlist's own view count in YouTube Music's words, "375K views", where its
+ *  search row shows one, else its song count, else a static "Playlist" label when the search
+ *  endpoint sends trackCount 0). An album with no year keeps the line's height, so cards in a row
+ *  line up. Album cards never show a count: YouTube Music shows none for albums. */
 export function AlbumCard(props: AlbumCardProps) {
   const { item, layout = 'carousel' } = props
   const [iconFailed, setIconFailed] = useState(false)
@@ -20,9 +21,7 @@ export function AlbumCard(props: AlbumCardProps) {
   const names = item.artists
   const thirdLine = props.kind === 'ALBUM'
     ? (props.item.year || '')
-    : props.item.trackCount > 0
-      ? `${props.item.trackCount} songs`
-      : 'Playlist'
+    : props.item.views || (props.item.trackCount > 0 ? `${props.item.trackCount} songs` : 'Playlist')
 
   // The whole card still opens the collection's own page (so the browser owns history and back),
   // but the artist line is a SIBLING of that link, not inside it: a link inside a link is invalid HTML
