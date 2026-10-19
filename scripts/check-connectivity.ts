@@ -66,6 +66,9 @@ assert(changes() === 7, 'an unsubscribed listener is not called')
 // server itself says (a search 502 is the YouTube helper; a 503 for suggested playlists is "no curator").
 assert(isServerDown('/api/downloads/active', 502) && isServerDown('http://localhost:8080/downloads/all?pageSize=10', 503),
   'a 502/503 on a downloads path is the server being down')
+assert(isServerDown('/api/auth/session', 502) && isServerDown('http://localhost:8080/auth/session', 503),
+  'a 502/503 on the session check is the server still starting behind the proxy: the amber bar, not a black page')
+assert(!isServerDown('/api/auth/session', 401), 'a 401 on the session check is the server answering (log in)')
 assert(!isServerDown('/api/search/oasis', 502), 'a search 502 is the YouTube helper, not the server')
 assert(!isServerDown('/api/suggested-playlists', 503), 'the curator not being configured is not the server being down')
 assert(!isServerDown('/api/downloads/active', 200) && !isServerDown('/api/downloads/x', 404), 'other statuses are the server answering')
