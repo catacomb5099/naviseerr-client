@@ -6,6 +6,7 @@ import { CollectionPage } from './pages/CollectionPage'
 import { ArtistPage } from './pages/ArtistPage'
 import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SetupPage } from './pages/SetupPage'
 import { LoginPage } from './pages/LoginPage'
 import { ConnectivityBar } from './components/ConnectivityBar'
 import { DownloadPanel } from './components/DownloadPanel'
@@ -13,6 +14,7 @@ import { SongInfoDialog } from './components/SongInfoDialog'
 import { SoulseekStatusBar } from './components/SoulseekStatusBar'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
 import { useSession } from './hooks/useSession'
+import { useSetup } from './hooks/useSetup'
 import { DownloadCardsContext } from './hooks/useItemDownload'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
 import { useDismissSound } from './hooks/useDismissSound'
@@ -36,10 +38,25 @@ function App() {
     void ask()
     return () => window.clearTimeout(handle)
   }, [session.status])
+  // Once signed in (or on an install with no login), has this install been set up? Until it has, the
+  // first-run screens stand in for the app, as the login card does. Login first: a connected Authentik
+  // must not let strangers see the setup.
+  const { setup, finished: setupFinished } = useSetup(session.status === 'in')
+  // Both gates passed: the pages render, and the downloads feed may poll.
+  const ready = session.status === 'in' && setup?.completed === true
   const navigate = useNavigate()
-  // A new page starts at the top; the query string (search, downloads paging) is not a new page.
-  const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  // A new page starts at the top, or at the section its address names (/settings#login, which React
+  // Router does not scroll to); the query string (search, downloads paging) is not a new page. Runs
+  // again when `ready` flips, since a page opened by its address mounts only then; and once more a
+  // moment later, because the sections above the named one fill in and push it down.
+  const { pathname, hash } = useLocation()
+  useEffect(() => {
+    const section = hash ? document.getElementById(hash.slice(1)) : null
+    if (!section) { window.scrollTo(0, 0); return }
+    section.scrollIntoView()
+    const again = window.setTimeout(() => section.scrollIntoView(), 1000)
+    return () => window.clearTimeout(again)
+  }, [pathname, hash, ready])
   const { muted, toggleMuted, playSwoosh } = useDismissSound()
   const {
     cards: downloadCards,
@@ -57,7 +74,7 @@ function App() {
     soulseekUsername,
     libraryProblem,
     youtubeMusicDown,
-  } = useActiveDownloads(playSwoosh, session.status === 'in')
+  } = useActiveDownloads(playSwoosh, ready)
   const library = useDownloadLibrary()
   // Which song's info pop-up is open, and on which page. One dialog for the whole app: every song row
   // opens it by id. Leaving that page (a link, Back, Forward) closes it: the pop-up belongs to the row
@@ -88,6 +105,23 @@ function App() {
       <div className="min-h-screen bg-black text-white">
         <ConnectivityBar />
         {session.status === 'out' && <LoginPage />}
+      </div>
+    )
+  }
+
+  if (!setup?.completed) {
+    // Nothing but the bar while unknown (no flash of Home); then the setup, whose address is its step.
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <ConnectivityBar />
+        {setup && (
+          <Routes>
+            <Route path="/setup/:step?" element={
+              <SetupPage libraryRoot={setup.libraryRoot} onFinished={() => { setupFinished(); navigate('/') }} />
+            } />
+            <Route path="*" element={<Navigate to="/setup/1" replace />} />
+          </Routes>
+        )}
       </div>
     )
   }

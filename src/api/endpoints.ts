@@ -1,11 +1,12 @@
 import { API_BASE_URL, ApiError, apiClient } from './client'
 import { NO_LOGIN } from '../lib/session'
+import { SETUP_DONE } from '../lib/setup'
 import {
   SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
-  SoulseekAccount,
+  SoulseekAccount, SetupStatus,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -485,6 +486,28 @@ export async function getSoulseekAccount(signal?: AbortSignal): Promise<Soulseek
 export async function putSoulseekAccount(username: string, password: string): Promise<SoulseekAccount> {
   if (USE_MOCK_DATA) return Promise.resolve({ username, generated: false, password: null, loggedIn: null, setInComposeFile: false })
   return apiClient<SoulseekAccount>('/settings/soulseek', { method: 'PUT', body: JSON.stringify({ username, password }) })
+}
+
+// --- First-run setup (19-10-2026) -----------------------------------------------------------------
+
+/**
+ * Has this install been through its first-run setup? Asked once the login gate is passed.
+ * GET /settings/setup -> {completed, libraryRoot}. A 404 is a server from before the setup existed:
+ * taken as completed, so the app works unchanged against it.
+ */
+export async function getSetup(signal?: AbortSignal): Promise<SetupStatus> {
+  if (USE_MOCK_DATA) return SETUP_DONE
+  try {
+    return await apiClient<SetupStatus>('/settings/setup', { signal })
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return SETUP_DONE
+    throw err
+  }
+}
+
+/** Finish on the last screen: the setup is remembered as done and never shown again. POST /settings/setup/done (204) */
+export function finishSetup(): Promise<void> {
+  return apiClient<void>('/settings/setup/done', { method: 'POST' })
 }
 
 /** Server-side cap on GET /downloads?ids= */
