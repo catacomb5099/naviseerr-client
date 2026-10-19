@@ -14,7 +14,8 @@ export function SetupStep({ step, total, intro, title, help, skipTo, children }:
   /** The welcome line, first screen only. */
   intro?: string
   title: string
-  help: string
+  /** One line under the question; a screen whose body carries its own words has none. */
+  help?: string
   /** Where "Not sure? Skip for now" goes; absent on a screen whose own buttons are the choice. */
   skipTo?: string
   children: ReactNode
@@ -28,8 +29,8 @@ export function SetupStep({ step, total, intro, title, help, skipTo, children }:
         {step !== undefined && <p className="text-sm text-zinc-400">{step} of {total}</p>}
         {intro && <p className="mt-4 text-sm text-zinc-300">{intro}</p>}
         <h1 className="mt-4 text-lg font-semibold text-zinc-200">{title}</h1>
-        <p className="mt-1 mb-6 text-sm text-zinc-400">{help}</p>
-        {children}
+        {help && <p className="mt-1 text-sm text-zinc-400">{help}</p>}
+        <div className="mt-6">{children}</div>
         {skipTo && (
           <p className="mt-6 text-sm">
             <Link
