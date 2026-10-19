@@ -7,8 +7,8 @@ import { CandidatesLoad, ManualImportTarget, useCandidates } from '../hooks/useC
 import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
-  GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel, qualityRank,
-  qualityText, searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
+  GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, lastFolders, qualityLabel,
+  qualityRank, qualityText, searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../lib/candidates'
 import { formatDuration } from '../lib/utils'
 import { CandidateTable, Column, Sort } from './CandidateTable'
@@ -54,24 +54,34 @@ const GRADE_CLASS: Record<string, string> = {
 
 const fmt = (c: SongCandidate) => formatOf(c.filename) || c.extension
 
-/** A file or folder name over the folder it sits in, as slskd reports it. The folder line is cut from the
- *  LEFT so the useful end (artist\album) stays readable: dir="rtl" moves the ellipsis to the start and
- *  <bdi> keeps the characters in order (measured in Chromium; a plain rtl span flips leading "@@" to the
- *  end). The cell's title carries the whole path for hover; the DOM holds it whole for screen readers, with
- *  a hidden ", in " between name and folder so the two are not read as one run-on word. */
-function PathCell({ path }: { path: string }) {
-  const folder = folderOf(path)
+/** A file's name, the whole slskd path on hover. On a phone the Folder column is gone, so the file's last two
+ *  folders stack under the name instead (a hidden ", in " keeps the two apart for screen readers). The cell is
+ *  narrow enough on a phone to stay clear of the pinned Download button. */
+function FileCell({ path }: { path: string }) {
+  const dir = folderOf(path)
   return (
-    <span title={path} className="block max-w-[18rem]">
+    <span title={path} className="block max-w-[10.5rem]">
       <span className="block truncate">{basename(path)}</span>
-      {folder && <span className="sr-only">, in </span>}
-      {folder && <span dir="rtl" className="block truncate text-left text-[11px] text-zinc-500"><bdi>{folder}</bdi></span>}
+      {dir && <span className="sr-only md:hidden">, in </span>}
+      {dir && <span className="block truncate text-[11px] text-zinc-500 md:hidden">{lastFolders(dir)}</span>}
     </span>
   )
 }
 
+/** The last two folders of a shared path, cut at the END with the ellipsis (Sonarr's Relative Path column), the
+ *  whole path on hover. */
+function FolderCell({ dir, className }: { dir: string; className: string }) {
+  return <span title={dir} className={`block truncate ${className}`}>{lastFolders(dir)}</span>
+}
+
 const SONG_COLUMNS: Column<SongCandidate>[] = [
-  { key: 'file', label: 'File', sortValue: c => basename(c.filename), render: c => <PathCell path={c.filename} /> },
+  { key: 'file', label: 'File', sortValue: c => basename(c.filename), render: c => <FileCell path={c.filename} /> },
+  // Sorting by the WHOLE folder path keeps one sharer's folder together; the cell shows its last two pieces. Phones
+  // do without the column (the File cell stacks the folder instead), hence the class.
+  {
+    key: 'folder', label: 'Folder', className: 'hidden md:table-cell', sortValue: c => folderOf(c.filename),
+    render: c => <FolderCell dir={folderOf(c.filename)} className="max-w-[11rem] text-zinc-400" />,
+  },
   {
     // Format and quality in one cell ("FLAC · Lossless", "MP3 · 320 kbps"), as Sonarr's Quality column names
     // codec and resolution together; sorted lossless first, then by bit rate. The filter still matches the format word.
@@ -85,7 +95,9 @@ const SONG_COLUMNS: Column<SongCandidate>[] = [
   },
   { key: 'size', label: 'Size', align: 'right', firstDir: 'desc', sortValue: c => c.size, render: c => formatBytes(c.size) },
   { key: 'speed', label: 'Speed', align: 'right', firstDir: 'desc', sortValue: c => c.uploadSpeed, render: c => formatSpeed(c.uploadSpeed) },
-  { key: 'sharer', label: 'Sharer', sortValue: c => c.username, render: c => c.username },
+  // Cut with the whole name on hover: a 20-character Soulseek name (real ones run to 30) pushed the Match badge under the
+  // pinned button at 1280 px (measured 19-10-2026: 39 px over without this and the two cuts above).
+  { key: 'sharer', label: 'Sharer', sortValue: c => c.username, render: c => <span title={c.username} className="block max-w-[7.5rem] truncate">{c.username}</span> },
   { key: 'slot', label: 'Slot / Queue', sortValue: c => slotRank(c), render: c => slotLabel(c) },
   {
     key: 'match', label: 'Match', sortValue: c => gradeRank(c.grade),
@@ -101,8 +113,11 @@ const SONG_COLUMNS: Column<SongCandidate>[] = [
 const SONG_HAYSTACK = (c: SongCandidate) => [c.filename, c.username, fmt(c)]
 
 const ALBUM_COLUMNS: Column<AlbumFolder>[] = [
+  // The folder first, as Sonarr and Lidarr list the path first and slskd heads each group with its folder; sorted by
+  // the whole path. 8.5 rem on a phone: the chevron column and the cell padding take 52 px, 52 + 136 = 188 < 191 where
+  // the pinned Download button starts in a 375 px window (measured 19-10-2026).
+  { key: 'folder', label: 'Folder', sortValue: f => f.folder, render: f => <FolderCell dir={f.folder} className="max-w-[8.5rem] md:max-w-[18rem]" /> },
   { key: 'sharer', label: 'Sharer', sortValue: f => f.username, render: f => f.username },
-  { key: 'folder', label: 'Folder', sortValue: f => basename(f.folder), render: f => <PathCell path={f.folder} /> },
   { key: 'files', label: 'Files', align: 'right', firstDir: 'desc', sortValue: f => f.fileCount, render: f => `${f.fileCount}` },
   { key: 'size', label: 'Size', align: 'right', firstDir: 'desc', sortValue: f => f.totalSize, render: f => formatBytes(f.totalSize) },
   { key: 'speed', label: 'Speed', align: 'right', firstDir: 'desc', sortValue: f => f.uploadSpeed, render: f => formatSpeed(f.uploadSpeed) },

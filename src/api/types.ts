@@ -399,7 +399,8 @@ export type CandidateStatus = 'READY' | 'SEARCHING' | 'NONE'
 export type CandidateGrade = 'EXACT' | 'OTHER_VERSION' | 'UNVERIFIED' | 'NONE'
 
 /** One file a Soulseek user shares that matched the song's search. `filename` is slskd's full path,
- *  verbatim (backslashes, share alias and all): shown as its name over its folder, sent back unchanged on a pick. */
+ *  verbatim (backslashes, share alias and all): shown as a File column (its name) and a Folder column (the last
+ *  two folders, the whole path on hover), sent back unchanged on a pick. */
 export interface SongCandidate {
   username: string
   filename: string
@@ -457,7 +458,7 @@ export interface AlbumFolderFile {
 }
 
 /** One sharer's folder holding (most of) the album. `folder` is slskd's full directory path, verbatim:
- *  shown as its name over the folder it sits in, sent back unchanged on a pick. */
+ *  shown as its last two folders in the Folder column (the whole path on hover), sent back unchanged on a pick. */
 export interface AlbumFolder {
   username: string
   folder: string
