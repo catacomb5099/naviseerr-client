@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { ApiError } from '../../api/client'
 import { deleteMediaServer, getMediaServers, putMediaServers } from '../../api/endpoints'
 import { MediaServerKind, MediaServersSettings } from '../../api/types'
-import { MEDIA_SERVER_ENV, MEDIA_SERVER_NAME, canSaveMediaServer, mediaServerStatusCopy } from '../../lib/mediaServers'
+import { MEDIA_SERVER_ENV, MEDIA_SERVER_NAME, canSaveMediaServer, mediaServerStatusCopy, secretSavedInApp } from '../../lib/mediaServers'
 import { serverMessage } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -98,7 +98,7 @@ export function MediaServerStep({ onDone }: { onDone?: () => void }) {
 
   if (pick) {
     const name = MEDIA_SERVER_NAME[pick]
-    const secretSet = pick === 'navidrome' ? settings.navidrome?.passwordSet ?? false : settings.jellyfin?.apiKeySet ?? false
+    const secretSet = secretSavedInApp(settings, pick)
     return (
       <form onSubmit={save} className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4" aria-label={`Connect ${name}`}>
         <p className="text-sm font-medium text-zinc-200">{name}</p>
@@ -125,7 +125,7 @@ export function MediaServerStep({ onDone }: { onDone?: () => void }) {
             placeholder={secretSet ? 'unchanged' : ''} aria-describedby="media-secret-help" className={FIELD} />
           <p id="media-secret-help" className="mt-1 text-xs text-zinc-400">
             {pick === 'jellyfin' ? 'Jellyfin: Dashboard → API Keys → +. ' : ''}
-            Kept on the server and never shown again{secretSet ? '; leave empty to keep the one already saved' : ''}.
+            Kept on the server and never shown again{secretSet ? '; leave empty to keep the one already saved for this address' : ''}.
           </p>
         </div>
         {resultLine}

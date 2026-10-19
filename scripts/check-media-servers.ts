@@ -1,5 +1,5 @@
 /** Pins the music-app step's rules and lines (src/lib/mediaServers.ts). Runs from check-download-state.ts. */
-import { canSaveMediaServer, mediaServerStatusCopy, musicAppSummary } from '../src/lib/mediaServers'
+import { canSaveMediaServer, mediaServerStatusCopy, musicAppSummary, secretSavedInApp } from '../src/lib/mediaServers'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -15,6 +15,13 @@ assert(!canSaveMediaServer('navidrome', 'http://x', 'admin', '', false), 'no pas
 assert(canSaveMediaServer('jellyfin', 'http://192.168.1.10:8096', '', 'key', false), 'Jellyfin needs no username')
 assert(!canSaveMediaServer('jellyfin', 'http://x', '', '', false), 'no API key and none stored: cannot save')
 assert(canSaveMediaServer('jellyfin', 'http://x', '', '', true), 'stored API key kept')
+
+// A secret may be left empty only when the app saved one: the install file's is not reused by the server.
+const fromFile = { navidrome: { url: 'http://nas:4533', username: 'admin', passwordSet: true, fromInstallFile: true }, jellyfin: null, status: [] }
+assert(!secretSavedInApp(fromFile, 'navidrome'), 'install-file password: must be typed')
+assert(!secretSavedInApp(fromFile, 'jellyfin'), 'no Jellyfin at all: must be typed')
+assert(secretSavedInApp({ ...fromFile, navidrome: { ...fromFile.navidrome, fromInstallFile: false } }, 'navidrome'), 'saved in the app: may be left empty')
+assert(secretSavedInApp({ ...fromFile, jellyfin: { url: 'http://nas:8096', apiKeySet: true, fromInstallFile: false } }, 'jellyfin'), 'saved Jellyfin key: may be left empty')
 
 // The saved state reads the server's last outcome.
 const url = 'http://192.168.1.10:4533'

@@ -13,6 +13,16 @@ export const MEDIA_SERVER_ENV: Record<MediaServerKind, string> = {
   jellyfin: 'JELLYFIN_URL, JELLYFIN_API_KEY',
 }
 
+/**
+ * The password or API key may be left empty only when the app saved one for that server: the server reuses what it
+ * stored, never the install file's line, so a value in force from the install file still has to be typed.
+ */
+export function secretSavedInApp(settings: MediaServersSettings, kind: MediaServerKind): boolean {
+  const s = settings[kind]
+  if (!s || s.fromInstallFile) return false
+  return 'passwordSet' in s ? s.passwordSet : s.apiKeySet
+}
+
 /** An http(s) address, the login (Navidrome needs an admin username), and a secret unless one is already stored. */
 export function canSaveMediaServer(kind: MediaServerKind, url: string, login: string, secret: string, secretSet: boolean): boolean {
   if (!/^https?:\/\/\S+$/.test(url.trim())) return false
