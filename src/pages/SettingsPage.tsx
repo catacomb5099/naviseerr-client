@@ -2,14 +2,15 @@ import { ArrowLeft } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { AuthentikStep } from '../components/setup/AuthentikStep'
+import { DownloadQualityStep } from '../components/setup/DownloadQualityStep'
 import { MediaServerStep } from '../components/setup/MediaServerStep'
 import { PlaylistsStep } from '../components/setup/PlaylistsStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
 
 /**
  * Settings: one section per thing a person may change about their install, in the first-run setup's
- * order and built from its step components (without `onDone`, each section saves itself): Soulseek, the
- * music app, the weekly playlists and the login (19-10-2026). Reached from the gear on every page, the amber "Not connected to
+ * order and built from its step components (without `onDone`, each section saves itself): the download
+ * quality, Soulseek, the music app, the weekly playlists and the login (19-10-2026). Reached from the gear on every page, the amber "Not connected to
  * Soulseek" strip's Fix link, and directly at /settings#<section>.
  */
 export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void }) {
@@ -19,7 +20,16 @@ export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void })
         <PageNavButton label="Search" icon={<ArrowLeft className="w-4 h-4" />} onClick={onNavigateHome} />
       } />
       <h2 className="mb-6 text-2xl font-bold">Settings</h2>
-      <section id="soulseek" aria-labelledby="soulseek-heading" className="max-w-2xl space-y-3">
+      <section id="download-quality" aria-labelledby="download-quality-heading" className="max-w-2xl space-y-3">
+        <h3 id="download-quality-heading" className="text-lg font-semibold">Download quality</h3>
+        <p className="text-sm text-zinc-400">
+          The quality every download aims for, songs, albums and playlists alike. When Soulseek has nothing at that quality
+          the nearest is taken, and the Quality column on the Downloads page says what you really got. Saved the moment you
+          pick one.
+        </p>
+        <DownloadQualityStep />
+      </section>
+      <section id="soulseek" aria-labelledby="soulseek-heading" className="mt-10 max-w-2xl space-y-3">
         <h3 id="soulseek-heading" className="text-lg font-semibold">Soulseek</h3>
         <p className="text-sm text-zinc-400">
           The account this install's Soulseek client logs in with. Downloads come from the Soulseek network, so

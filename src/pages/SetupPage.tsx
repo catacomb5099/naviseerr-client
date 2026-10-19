@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DoneStep } from '../components/setup/DoneStep'
+import { DownloadQualityStep } from '../components/setup/DownloadQualityStep'
 import { ExposureStep } from '../components/setup/ExposureStep'
 import { MediaServerStep } from '../components/setup/MediaServerStep'
 import { PlaylistsStep } from '../components/setup/PlaylistsStep'
@@ -18,6 +19,11 @@ import { stepIndex, stepPath } from '../lib/setup'
  */
 /** `noSkip`: the screen's own controls are the choice, so no Skip link under them. */
 const steps: { title: string; help?: string; body: (next: () => void) => ReactNode; noSkip?: boolean }[] = [
+  {
+    title: 'What quality do you want your music in?',
+    help: 'Every song, album and playlist is looked for at this quality first; when Soulseek has none, the nearest is taken, and the Downloads page says what you got.',
+    body: next => <DownloadQualityStep onDone={next} />,
+  },
   {
     title: 'Your Soulseek account',
     help: 'naviseerr downloads from the Soulseek network as this account. Passwords cannot be reset, so write it down.',
@@ -43,7 +49,7 @@ const steps: { title: string; help?: string; body: (next: () => void) => ReactNo
 ]
 
 const welcome = (libraryRoot: string | null) =>
-  'Welcome to naviseerr. Four short questions; skip any, change all of them later in Settings.'
+  'Welcome to naviseerr. Five short questions; skip any, change all of them later in Settings.'
   + (libraryRoot ? ` Your music lands in ${libraryRoot} (set in the install file).` : '')
 
 export function SetupPage({ libraryRoot, onFinished }: { libraryRoot: string | null; onFinished: () => void }) {

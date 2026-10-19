@@ -7,7 +7,7 @@ import {
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
   SoulseekAccount, SetupStatus, MediaServerChange, MediaServerKind, MediaServersSettings, SuggestedPlaylistsSettings,
-  SlskdSettings,
+  SlskdSettings, DownloadQuality, DownloadQualitySettings,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -537,6 +537,18 @@ export function putMediaServers(change: MediaServerChange): Promise<MediaServers
  */
 export function deleteMediaServer(kind: MediaServerKind): Promise<void> {
   return apiClient<void>(`/settings/media-servers/${kind}`, { method: 'DELETE' })
+}
+
+// --- Download quality (19-10-2026) ----------------------------------------------------------------
+
+/** The quality every download aims for, and whether anyone chose it. Never cached. GET /settings/download-quality  (404 on an older server) */
+export function getDownloadQuality(signal?: AbortSignal): Promise<DownloadQualitySettings> {
+  return apiClient<DownloadQualitySettings>('/settings/download-quality', { signal })
+}
+
+/** Choose a tier; the next search already follows it. PUT /settings/download-quality {quality}  (200; 400 {message} for an unknown word) */
+export function putDownloadQuality(quality: DownloadQuality): Promise<DownloadQualitySettings> {
+  return apiClient<DownloadQualitySettings>('/settings/download-quality', { method: 'PUT', body: JSON.stringify({ quality }) })
 }
 
 // --- Weekly suggested playlists: the opt-in (19-10-2026) ------------------------------------------

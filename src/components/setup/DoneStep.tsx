@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { ApiError } from '../../api/client'
 import {
-  finishSetup, getMediaServers, getSession, getSlskdSettings, getSoulseekAccount, getSuggestedPlaylistsSettings,
+  finishSetup, getDownloadQuality, getMediaServers, getSession, getSlskdSettings, getSoulseekAccount,
+  getSuggestedPlaylistsSettings,
 } from '../../api/endpoints'
+import { qualitySummary } from '../../lib/downloadQuality'
 import { musicAppSummary } from '../../lib/mediaServers'
 import { loginSummary, soulseekSummary } from '../../lib/setup'
 import { playlistsSummary } from '../../lib/suggested'
@@ -31,8 +33,10 @@ export function DoneStep({ libraryRoot, onDone }: { libraryRoot: string | null; 
     const music = getMediaServers(controller.signal).catch(() => null)
     const playlists = getSuggestedPlaylistsSettings(controller.signal).catch(() => null)
     const slskd = getSlskdSettings(controller.signal).catch(() => null)
-    Promise.all([soulseek, slskd, music, playlists, getSession()]).then(
-      ([account, own, servers, weekly, session]) => setLines([
+    const quality = getDownloadQuality(controller.signal).catch(() => null)
+    Promise.all([quality, soulseek, slskd, music, playlists, getSession()]).then(
+      ([tier, account, own, servers, weekly, session]) => setLines([
+        ...(tier ? [qualitySummary(tier)] : []),
         soulseekSummary(account, own),
         ...(servers ? [musicAppSummary(servers)] : []),
         ...(weekly ? [playlistsSummary(weekly)] : []),
