@@ -232,7 +232,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                 const plays = formatPlays(track.popularity)
                 return (
                   <li key={track.position} className="h-16 sm:h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
-                    <span className="w-6 text-right text-sm text-zinc-500 tabular-nums">{track.position}</span>
+                    <span className="hidden sm:block w-6 text-right text-sm text-zinc-500 tabular-nums">{track.position}</span>
                     {track.iconURL ? (
                       <img src={track.iconURL} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="h-10 w-10 rounded object-cover bg-zinc-800" />
                     ) : (

@@ -123,7 +123,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
               <div className="min-w-0 max-w-full">
                 {artist ? (
                   <>
-                    <h2 className="text-3xl md:text-5xl font-bold line-clamp-2">{artist.name}</h2>
+                    <h2 className="text-3xl md:text-5xl font-bold line-clamp-2 sm:line-clamp-none sm:truncate">{artist.name}</h2>
                     {artist.subscribers && <p className="mt-2 text-zinc-400">{artist.subscribers} subscribers</p>}
                   </>
                 ) : (
@@ -143,7 +143,7 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
                 <ol aria-label="Loading songs" className="space-y-2">
                   {Array.from({ length: COLLAPSED_SONGS }, (_, i) => (
                     <li key={i} className="flex items-center gap-3">
-                      <span className="w-6" />
+                      <span className="hidden sm:block w-6" />
                       <div className={`flex-1 h-24 rounded-md ${PULSE}`} />
                     </li>
                   ))}
@@ -157,7 +157,8 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
                   <ol id="top-songs" className="space-y-2">
                     {shownSongs.map((track, i) => (
                       <li key={i} className="flex items-center gap-3">
-                        <span className="w-6 text-right text-sm text-zinc-500 tabular-nums">{i + 1}</span>
+                        {/* No rank on phones (YouTube Music's top songs show none): the 36 px go to the title. */}
+                        <span className="hidden sm:block w-6 text-right text-sm text-zinc-500 tabular-nums">{i + 1}</span>
                         <div className="flex-1 min-w-0">
                           <SongCard
                             track={track}
