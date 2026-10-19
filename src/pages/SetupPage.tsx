@@ -68,13 +68,13 @@ function AccountStep({ onDone }: StepProps) {
         </div>
         <div className="space-y-1.5">
           <label htmlFor="setup-password" className="text-sm text-zinc-300">Password</label>
-          <Input id="setup-password" type="password" autoComplete="new-password" required minLength={8} value={password}
-            onChange={e => setPassword(e.target.value)} />
-          <p className="text-xs text-zinc-500">At least 8 characters.</p>
+          <Input id="setup-password" type="password" autoComplete="new-password" required minLength={8} maxLength={72}
+            value={password} onChange={e => setPassword(e.target.value)} />
+          <p className="text-xs text-zinc-500">8 to 72 characters.</p>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="setup-confirm" className="text-sm text-zinc-300">Password again</label>
-          <Input id="setup-confirm" type="password" autoComplete="new-password" required value={confirm}
+          <Input id="setup-confirm" type="password" autoComplete="new-password" required maxLength={72} value={confirm}
             onChange={e => setConfirm(e.target.value)} />
         </div>
         {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
