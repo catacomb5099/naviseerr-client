@@ -42,7 +42,7 @@ export function SoulseekStatusBar({ loggedIn, username, libraryProblem, youtubeM
       )}
       {youtubeMusicDown && (
         <div role="status" className={`${strip} border-t border-amber-700`}>
-          YouTube Music isn't answering — search and new downloads will wait until it is back
+          YouTube Music isn't answering — search won't work and new downloads will wait until it is back
         </div>
       )}
     </div>
