@@ -261,6 +261,9 @@ export interface DownloadSongView {
   slskdUsername: string | null
   slskdFilename: string | null
   lastError: string | null
+  /** Where the file is in the server's music library once filed; absent on older servers. A song the
+   *  library already had is done from the start with this set and no sharer of its own. */
+  libraryPath?: string | null
 }
 
 /** GET /downloads/{id}. `songs` is empty until the download has been admitted. */

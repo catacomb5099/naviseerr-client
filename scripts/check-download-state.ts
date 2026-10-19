@@ -13,7 +13,7 @@ import './check-youtube-music'
 import './check-artist-names'
 import './check-candidates'
 import { ActiveDownloadView } from '../src/api/types'
-import { DownloadCardState, alreadyCopy, failureCopy, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
+import { DownloadCardState, alreadyCopy, doneWord, failureCopy, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
 import { apiErrorMessage, formatPlays, formatViews } from '../src/lib/utils'
 
@@ -120,6 +120,8 @@ assert(!isTerminal('DOWNLOADING') && !isTerminal('QUEUED'), 'non-terminal stages
 assert(failureCopy('CANCELLED') === 'Cancelled', 'cancelled wording')
 assert(failureCopy('SOULSEEK_OFFLINE') === 'Not connected to Soulseek', 'Soulseek offline wording')
 assert(failureCopy('SOMETHING_NEW') === 'Download failed', 'an unknown code falls back')
+assert(doneWord({ slskdUsername: 'vinyl_hoarder_77' }) === 'Done', 'a song a sharer sent is done')
+assert(doneWord({ slskdUsername: null }) === 'In your library', 'a song never fetched from Soulseek was already in the library')
 
 // A 502 or 503 reads as plain words; search gets its own sentence; other statuses are unchanged.
 assert(apiErrorMessage('http://x/search/daft%20punk', 502, 'Bad Gateway') === 'Search is not available right now. Try again in a minute.', 'search 502')

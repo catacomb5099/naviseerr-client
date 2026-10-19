@@ -5,7 +5,7 @@ import { getDownloadDetail } from '../api/endpoints'
 import { DownloadSongView, DownloadStage } from '../api/types'
 import { ManualImportTarget } from '../hooks/useCandidates'
 import { DownloadItem, collectionPath, itemStageLabel } from '../lib/downloadLibrary'
-import { failureCopy, isCancelled, isTerminal } from '../lib/downloadPanel'
+import { doneWord, failureCopy, isCancelled, isTerminal } from '../lib/downloadPanel'
 import { collectionSummary } from '../lib/collectionProgress'
 import { formatDuration } from '../lib/utils'
 import { CollectionProgress, CollectionSummary } from './CollectionProgress'
@@ -50,7 +50,7 @@ const WAITING_COPY: Partial<Record<DownloadStage, string>> = {
 function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; color: string } {
   switch (song.stage) {
     case 'SUCCEEDED':
-      return { glyph: <CircleCheck className="w-4 h-4" aria-hidden="true" />, word: 'Done', color: 'text-green-500' }
+      return { glyph: <CircleCheck className="w-4 h-4" aria-hidden="true" />, word: doneWord(song), color: 'text-green-500' }
     case 'FAILED':
       if (song.failureCode === 'CANCELLED') {
         return { glyph: <Ban className="w-4 h-4" aria-hidden="true" />, word: 'Cancelled', color: 'text-zinc-400' }
@@ -97,7 +97,7 @@ function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight
           {song.slskdUsername && <span className="text-zinc-500" title={song.slskdFilename ?? undefined}> · from {song.slskdUsername}</span>}
         </p>
       </div>
-      <span className={`flex items-center gap-1.5 text-xs ${status.color}`}>
+      <span className={`flex items-center gap-1.5 text-xs ${status.color}`} title={song.libraryPath ?? undefined}>
         {status.glyph}
         {status.word}
       </span>

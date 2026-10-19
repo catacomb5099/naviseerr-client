@@ -120,6 +120,14 @@ export function failureCopy(failureCode: string | null): string {
   return (failureCode && FAILURE_COPY[failureCode]) || 'Download failed'
 }
 
+/** The word next to a finished song's check mark. Spotify and Apple Music show a song you already have
+ *  as simply available, never where it came from: a song that was never fetched from Soulseek (your
+ *  library had it, or the server copied it from another album you own) reads "In your library"; one a
+ *  sharer sent reads "Done". */
+export function doneWord(song: { slskdUsername: string | null }): string {
+  return song.slskdUsername ? 'Done' : 'In your library'
+}
+
 /** What each stage says on the card. DOWNLOADING is absent: it renders a percentage instead. */
 const STAGE_COPY: Record<Exclude<DownloadStage, 'DOWNLOADING' | 'FAILED'>, string> = {
   QUEUED: 'Waiting',
