@@ -20,16 +20,6 @@ export function folderOf(path: string): string {
   return cut > 0 ? path.slice(0, cut) : ''
 }
 
-/** The last `keep` folders of a directory path, "…\\" first when more were cut: "…\\Oasis\\(1994) Definitely Maybe"
- *  for `@@music\\Oasis\\(1994) Definitely Maybe`, a two-folder path unchanged. Joined with a backslash, as slskd
- *  writes paths; "" for "". What the Folder column shows (19-10-2026); the whole path stays on hover. */
-export function lastFolders(dir: string, keep = 2): string {
-  const parts = dir.split(/[\\/]/).filter(Boolean)
-  if (parts.length === 0) return ''
-  const tail = parts.slice(-keep).join('\\')
-  return parts.length > keep ? `…\\${tail}` : tail
-}
-
 /** The format from the file name's suffix, lower-case ("flac", "mp3"); "" when there is none. The
  *  server does the same because slskd's own extension field is often blank or wrong. */
 export function formatOf(filename: string): string {

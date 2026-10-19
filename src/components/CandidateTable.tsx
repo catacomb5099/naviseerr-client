@@ -2,16 +2,22 @@ import { useId, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight } from 'lucide-react'
 import { SortDir, SortValue } from '../lib/candidates'
 
-export interface Column<T> {
+/** One way to sort the table: a header button's label and the value it sorts by. */
+export interface SortKey<T> {
   key: string
   label: string
-  align?: 'left' | 'right'
-  /** Extra classes on the column's header and cells, e.g. `hidden md:table-cell` for a column phones do without. */
-  className?: string
   /** Which way the first click on the header sorts. Numbers go descending first (the biggest or best
    *  on top is what a person clicking "Speed" wants); text ascending. */
   firstDir?: SortDir
   sortValue: (row: T) => SortValue
+}
+
+export interface Column<T> extends SortKey<T> {
+  align?: 'left' | 'right'
+  /** Extra classes on the column's header and cells, e.g. `hidden md:table-cell` for a column phones do without. */
+  className?: string
+  /** A second sort button in the same header, for a cell that shows two things (the File cell: name over folder). */
+  alsoSort?: SortKey<T>
   render: (row: T) => ReactNode
 }
 
@@ -58,10 +64,24 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
     return next
   })
   const span = columns.length + (renderAction ? 1 : 0) + (renderExpanded ? 1 : 0)
-  const next = (col: Column<T>): Sort => sort?.key === col.key
-    ? { key: col.key, dir: sort.dir === 'asc' ? 'desc' : 'asc' }
-    : { key: col.key, dir: col.firstDir ?? 'asc' }
+  const next = (k: SortKey<T>): Sort => sort?.key === k.key
+    ? { key: k.key, dir: sort.dir === 'asc' ? 'desc' : 'asc' }
+    : { key: k.key, dir: k.firstDir ?? 'asc' }
   const cellAlign = (col: Column<T>) => col.align === 'right' ? 'text-right tabular-nums' : 'text-left'
+  const sortButton = (k: SortKey<T>) => {
+    const active = sort?.key === k.key
+    return (
+      <button type="button" className={`${HEADER_BUTTON} ${active ? 'text-white' : ''}`} onClick={() => onSort(next(k))}>
+        {k.label}
+        {active
+          ? sort.dir === 'asc'
+            ? <ArrowUp className="w-3 h-3" aria-hidden="true" />
+            : <ArrowDown className="w-3 h-3" aria-hidden="true" />
+          : <ArrowUpDown className="w-3 h-3 opacity-40" aria-hidden="true" />}
+        <span className="sr-only">{active ? `, sorted ${sort.dir === 'asc' ? 'ascending' : 'descending'}` : ', sort'}</span>
+      </button>
+    )
+  }
 
   return (
     <div className="overflow-x-auto overscroll-x-contain rounded-lg border border-zinc-800">
@@ -70,23 +90,17 @@ export function CandidateTable<T>({ columns, rows, rowKey, sort, onSort, isCurre
           <tr>
             {renderExpanded && <th scope="col" className="w-8 px-1"><span className="sr-only">Files</span></th>}
             {columns.map(col => {
-              const active = sort?.key === col.key
+              // The header is sorted when either of its buttons is the sort key.
+              const dir = sort && (sort.key === col.key || sort.key === col.alsoSort?.key) ? sort.dir : null
               return (
                 <th
                   key={col.key}
                   scope="col"
-                  aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                  aria-sort={dir ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}
                   className={`px-2.5 py-2 font-medium ${cellAlign(col)} ${col.className ?? ''}`}
                 >
-                  <button type="button" className={`${HEADER_BUTTON} ${active ? 'text-white' : ''}`} onClick={() => onSort(next(col))}>
-                    {col.label}
-                    {active
-                      ? sort.dir === 'asc'
-                        ? <ArrowUp className="w-3 h-3" aria-hidden="true" />
-                        : <ArrowDown className="w-3 h-3" aria-hidden="true" />
-                      : <ArrowUpDown className="w-3 h-3 opacity-40" aria-hidden="true" />}
-                    <span className="sr-only">{active ? `, sorted ${sort.dir === 'asc' ? 'ascending' : 'descending'}` : ', sort'}</span>
-                  </button>
+                  {sortButton(col)}
+                  {col.alsoSort && <span className="ml-3">{sortButton(col.alsoSort)}</span>}
                 </th>
               )
             })}
