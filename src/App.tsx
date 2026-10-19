@@ -5,20 +5,37 @@ import { DownloadsPage } from './pages/DownloadsPage'
 import { CollectionPage } from './pages/CollectionPage'
 import { ArtistPage } from './pages/ArtistPage'
 import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
+import { LoginPage } from './pages/LoginPage'
+import { SetupPage } from './pages/SetupPage'
 import { ConnectivityBar } from './components/ConnectivityBar'
 import { DownloadPanel } from './components/DownloadPanel'
 import { SongInfoDialog } from './components/SongInfoDialog'
 import { SoulseekStatusBar } from './components/SoulseekStatusBar'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
+import { useSession } from './hooks/useSession'
 import { DownloadCardsContext } from './hooks/useItemDownload'
 import { useDownloadLibrary } from './hooks/useDownloadLibrary'
 import { useDismissSound } from './hooks/useDismissSound'
 import { DownloadMetaInput } from './lib/downloadLibrary'
 import { RequestOutcome } from './lib/downloadPanel'
-import { DownloadRequestOptions } from './api/endpoints'
+import { DownloadRequestOptions, getSession } from './api/endpoints'
 import { DownloadType } from './api/types'
+import { applySession } from './lib/session'
 
 function App() {
+  // Who is signed in gates everything below: no account yet shows the first-run screen, logged out the
+  // login screen, and only 'in' renders the pages (and lets the downloads feed poll).
+  const session = useSession()
+  useEffect(() => {
+    // Asked once at start, and again whenever a 401 logs this tab out: 'out' may really be 'no account
+    // yet' (a server reset by the README's forgot-your-password recipe), which the login screen cannot
+    // tell. A server that does not answer is asked again every five seconds; the amber bar says so.
+    if (session.status !== 'unknown' && session.status !== 'out') return
+    let handle: number | undefined
+    const ask = () => getSession().then(applySession, () => { handle = window.setTimeout(ask, 5000) })
+    void ask()
+    return () => window.clearTimeout(handle)
+  }, [session.status])
   const navigate = useNavigate()
   // A new page starts at the top; the query string (search, downloads paging) is not a new page.
   const { pathname } = useLocation()
@@ -39,7 +56,7 @@ function App() {
     soulseekLoggedIn,
     soulseekUsername,
     libraryProblem,
-  } = useActiveDownloads(playSwoosh)
+  } = useActiveDownloads(playSwoosh, session.status === 'in')
   const library = useDownloadLibrary()
   // Which song's info pop-up is open, and on which page. One dialog for the whole app: every song row
   // opens it by id. Leaving that page (a link, Back, Forward) closes it: the pop-up belongs to the row
@@ -62,6 +79,17 @@ function App() {
     // records nothing, and an existing download already has the server's own name and artwork.
     if (outcome.status === 'accepted') library.record(outcome.download.downloadId, meta)
     return outcome
+  }
+
+  if (session.status !== 'in') {
+    // The address is kept as it is, so logging in at /downloads lands on the Downloads page.
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <ConnectivityBar />
+        {session.status === 'setup' && <SetupPage />}
+        {session.status === 'out' && <LoginPage />}
+      </div>
+    )
   }
 
   return (

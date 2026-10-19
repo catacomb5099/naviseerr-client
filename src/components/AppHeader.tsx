@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { AccountMenu } from './AccountMenu'
 
 interface AppHeaderProps {
   /** Rendered to the right of the title: the page-switch control. */
@@ -21,7 +22,10 @@ export function AppHeader({ action, children }: AppHeaderProps) {
             <span className="bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">Naviseerr</span>
           </Link>
         </h1>
-        {action}
+        <div className="flex items-center gap-2">
+          {action}
+          <AccountMenu />
+        </div>
       </div>
       {children}
     </header>

@@ -76,9 +76,14 @@ function saveSnapshot(snapshot: Snapshot) {
  * a card that is merely absent from a response, because absence is the normal state of a download
  * the runner has not picked up yet, and dismissing those is how a card vanished mid-flight while
  * still reading "in progress".
+ *
+ * `active` is "somebody is signed in" (19-10-2026): the loop starts on the first true, books nothing and
+ * drops its in-flight calls while false (every poll would be a 401), and asks again when it turns true.
  */
-export function useActiveDownloads(playSwoosh: () => void) {
+export function useActiveDownloads(playSwoosh: () => void, active: boolean) {
   const initial = useRef(loadSnapshot()).current
+  const activeRef = useRef(active)
+  useEffect(() => { activeRef.current = active }, [active])
 
   const [cards, setCards] = useState<Record<string, DownloadCardState>>(() => {
     const result: Record<string, DownloadCardState> = {}
@@ -285,11 +290,13 @@ export function useActiveDownloads(playSwoosh: () => void) {
       serverPollIntervalMs: pollIntervalRef.current,
       consecutiveFailures: failuresRef.current,
       browserOffline: navigator.onLine === false,
+      loggedOut: !activeRef.current,
     })
     if (delayMs === null) return
     timeoutRef.current = window.setTimeout(async () => {
-      // Went hidden or offline since this was booked: stop here, the listeners restart us on return.
-      if (document.hidden || navigator.onLine === false) return
+      // Went hidden, offline or logged out since this was booked: stop here, the listeners (or the
+      // next login) restart us on return.
+      if (document.hidden || navigator.onLine === false || !activeRef.current) return
       await poll()
       scheduleNext()
     }, delayMs)
@@ -302,7 +309,15 @@ export function useActiveDownloads(playSwoosh: () => void) {
   }, [poll, scheduleNext])
 
   useEffect(() => {
-    if (startedRef.current) return
+    if (!active) return
+    if (startedRef.current) {
+      // Signed in again: nothing was booked while logged out, so ask now and carry on from there.
+      void pollNow()
+      return () => {
+        if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+        abortRef.current?.abort()
+      }
+    }
     startedRef.current = true
 
     const restored = Object.values(cardsRef.current)
@@ -322,21 +337,23 @@ export function useActiveDownloads(playSwoosh: () => void) {
     }
     void boot()
 
+    // Also runs when `active` turns false (logged out): the timer is dropped and the in-flight poll
+    // aborted, so nothing asks the server until the next login.
     return () => {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
       abortRef.current?.abort()
     }
-    // Intentionally runs once: this owns a singleton poll loop, guarded by startedRef against
-    // React StrictMode's double-invoked effect.
+    // Intentionally keyed on `active` alone: this owns a singleton poll loop, guarded by startedRef
+    // against React StrictMode's double-invoked effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [active])
 
   // Its own effect, NOT inside the run-once one above: StrictMode runs that effect's cleanup and
   // then skips the re-run, which used to leave this listener removed for good in development.
   // A hidden tab books no timer, so this listener is the only thing that restarts polling.
   useEffect(() => {
     const onVisibilityChange = () => {
-      if (!document.hidden) void pollNow()
+      if (!document.hidden && activeRef.current) void pollNow()
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => document.removeEventListener('visibilitychange', onVisibilityChange)
@@ -344,7 +361,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
 
   // Same shape: an offline browser books no timer, so the network coming back has to ask at once.
   useEffect(() => {
-    const onOnline = () => { void pollNow() }
+    const onOnline = () => { if (activeRef.current) void pollNow() }
     window.addEventListener('online', onOnline)
     return () => window.removeEventListener('online', onOnline)
   }, [pollNow])

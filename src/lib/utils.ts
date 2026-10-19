@@ -8,13 +8,24 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * What a failed API call says on the page. A 502 or 503 means something behind the server is down for
  * now (the YouTube Music helper, or the server itself behind the web app's proxy), so it says that in
- * plain words instead of "Bad Gateway". Other statuses keep the status text.
+ * plain words instead of "Bad Gateway". A 401 is "log in" (the gate shows the login screen at the same
+ * time). Other statuses keep the status text.
  */
 export function apiErrorMessage(url: string, status: number, statusText: string): string {
+  if (status === 401) return 'Log in to Naviseerr'
   if (status !== 502 && status !== 503) return `API request failed: ${statusText}`
   return url.includes('/search/')
     ? 'Search is not available right now. Try again in a minute.'
     : 'The server is not available right now. Try again in a minute.'
+}
+
+/** What a failed login or sign-up says: the server's own sentence when it sent one ("Wrong username or
+ *  password"), else the error's ("Can't reach the Naviseerr server..."). */
+export function serverMessage(err: unknown): string {
+  const body = (err as { body?: unknown } | null)?.body
+  const message = body && typeof body === 'object' ? (body as { message?: unknown }).message : undefined
+  if (typeof message === 'string' && message) return message
+  return err instanceof Error ? err.message : 'Something went wrong. Try again.'
 }
 
 /** "3:05" - a track length. Floors the seconds too: the server can send fractional durations. */

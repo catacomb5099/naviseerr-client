@@ -1,9 +1,10 @@
-import { apiClient } from './client'
+import { ApiError, apiClient } from './client'
+import { NO_LOGIN } from '../lib/session'
 import {
   SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
-  CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse,
+  CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, SessionResponse,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -370,6 +371,38 @@ export async function getStatus(signal?: AbortSignal): Promise<StatusResponse> {
     })
   }
   return apiClient<StatusResponse>('/status', { signal })
+}
+
+// --- Login (19-10-2026) --------------------------------------------------------------------------
+
+/**
+ * Who is signed in, and whether this install wants a login at all. Asked once when the app opens.
+ * GET /auth/session. A 404 is a server from before the login existed: taken as "no login here", so
+ * the app works unchanged against it.
+ */
+export async function getSession(): Promise<SessionResponse> {
+  if (USE_MOCK_DATA) return NO_LOGIN
+  try {
+    return await apiClient<SessionResponse>('/auth/session')
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return NO_LOGIN
+    throw err
+  }
+}
+
+/** The first account, once: 201 `{username}`; 409 when one exists already. POST /auth/setup */
+export function setupAccount(username: string, password: string): Promise<{ username: string }> {
+  return apiClient<{ username: string }>('/auth/setup', { method: 'POST', body: JSON.stringify({ username, password }) })
+}
+
+/** 200 `{username}` and the session cookie; 401 wrong name or password; 429 too many tries. POST /auth/login */
+export function login(username: string, password: string): Promise<{ username: string }> {
+  return apiClient<{ username: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) })
+}
+
+/** Ends this browser's session; the cookie is cleared by the answer. POST /auth/logout */
+export function logout(): Promise<void> {
+  return apiClient<void>('/auth/logout', { method: 'POST' })
 }
 
 /** Server-side cap on GET /downloads?ids= */

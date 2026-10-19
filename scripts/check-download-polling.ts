@@ -53,4 +53,8 @@ assert(nextPollDelayMs({ serverHasLive: false, lastRequestedAt: null, now, conse
 assert(nextPollDelayMs({ ...live, browserOffline: true }) === null, 'offline books no poll')
 assert(nextPollDelayMs({ ...live, browserOffline: false, consecutiveFailures: 1 }) === 5000, 'online with failures still books')
 
+// Logged out: nothing is booked either (every poll would be a 401); logging in books again.
+assert(nextPollDelayMs({ ...live, loggedOut: true }) === null, 'logged out books no poll')
+assert(nextPollDelayMs({ ...live, loggedOut: false }) === ACTIVE_POLL_MS, 'logged in books as usual')
+
 console.log('check-download-polling: ok')

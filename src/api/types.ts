@@ -380,6 +380,16 @@ export interface StatusResponse {
   library?: { enabled: boolean; root: string | null; problem: string | null }
 }
 
+/** GET /auth/session (19-10-2026). `authRequired` false = this install has its login switched off; then the
+ *  other three are false, false, true, null. `setupRequired` true = no account exists yet: the first-run
+ *  screen. `username` only while `authenticated`. */
+export interface SessionResponse {
+  authRequired: boolean
+  setupRequired: boolean
+  authenticated: boolean
+  username: string | null
+}
+
 // --- Manual import: the files Soulseek found for a song -------------------
 
 export type CandidateStatus = 'READY' | 'SEARCHING' | 'NONE'

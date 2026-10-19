@@ -126,6 +126,7 @@ assert(apiErrorMessage('http://x/search/daft%20punk', 502, 'Bad Gateway') === 'S
 assert(apiErrorMessage('/api/search/daft/tracks?limit=40', 503, '') === 'Search is not available right now. Try again in a minute.', 'category search 503')
 assert(apiErrorMessage('/api/downloads/active', 502, 'Bad Gateway') === 'The server is not available right now. Try again in a minute.', 'other call 502')
 assert(apiErrorMessage('/api/search/x', 404, 'Not Found') === 'API request failed: Not Found', 'other statuses unchanged')
+assert(apiErrorMessage('/api/downloads/active', 401, 'Unauthorized') === 'Log in to Naviseerr', 'a 401 says log in')
 assert(isCancelled({ stage: 'FAILED', failureCode: 'CANCELLED' }), 'a failed card with the cancelled code is cancelled')
 assert(!isCancelled({ stage: 'DOWNLOADING', failureCode: 'CANCELLED' }), 'a live album with one cancelled song is not itself cancelled')
 assert(!isCancelled({ stage: 'PARTIAL_SUCCESS', failureCode: 'CANCELLED' }), 'a partly downloaded album is not cancelled')
