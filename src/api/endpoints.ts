@@ -10,7 +10,7 @@ import {
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
   cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates, pickMockSongCandidate,
-  getMockAlbumCandidates, pickMockAlbumFolder, searchMockSongCandidates,
+  getMockAlbumCandidates, pickMockAlbumFolder, searchMockSongCandidates, searchMockAlbumFolders,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -324,6 +324,20 @@ export async function searchSongCandidates(downloadId: string, taskId: string, t
 export async function getAlbumCandidates(downloadId: string, signal?: AbortSignal): Promise<AlbumCandidatesResponse> {
   if (USE_MOCK_DATA) return Promise.resolve(getMockAlbumCandidates(downloadId))
   return apiClient<AlbumCandidatesResponse>(`/downloads/${encodeURIComponent(downloadId)}/album-candidates`, { signal })
+}
+
+/**
+ * Search Soulseek with your own words for the whole album and wait for it: the server runs ONE slskd search with the
+ * text as typed, keeps every folder holding any of the album's songs (the ones its own search would take first) as the
+ * album's folders, so any can then be picked. Same shape as getAlbumCandidates, `query` being the text.
+ * POST /downloads/{id}/album-search {text}  (200 the folders; 400 blank; 404 unknown; 409 {reason: SOULSEEK_OFFLINE | NOT_AN_ALBUM |
+ * NO_ALBUM_SEARCH, message}; 429 {reason: SOULSEEK_BUSY}; 502 {reason: SLSKD_UNREACHABLE})
+ */
+export async function searchAlbumFolders(downloadId: string, text: string): Promise<AlbumCandidatesResponse> {
+  if (USE_MOCK_DATA) return searchMockAlbumFolders(downloadId, text)
+  return apiClient<AlbumCandidatesResponse>(
+    `/downloads/${encodeURIComponent(downloadId)}/album-search`,
+    { method: 'POST', body: JSON.stringify({ text }), timeoutMs: SOULSEEK_SEARCH_TIMEOUT_MS })
 }
 
 /** The album pick body: the sharer and the folder EXACTLY as the folder list gave them. */
