@@ -29,7 +29,7 @@ function App() {
     exiting: exitingDownloadIds,
     pollIntervalMs,
     minimized: downloadsMinimized,
-    setMinimized: setDownloadsMinimized,
+    toggleMinimized: toggleDownloadsMinimized,
     dismiss: dismissDownload,
     requestDownload,
     cancel: cancelDownload,
@@ -121,7 +121,7 @@ function App() {
         exiting={exitingDownloadIds}
         pollIntervalMs={pollIntervalMs}
         minimized={downloadsMinimized}
-        onToggleMinimized={() => setDownloadsMinimized(m => !m)}
+        onToggleMinimized={toggleDownloadsMinimized}
         onDismiss={dismissDownload}
         onCancel={cancelDownload}
         onRetry={retryDownload}

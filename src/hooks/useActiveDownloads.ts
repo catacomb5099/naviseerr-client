@@ -6,7 +6,7 @@ import {
 } from '../api/endpoints'
 import { ActiveDownloadsResponse, ActiveDownloadView, DownloadType } from '../api/types'
 import {
-  DownloadCardState, RequestOutcome, dismissTtlMs, dismissedRetentionMs, isTerminal, mergeCard, replaceCard, sortCards,
+  DownloadCardState, RequestOutcome, dismissTtlMs, dismissedRetentionMs, initialMinimized, isTerminal, mergeCard, replaceCard, sortCards,
 } from '../lib/downloadPanel'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { ACTIVE_POLL_MS, nextPollDelayMs } from '../lib/downloadPolling'
@@ -33,6 +33,8 @@ interface Snapshot {
   v: number
   savedAt: number
   minimized: boolean
+  /** Set once the user has folded or unfolded the panel; absent, `minimized` is an autosaved default. */
+  minimizedByUser?: boolean
   cards: DownloadCardState[]
   dismissed: DismissedEntry[]
 }
@@ -87,9 +89,10 @@ export function useActiveDownloads(playSwoosh: () => void) {
     return result
   })
   const [exiting, setExiting] = useState<Set<string>>(new Set())
-  // A phone with no saved preference starts folded: the open sheet would cover a third of the screen.
-  // Once the user folds or unfolds it, that choice is what is saved and wins.
-  const [minimized, setMinimized] = useState<boolean>(() => initial?.minimized ?? window.matchMedia('(max-width: 639px)').matches)
+  // A phone starts folded unless the user has folded or unfolded the panel before (see initialMinimized):
+  // the open sheet would cover a third of the screen.
+  const [minimized, setMinimized] = useState<boolean>(() => initialMinimized(initial, window.matchMedia('(max-width: 639px)').matches))
+  const minimizedByUserRef = useRef(initial?.minimizedByUser ?? false)
   const dismissedRef = useRef<Map<string, number>>(
     new Map((initial?.dismissed ?? []).map(d => [d.id, d.at])))
   const pollIntervalRef = useRef<number>(ACTIVE_POLL_MS)
@@ -134,12 +137,19 @@ export function useActiveDownloads(playSwoosh: () => void) {
         v: STORAGE_VERSION,
         savedAt: Date.now(),
         minimized,
+        minimizedByUser: minimizedByUserRef.current,
         cards: Object.values(cards),
         dismissed: Array.from(dismissedRef.current, ([id, at]) => ({ id, at })),
       })
     }, 300)
     return () => window.clearTimeout(handle)
   }, [cards, minimized])
+
+  /** The user's fold/unfold: from here on the saved state is a choice, not a default. */
+  const toggleMinimized = useCallback(() => {
+    minimizedByUserRef.current = true
+    setMinimized(m => !m)
+  }, [])
 
   const removeCard = useCallback((id: string) => {
     setCards(prev => {
@@ -477,7 +487,7 @@ export function useActiveDownloads(playSwoosh: () => void) {
     pollIntervalMs,
     terminalRetentionMs,
     minimized,
-    setMinimized,
+    toggleMinimized,
     dismiss,
     requestDownload,
     cancel,

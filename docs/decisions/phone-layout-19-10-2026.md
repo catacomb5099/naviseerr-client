@@ -26,9 +26,12 @@ viewport meta was right and nothing overflowed sideways. Three things were wrong
 2. **The panel is a bottom sheet on phones.** Full width, flush with the bottom edge, rounded top
    corners; from tablet up it stays the floating box in the corner. This is the shape YouTube Music web
    and Spotify web use for anything that pops up from the bottom on a phone.
-3. **It starts folded on a phone.** With no saved preference the panel reads the viewport
-   (`matchMedia('(max-width: 639px)')`) and starts as the one-line pill. The moment the user folds or
-   unfolds it, that choice is saved and wins, as before. Tablets and desktops still start open.
+3. **It starts folded on a phone.** The panel reads the viewport (`matchMedia('(max-width: 639px)')`)
+   and starts as the one-line pill. The moment the user folds or unfolds it, that choice is saved
+   (`minimizedByUser` in the snapshot) and wins from then on. A snapshot without that flag is an
+   autosave, not a choice: the hook has written `minimized` 300 ms after every visit since September, so
+   every returning browser holds `minimized: false`, and honouring it would have kept every phone open.
+   Tablets and desktops keep whatever was saved (open, unless folded by hand).
 4. **The page leaves room under the pill.** `App` adds `pb-16` (64 px) on phones whenever there is a
    card, so the last row of any list can be scrolled out from under the pill. The open sheet is not
    reserved for: it starts folded, and its own list scrolls (Spotify's mini-player makes the same trade).
@@ -43,7 +46,8 @@ viewport meta was right and nothing overflowed sideways. Three things were wrong
 ## Consequences
 
 - Desktop screenshots at 1280 px are unchanged by any of the three PRs (measured).
-- A phone that had the panel open before this change keeps it open: the saved preference wins.
+- A phone that had the panel open before this change starts folded too; only a fold or unfold made after this
+  change is remembered. A desktop that was folded by hand before this change stays folded.
 - If a user unfolds the sheet on a phone it can still cover the last rows until folded again.
 - The pop-ups (choose a file, song details) are not full-screen yet; that is a fourth PR that must wait
   for the manual-import work, which rewrites the same files.
