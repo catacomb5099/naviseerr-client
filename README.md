@@ -94,6 +94,12 @@ It serves the app on port 80 and forwards `/api/*` to the server, which it expec
 (`docker compose ps` shows `healthy` once the app is served). `VITE_API_URL` is baked in when the
 image is built (`/api`), so it cannot be changed when the container starts.
 
+**Your own login in front of the app (19-10-2026):** the Caddyfile imports `/etc/caddy/conf.d/*.caddy`.
+Mount a snippet there (one file, any name ending in `.caddy`) and Caddy applies it to the whole app, the
+`/api` proxy included; with nothing mounted, nothing changes. The naviseerr README's "Using your own
+login (Authentik)" section has the snippet and the compose lines, and says to switch the server's own
+login off with `AUTH_REQUIRED=false` at the same time.
+
 ## Project Structure
 
 ```

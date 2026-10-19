@@ -3,6 +3,11 @@
 :80 {
 	encode
 
+	# Optional: your own login in front of the whole app, API included (Authentik, Authelia...). Mount a
+	# snippet at /etc/caddy/conf.d/<name>.caddy (the naviseerr README, "Using your own login", has one for
+	# Authentik). No file there = nothing changes: an empty match is not an error for Caddy.
+	import /etc/caddy/conf.d/*.caddy
+
 	# The server: /api/search/x reaches naviseerr as /search/x. Caddy keeps encoded characters
 	# such as %2F (AC/DC) intact, which nginx's usual prefix strip does not. naviseerr is looked
 	# up on every request, so the web app starts even while the server is still down.
