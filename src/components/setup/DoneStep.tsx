@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ApiError } from '../../api/client'
-import { finishSetup, getLoginSettings, getMediaServers, getSession, getSoulseekAccount, getSuggestedPlaylistsSettings } from '../../api/endpoints'
+import {
+  finishSetup, getLoginSettings, getMediaServers, getSession, getSlskdSettings, getSoulseekAccount, getSuggestedPlaylistsSettings,
+} from '../../api/endpoints'
 import { musicAppSummary } from '../../lib/mediaServers'
 import { loginSummary, soulseekSummary } from '../../lib/setup'
 import { playlistsSummary } from '../../lib/suggested'
@@ -29,9 +31,10 @@ export function DoneStep({ libraryRoot, onDone }: { libraryRoot: string | null; 
     // Null: an older server without that setting, so no line for it.
     const music = getMediaServers(controller.signal).catch(() => null)
     const playlists = getSuggestedPlaylistsSettings(controller.signal).catch(() => null)
-    Promise.all([soulseek, music, playlists, getSession(), login]).then(
-      ([account, servers, weekly, session, settings]) => setLines([
-        soulseekSummary(account),
+    const slskd = getSlskdSettings(controller.signal).catch(() => null)
+    Promise.all([soulseek, slskd, music, playlists, getSession(), login]).then(
+      ([account, own, servers, weekly, session, settings]) => setLines([
+        soulseekSummary(account, own),
         ...(servers ? [musicAppSummary(servers)] : []),
         ...(weekly ? [playlistsSummary(weekly)] : []),
         loginSummary(session, settings),

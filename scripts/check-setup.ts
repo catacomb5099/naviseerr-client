@@ -20,6 +20,8 @@ assert(stepPath(stepIndex('3', 5) + 1) === '/setup/4', 'next after /setup/3 is /
 const account = { username: 'naviseerr-ab12cd', generated: true, password: 'x', loggedIn: null, setInComposeFile: false }
 assert(soulseekSummary(account) === 'Soulseek: logging in as naviseerr-ab12cd.', 'the account by name')
 assert(soulseekSummary(null).includes('install file'), 'no account in the app: the install file has it')
+assert(soulseekSummary(account, { url: 'http://slskd:5030/api/v0/', apiKeySet: true, fromInstallFile: true }).includes('naviseerr-ab12cd'), 'the bundled slskd: the account')
+assert(soulseekSummary(account, { url: 'http://192.168.1.20:5030/api/v0/', apiKeySet: true, fromInstallFile: false }) === 'Soulseek: your own slskd at http://192.168.1.20:5030/api/v0/.', 'your own slskd names its address')
 const noLogin = { issuer: null, clientId: null, clientSecretSet: false, enabled: false, redirectUrl: 'http://x/auth/authentik/callback' }
 assert(loginSummary({ mode: 'open' }, noLogin).startsWith('Login: open'), 'nothing connected: open')
 assert(loginSummary({ mode: 'open' }, null).startsWith('Login: open'), 'an older server: open')

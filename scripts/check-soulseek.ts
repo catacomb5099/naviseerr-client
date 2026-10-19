@@ -1,5 +1,5 @@
 /** Pins the Soulseek account step's rules and status line (src/lib/soulseek.ts). Runs from check-download-state.ts. */
-import { LOGIN_CHECK_MS, RECONNECT_GRACE_MS, loginState, loginStatusCopy, soulseekNameProblem } from '../src/lib/soulseek'
+import { LOGIN_CHECK_MS, RECONNECT_GRACE_MS, canSaveSlskd, loginState, loginStatusCopy, soulseekNameProblem } from '../src/lib/soulseek'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -31,5 +31,11 @@ assert(loginState(true, t0, t0 + RECONNECT_GRACE_MS) === 'connected', 'logged in
 assert(loginStatusCopy('connected', 'alex') === 'Connected to Soulseek as alex.', 'connected names the account')
 assert(loginStatusCopy('not-accepted', 'alex').includes('did not accept this login'), 'the plain failure sentence')
 assert(loginStatusCopy('not-connected', 'alex').includes('as alex'), 'not connected names the account')
+
+// Your own slskd: an http(s) address and a key, unless one is stored for it.
+assert(canSaveSlskd('http://192.168.1.20:5030', 'key', false), 'address and key: can save')
+assert(canSaveSlskd(' http://192.168.1.20:5030/api/v0/ ', '', true), 'stored key kept, tail allowed, address trimmed')
+assert(!canSaveSlskd('192.168.1.20:5030', 'key', false), 'no scheme: cannot save')
+assert(!canSaveSlskd('http://x', '', false), 'no key and none stored: cannot save')
 
 console.log('check-soulseek: ok')

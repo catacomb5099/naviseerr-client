@@ -460,6 +460,17 @@ export interface SuggestedPlaylistsSettings {
   message?: string | null
 }
 
+/** GET/PUT /settings/slskd (19-10-2026): the Soulseek client (slskd) this server talks to. `fromInstallFile` true while
+ *  it is the install's bundled one (or a developer's .env); false once your own slskd was saved here, which the server
+ *  then uses for everything, no restart. The API key never comes back (`apiKeySet`). `message` is the "Save and test"
+ *  sentence (PUT only). */
+export interface SlskdSettings {
+  url: string
+  apiKeySet: boolean
+  fromInstallFile: boolean
+  message?: string | null
+}
+
 /** GET/PUT /settings/soulseek (19-10-2026): the Soulseek account this install logs in with. `generated` is true
  *  for a name setup made up (naviseerr-xxxxxx), and only then is `password` filled, so it can be written down from
  *  the app (it cannot be reset); a name a person chose never has its password echoed. `loggedIn` is slskd's answer,
