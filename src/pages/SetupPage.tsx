@@ -71,8 +71,8 @@ function AccountStep({ onDone }: StepProps) {
           <Input id="setup-code" autoComplete="one-time-code" autoFocus required maxLength={40} spellCheck={false}
             placeholder="xxxx-xxxx-xxxx" value={setupCode} onChange={e => setSetupCode(e.target.value)} />
           <p className="text-xs text-zinc-500">
-            Find it in the server log: <code className="text-zinc-400">docker compose logs naviseerr</code>.
-            The Docker install also saves it as <code className="text-zinc-400">config/setup-code.txt</code> in its data folder.
+            Find it in the server log (TrueNAS: Apps → naviseerr → Logs; Docker: <code className="text-zinc-400">docker compose logs naviseerr</code>;
+            a developer's run: the console). The copy-paste install also saves it as <code className="text-zinc-400">config/setup-code.txt</code> in its data folder.
           </p>
         </div>
         <div className="space-y-1.5">
