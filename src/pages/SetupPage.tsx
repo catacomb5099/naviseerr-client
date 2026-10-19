@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DoneStep } from '../components/setup/DoneStep'
 import { MediaServerStep } from '../components/setup/MediaServerStep'
+import { PlaylistsStep } from '../components/setup/PlaylistsStep'
 import { SetupStep } from '../components/setup/SetupStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
 import { stepIndex, stepPath } from '../lib/setup'
@@ -24,6 +25,11 @@ const steps: { title: string; help: string; body: (next: () => void) => ReactNod
     title: 'Which app plays your music?',
     help: 'naviseerr asks that app to rescan the moment a song or playlist lands. Neither? Your app still finds new files on its own schedule.',
     body: next => <MediaServerStep onDone={next} />,
+  },
+  {
+    title: 'Want a fresh set of playlists every week?',
+    help: 'Every Monday night naviseerr builds 49 playlists from what is popular right now (about 90 minutes; it asks Discogs and YouTube Music). The first set starts as soon as you switch it on. Off unless you say yes.',
+    body: next => <PlaylistsStep onDone={next} />,
   },
 ]
 

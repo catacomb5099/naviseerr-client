@@ -449,6 +449,17 @@ export type MediaServerChange =
   | { navidrome: { url: string; username: string; password: string } }
   | { jellyfin: { url: string; apiKey: string } }
 
+/** GET/PUT /settings/suggested-playlists (19-10-2026): the opt-in for the weekly "Made for you" playlists. `on` is the
+ *  stored switch (off for a fresh install); `configured` whether this install has a playlist maker at all (false on a
+ *  developer run: the switch is disabled); `refreshDay` the weekday of the weekly run ("MONDAY"), null when the schedule
+ *  is not one plain weekday. `message` is the sentence a PUT answers with. */
+export interface SuggestedPlaylistsSettings {
+  on: boolean
+  configured: boolean
+  refreshDay: string | null
+  message?: string | null
+}
+
 /** GET/PUT /settings/soulseek (19-10-2026): the Soulseek account this install logs in with. `generated` is true
  *  for a name setup made up (naviseerr-xxxxxx), and only then is `password` filled, so it can be written down from
  *  the app (it cannot be reset); a name a person chose never has its password echoed. `loggedIn` is slskd's answer,
