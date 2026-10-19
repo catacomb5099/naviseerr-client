@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
  * The frame every first-run screen sits in, the shape of Jellyfin's setup wizard: the product name,
  * "1 of 4", one question, one line of help, then the step's own body with its one primary button, and
  * under it the "Not sure? Skip for now" link (Jellyfin, Immich and Home Assistant skip by pressing
- * Next with the default; Plex has a Skip word; here the link says what skipping means). `step` absent
+ * Next with the default; here the link says what skipping means). `step` absent
  * is the done screen, which has no number. Phone-first: one column up to 28 rem, as the login card.
  */
 export function SetupStep({ step, total, intro, title, help, skipTo, children }: {
