@@ -24,8 +24,8 @@ export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void })
         <h3 id="download-quality-heading" className="text-lg font-semibold">Download quality</h3>
         <p className="text-sm text-zinc-400">
           The quality every download aims for, songs, albums and playlists alike. When Soulseek has nothing at that quality
-          the nearest is taken, and the Quality column on the Downloads page says what you really got. Saved the moment you
-          pick one.
+          the nearest is taken; a song&rsquo;s Choose a file pop-up (the person icon on the Downloads page) shows every
+          file&rsquo;s quality and marks the one taken. Saved the moment you pick one.
         </p>
         <DownloadQualityStep />
       </section>

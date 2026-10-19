@@ -140,7 +140,7 @@ const ALBUM_COLUMNS: Column<AlbumFolder>[] = [
       <span
         title={f.judged
           ? "Naviseerr's own album search would take this folder"
-          : "Naviseerr's album search would not take this folder: too few of the album's songs, no artist in its path, a low bit rate or a sharer that stalls. It is listed so you can decide for yourself"}
+          : "Naviseerr's album search would not take this folder: too few of the album's songs, no artist in its path, no reported bit rate or a sharer that stalls. It is listed so you can decide for yourself"}
         className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${f.judged ? GRADE_CLASS.EXACT : GRADE_CLASS.NONE}`}
       >
         {f.judged ? 'Match' : 'Not judged'}

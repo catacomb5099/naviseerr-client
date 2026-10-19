@@ -21,8 +21,10 @@ import { stepIndex, stepPath } from '../lib/setup'
 const steps: { title: string; help?: string; body: (next: () => void) => ReactNode; noSkip?: boolean }[] = [
   {
     title: 'What quality do you want your music in?',
-    help: 'Every song, album and playlist is looked for at this quality first; when Soulseek has none, the nearest is taken, and the Downloads page says what you got.',
+    help: 'Every song, album and playlist is looked for at this quality first; when Soulseek has none, the nearest is taken, and the song\'s Choose a file pop-up on the Downloads page shows which.',
     body: next => <DownloadQualityStep onDone={next} />,
+    // A row saves on press, so Next with the default marked IS the skip (as the playlists switch); a Skip link under a row just pressed would read as undoing it, and would not.
+    noSkip: true,
   },
   {
     title: 'Your Soulseek account',

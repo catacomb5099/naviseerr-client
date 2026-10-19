@@ -579,7 +579,7 @@ export interface AlbumFolder {
   songsCurrent: number
   isCurrent: boolean
   /** Whether Naviseerr's own album search would take this folder; false for one listed only for a person to
-   *  choose (too few of the album's songs, no artist in its path, a low bit rate, a sharer that stalls). */
+   *  choose (too few of the album's songs, no artist in its path, no reported bit rate, a sharer that stalls). */
   judged: boolean
   files: AlbumFolderFile[]
 }
