@@ -3,6 +3,7 @@ import { Check, Copy } from 'lucide-react'
 import { ApiError } from '../../api/client'
 import { authentikStartUrl, getLoginSettings, getSession, putLoginSettings, turnOffLogin } from '../../api/endpoints'
 import { LoginSettings } from '../../api/types'
+import { useSession } from '../../hooks/useSession'
 import { canSaveLogin, loginStatusCopy } from '../../lib/login'
 import { applySession } from '../../lib/session'
 import { serverMessage } from '../../lib/utils'
@@ -12,13 +13,19 @@ import { Input } from '../ui/input'
 /**
  * One step: connect Authentik. The three fields Immich's OAuth settings have (issuer, Client ID, Client
  * secret), the Redirect URL to paste into Authentik with a Copy button (Authentik's own UI copies its
- * URLs the same way), "Save and test" (the server reads Authentik's OpenID configuration before storing
- * anything, as Audiobookshelf's "Auto-populate" does), then "Continue with Authentik" to sign in once,
- * which is what turns the login on. Stands alone on the Settings page today; `onDone` makes it a wizard
- * step: the ghost button moves on, reading "Skip for now" with nothing saved, "Next" once Authentik is saved
- * (the done screen says it is not on yet), "Done" once the login is on.
+ * URLs the same way), and "Save and test": the server reads Authentik's OpenID configuration and tries
+ * the three values before storing anything (Audiobookshelf's "Auto-populate" check), and a success turns
+ * the login on at once (the owner's call, 19-10-2026 22:40). The server's sentence then ends "Sign in to
+ * carry on." and the one way on is "Continue with Authentik", whose return address is this very page
+ * (the wizard's step or Settings); the next page load, or the next API call, shows the login screen
+ * anyway, with the same button. Stands alone on the Settings page; `onDone` makes it a wizard step: the
+ * ghost button reads "Skip for now" while the login is off and "Done" once you are signed in, and is
+ * absent in between (nothing moves on past a shut door but signing in).
  */
 export function AuthentikStep({ onDone }: { onDone?: () => void }) {
+  // Whether this browser is signed in: false right after Save and test shut the door (the store still says
+  // the install was open), true when the login was on already and we are inside it.
+  const signedIn = useSession().authRequired
   const [settings, setSettings] = useState<LoginSettings | null>(null)
   // The server's own sentence when it has no login at all (404: an older server).
   const [unsupported, setUnsupported] = useState(false)
@@ -66,7 +73,7 @@ export function AuthentikStep({ onDone }: { onDone?: () => void }) {
       await turnOffLogin()
       await load()
       applySession(await getSession())   // the Log out button goes: there is nothing to log out of
-      setResult({ ok: true, message: 'Authentik login is off. Everyone has been logged out; the settings are kept.' })
+      setResult({ ok: true, message: 'Authentik login is off. Everyone has been logged out; the settings are kept, and Save and test turns it back on.' })
     } catch (err) {
       setResult({ ok: false, message: serverMessage(err) })
     }
@@ -88,7 +95,7 @@ export function AuthentikStep({ onDone }: { onDone?: () => void }) {
   if (!settings) return <p className="text-zinc-400">Looking up the login settings…</p>
 
   const connected = settings.clientSecretSet
-  const statusColour = settings.enabled ? 'text-green-400' : connected ? 'text-zinc-300' : 'text-amber-400'
+  const statusColour = settings.enabled ? 'text-green-400' : 'text-amber-400'
   const field = 'bg-zinc-900 border-zinc-700 text-white'
 
   return (
@@ -142,20 +149,20 @@ export function AuthentikStep({ onDone }: { onDone?: () => void }) {
             className="bg-green-600 text-white hover:bg-green-500">
             {saving ? 'Testing…' : 'Save and test'}
           </Button>
-          {connected && !settings.enabled && (
+          {settings.enabled && !signedIn && (
             <Button asChild className="bg-white text-black hover:bg-zinc-200">
               <a href={authentikStartUrl(window.location.href)}>Continue with Authentik</a>
             </Button>
           )}
-          {settings.enabled && (
+          {settings.enabled && signedIn && (
             <Button type="button" variant="outline" onClick={turnOff}
               className="border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800 hover:text-white">
               Turn off Authentik login
             </Button>
           )}
-          {onDone && (
+          {onDone && (!settings.enabled || signedIn) && (
             <Button type="button" variant="ghost" onClick={onDone} className="text-zinc-300 hover:bg-zinc-800 hover:text-white">
-              {settings.enabled ? 'Done' : connected ? 'Next' : 'Skip for now'}
+              {settings.enabled ? 'Done' : 'Skip for now'}
             </Button>
           )}
         </div>

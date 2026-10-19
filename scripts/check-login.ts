@@ -13,7 +13,8 @@ const connected = { ...off, issuer: 'https://auth.example.com/application/o/navi
 
 assert(loginStatusCopy(null).startsWith('Authentik login is off'), 'not loaded reads as off')
 assert(loginStatusCopy(off).startsWith('Authentik login is off'), 'nothing connected reads as off')
-assert(loginStatusCopy(connected).includes('not on yet'), 'connected but never signed in says so')
+assert(loginStatusCopy(connected).startsWith('Authentik login is off'), 'saved but turned off reads as off: on or off, nothing in between')
+assert(!loginStatusCopy(connected).includes('not on yet'), 'no "not on yet" state since Save and test turns the login on')
 assert(loginStatusCopy({ ...connected, enabled: true }).startsWith('Authentik login is on'), 'enabled reads as on')
 
 assert(!canSaveLogin('', 'abc', 's', false), 'no address: cannot save')

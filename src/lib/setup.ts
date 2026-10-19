@@ -2,7 +2,7 @@
  * The first-run setup's pure parts (no React, no window): which screen an address names, and the
  * sentences the last screen says about what was set. Checked by scripts/check-setup.ts.
  */
-import type { LoginSettings, SessionResponse, SetupStatus, SlskdSettings, SoulseekAccount } from '../api/types'
+import type { SessionResponse, SetupStatus, SlskdSettings, SoulseekAccount } from '../api/types'
 
 /** What GET /settings/setup is taken to say on a server that does not have it (404): nothing to set up. */
 export const SETUP_DONE: SetupStatus = { completed: true, libraryRoot: null }
@@ -23,9 +23,7 @@ export function soulseekSummary(account: SoulseekAccount | null, slskd: SlskdSet
   return account ? `Soulseek: logging in as ${account.username}.` : 'Soulseek: the account from the install file.'
 }
 
-/** The done screen's login line: on, saved but never signed in, or open. `settings` null = an older server. */
-export function loginSummary(session: SessionResponse, settings: LoginSettings | null): string {
-  if (session.mode === 'authentik') return 'Login: Authentik, on.'
-  if (settings?.clientSecretSet) return 'Login: Authentik is saved but not on yet. Sign in once from Settings → Login to turn it on.'
-  return 'Login: open on your network, no login.'
+/** The done screen's login line: on or open, nothing in between (Save and test turns the login on by itself). */
+export function loginSummary(session: SessionResponse): string {
+  return session.mode === 'authentik' ? 'Login: Authentik, on.' : 'Login: open on your network, no login.'
 }

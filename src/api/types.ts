@@ -401,8 +401,8 @@ export interface SessionResponse {
 }
 
 /** GET/PUT /settings/login (19-10-2026): how this install connects to Authentik. `clientSecretSet` says whether a
- *  secret is stored (the secret itself never comes back); `enabled` whether the login is on (set by the first
- *  successful sign-in, cleared by Turn off); `redirectUrl` the address to paste into Authentik's Redirect URIs,
+ *  secret is stored (the secret itself never comes back); `enabled` whether the login is on (true from a successful
+ *  Save and test, 19-10-2026 22:40; false after Turn off); `redirectUrl` the address to paste into Authentik's Redirect URIs,
  *  computed by the server from how this request reached it. `message` is the "Save and test" sentence (PUT only). */
 export interface LoginSettings {
   issuer: string | null

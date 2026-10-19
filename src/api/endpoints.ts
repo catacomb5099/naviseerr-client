@@ -442,8 +442,9 @@ export function getLoginSettings(signal?: AbortSignal): Promise<LoginSettings> {
 }
 
 /**
- * "Save and test": the server reads Authentik's OpenID configuration first and stores the values only
- * when that works; an empty `clientSecret` keeps the one already stored. Never turns the login on.
+ * "Save and test": the server reads Authentik's OpenID configuration and tries the three values first,
+ * stores them only when that works, and turns the login on in the same step (`enabled: true` comes back;
+ * the next call without a session is 401). An empty `clientSecret` keeps the one already stored.
  * PUT /settings/login {issuer, clientId, clientSecret}  (200 with `message`; 400 {message} saying what to fix)
  */
 export function putLoginSettings(issuer: string, clientId: string, clientSecret: string): Promise<LoginSettings> {
