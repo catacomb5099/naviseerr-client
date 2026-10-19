@@ -108,6 +108,9 @@ export function useActiveDownloads(playSwoosh: () => void) {
   // One sentence when finished songs cannot be filed into the music library (folder missing or not
   // writable); null when fine, unknown, or on an older server. Shown as a second strip.
   const [libraryProblem, setLibraryProblem] = useState<string | null>(null)
+  // true while the server says it cannot reach YouTube Music (search and new downloads wait); null
+  // when unknown or on a server too old to say, and the strip stays hidden. Shown as a third strip.
+  const [youtubeMusicDown, setYoutubeMusicDown] = useState<boolean | null>(null)
 
   const timeoutRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -244,8 +247,9 @@ export function useActiveDownloads(playSwoosh: () => void) {
         s => {
           setSoulseekLoggedIn(s.soulseek.loggedIn); setSoulseekUsername(s.soulseek.username ?? null)
           setLibraryProblem(s.library?.problem ?? null)
+          setYoutubeMusicDown(s.youtubeMusic ? !s.youtubeMusic.reachable : null)
         },
-        () => { if (!controller.signal.aborted) { setSoulseekLoggedIn(null); setSoulseekUsername(null); setLibraryProblem(null) } },
+        () => { if (!controller.signal.aborted) { setSoulseekLoggedIn(null); setSoulseekUsername(null); setLibraryProblem(null); setYoutubeMusicDown(null) } },
       )
       const response = await getActiveDownloads(controller.signal)
       failuresRef.current = 0
@@ -481,5 +485,6 @@ export function useActiveDownloads(playSwoosh: () => void) {
     soulseekLoggedIn,
     soulseekUsername,
     libraryProblem,
+    youtubeMusicDown,
   }
 }
