@@ -1,5 +1,7 @@
 import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { Settings } from 'lucide-react'
+import { Button } from './ui/button'
 
 interface AppHeaderProps {
   /** Rendered to the right of the title: the page-switch control. */
@@ -21,7 +23,13 @@ export function AppHeader({ action, children }: AppHeaderProps) {
             <span className="bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">Naviseerr</span>
           </Link>
         </h1>
-        {action}
+        <div className="flex items-center gap-2">
+          {action}
+          {/* Settings on every page (the gear, as in Navidrome and Jellyfin). */}
+          <Button asChild variant="outline" size="icon" className="flex-none bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white">
+            <Link to="/settings" aria-label="Settings" title="Settings"><Settings className="w-4 h-4" /></Link>
+          </Button>
+        </div>
       </div>
       {children}
     </header>

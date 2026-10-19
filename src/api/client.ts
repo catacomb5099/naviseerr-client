@@ -2,7 +2,7 @@ import { isServerDown, reportServer } from '../lib/connectivity'
 import { share } from '../lib/requestCache'
 import { apiErrorMessage } from '../lib/utils'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 /** A request the server has not answered in this long counts as unreachable: a hung server (port
  *  open, nothing behind it) would otherwise hold "Searching..." for minutes. The All search takes

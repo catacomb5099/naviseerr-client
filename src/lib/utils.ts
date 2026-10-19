@@ -34,6 +34,16 @@ export function providerMessage(err: unknown): string | null {
   return typeof said === 'string' && said ? said : null
 }
 
+/** What a failed settings call says: the server's own sentence when it sent one ("Enter the Client ID.",
+ *  "Could not reach auth.example.com: connection refused..."), else the error's ("Can't reach the Naviseerr
+ *  server..."). Read structurally (an ApiError has `body`): this file must not import the API client. */
+export function serverMessage(err: unknown): string {
+  const body = (err as { body?: unknown } | null)?.body
+  const message = body && typeof body === 'object' ? (body as { message?: unknown }).message : undefined
+  if (typeof message === 'string' && message) return message
+  return err instanceof Error ? err.message : 'Something went wrong. Try again.'
+}
+
 /** "3:05" - a track length. Floors the seconds too: the server can send fractional durations. */
 export function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`

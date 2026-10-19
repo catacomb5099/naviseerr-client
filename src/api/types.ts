@@ -392,6 +392,19 @@ export interface StatusResponse {
   youtubeMusic?: { reachable: boolean; detail: string | null }
 }
 
+/** GET/PUT /settings/login (19-10-2026): how this install connects to Authentik. `clientSecretSet` says whether a
+ *  secret is stored (the secret itself never comes back); `enabled` whether the login is on (set by the first
+ *  successful sign-in, cleared by Turn off); `redirectUrl` the address to paste into Authentik's Redirect URIs,
+ *  computed by the server from how this request reached it. `message` is the "Save and test" sentence (PUT only). */
+export interface LoginSettings {
+  issuer: string | null
+  clientId: string | null
+  clientSecretSet: boolean
+  enabled: boolean
+  redirectUrl: string
+  message?: string | null
+}
+
 // --- Manual import: the files Soulseek found for a song -------------------
 
 export type CandidateStatus = 'READY' | 'SEARCHING' | 'NONE'

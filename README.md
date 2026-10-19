@@ -28,6 +28,7 @@ React-based music search and download client with Spotify-inspired UI.
 - A third amber strip says "YouTube Music isn't answering — search won't work and new downloads will wait until it is back" while the server cannot reach YouTube Music (its helper is down, or YouTube is unreachable from it); it clears by itself within about a minute of YouTube Music answering again
 - On the Downloads page, the person icon on a song opens every audio file Soulseek returned for it (format, quality, length, size, sharer speed, queue, and Naviseerr's own verdict: Exact, Other version, Unverified or Not a match) as a sortable, filterable table; press Download on any row to fetch that file instead (a download already under way asks before it is replaced). The same icon on an album lists every sharer folder holding any of the album's songs, the ones Naviseerr's own search would take first and the rest marked "Not judged", each unfolding into its files, and takes the remaining songs from the folder you pick
 - Responsive design for mobile and desktop: on a phone the active-downloads panel is a bottom sheet that starts folded and leaves the page room, list rows give the title the width (smaller art, status under the title, no duration), every button is at least 40 px and no text is smaller than 12 px
+- Settings (the gear top right, or `/settings`), with a Login section to connect your Authentik (19-10-2026): Authentik address, Client ID, Client secret (never shown again), the Redirect URL to paste into Authentik with a Copy button, "Save and test" (the server reads Authentik's OpenID configuration first and says in plain words what to fix), then "Continue with Authentik" to sign in once, which turns the login on; "Turn off Authentik login" opens the app again. The fields follow Immich's OAuth settings; the check follows Audiobookshelf's "Auto-populate"
 - Responsive design for mobile and desktop
 - Docker deployment
 
@@ -124,6 +125,8 @@ Expected endpoints:
 - `GET /songs/views?ids=` - How many times each video was viewed (at most 50 ids)
 - `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
 - `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
+- `GET /settings/login`, `PUT /settings/login`, `DELETE /settings/login` - How this install connects to Authentik (address, Client ID, whether a secret is set, whether the login is on, the Redirect URL), save and test it, turn the login off
+- `GET /auth/authentik/start?to=` - Where "Continue with Authentik" sends the browser (a redirect to Authentik)
 - `GET /status` - Whether the server's Soulseek client is connected, which Soulseek account it logs in with, and whether the music library folder can be written to (polled with the downloads feed)
 - `GET /downloads/all?pageSize=&pageNumber=&type=SONG|ALBUM|PLAYLIST` - Every download, paged, for the Downloads page; `type` is optional and narrows to one kind (PLAYLIST includes suggested playlists), with page counts per kind
 - `GET /downloads/{id}/tasks/{taskId}/candidates` - Every file Soulseek found for one song, from the server's cached search
