@@ -378,6 +378,10 @@ export interface StatusResponse {
    *  (then root and problem are null); `problem` one plain sentence when the folder is missing or cannot be written to,
    *  null when fine. Absent on an older server. */
   library?: { enabled: boolean; root: string | null; problem: string | null }
+  /** Can the server reach YouTube Music (19-10-2026)? From the helper's own cached readiness probe, so it can lag a
+   *  minute behind the truth. `detail` says which part is down when `reachable` is false ("ytmusic-adapter not
+   *  reachable: …" or "YouTube Music not reachable from the adapter…"), null when fine. Absent on an older server. */
+  youtubeMusic?: { reachable: boolean; detail: string | null }
 }
 
 // --- Manual import: the files Soulseek found for a song -------------------

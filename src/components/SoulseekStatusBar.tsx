@@ -11,16 +11,21 @@
  * library (the folder is missing or cannot be written to): a second strip in the same amber, since
  * the web app would otherwise say "Downloaded" while nothing reaches Navidrome or Jellyfin. Both
  * strips sit in one sticky box, so they stack instead of sliding over each other when scrolled.
+ * `youtubeMusicDown` (19-10-2026) is the server's word that it cannot reach YouTube Music (the helper
+ * is down, or YouTube is unreachable from it): a third strip in the same family, since search and
+ * new downloads both wait on it. Sonarr and Lidarr show a failing indexer the same way, as a
+ * persistent health warning cleared by the next check. `null` hides it (older server, first poll).
  * When the connectivity work's offline bar lands it should reuse this markup, so the two read as one
  * family.
  */
-export function SoulseekStatusBar({ loggedIn, username, libraryProblem }: {
+export function SoulseekStatusBar({ loggedIn, username, libraryProblem, youtubeMusicDown }: {
   loggedIn: boolean | null
   username?: string | null
   libraryProblem?: string | null
+  youtubeMusicDown?: boolean | null
 }) {
   const notLoggedIn = loggedIn === false
-  if (!notLoggedIn && !libraryProblem) return null
+  if (!notLoggedIn && !libraryProblem && !youtubeMusicDown) return null
   const strip = 'bg-amber-500 px-4 py-2 text-center text-sm font-medium text-black'
   return (
     <div className="sticky top-0 z-50">
@@ -33,6 +38,11 @@ export function SoulseekStatusBar({ loggedIn, username, libraryProblem }: {
         <div role="status" className={`${strip} border-t border-amber-700`}>
           Downloads cannot be filed into your music library: {libraryProblem} Songs stay in Soulseek's download
           folder until this is fixed (see the README's Troubleshooting).
+        </div>
+      )}
+      {youtubeMusicDown && (
+        <div role="status" className={`${strip} border-t border-amber-700`}>
+          YouTube Music isn't answering — search and new downloads will wait until it is back
         </div>
       )}
     </div>

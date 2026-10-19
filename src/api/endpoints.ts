@@ -367,6 +367,7 @@ export async function getStatus(signal?: AbortSignal): Promise<StatusResponse> {
     return Promise.resolve({
       soulseek: { connected: true, loggedIn: true, state: 'Connected, LoggedIn', detail: null },
       library: { enabled: true, root: '/library', problem: null },
+      youtubeMusic: { reachable: true, detail: null },
     })
   }
   return apiClient<StatusResponse>('/status', { signal })
