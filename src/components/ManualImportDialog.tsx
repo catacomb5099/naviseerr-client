@@ -560,7 +560,7 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
   const action = load.status === 'error' || empty
     ? { label: 'Reload', pending: false, onClick: refetch }
     : canSearchAgain
-      ? { label: 'Try again', pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId)) }
+      ? { label: 'Try again', hint: TRY_AGAIN_HINT, pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId)) }
       : undefined
   // The person's own search box (19-10-2026): same rule as the song view; an album with no search row has nowhere to keep folders.
   const canSearch = data && stage ? manualSearchAllowed(data.status, data.reason, stage) : false
