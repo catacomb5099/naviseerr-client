@@ -87,7 +87,9 @@ export function useActiveDownloads(playSwoosh: () => void) {
     return result
   })
   const [exiting, setExiting] = useState<Set<string>>(new Set())
-  const [minimized, setMinimized] = useState<boolean>(initial?.minimized ?? false)
+  // A phone with no saved preference starts folded: the open sheet would cover a third of the screen.
+  // Once the user folds or unfolds it, that choice is what is saved and wins.
+  const [minimized, setMinimized] = useState<boolean>(() => initial?.minimized ?? window.matchMedia('(max-width: 639px)').matches)
   const dismissedRef = useRef<Map<string, number>>(
     new Map((initial?.dismissed ?? []).map(d => [d.id, d.at])))
   const pollIntervalRef = useRef<number>(ACTIVE_POLL_MS)
