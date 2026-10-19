@@ -998,6 +998,21 @@ export function getMockSongCandidates(downloadId: string, taskId: string): SongC
   }
 }
 
+/** Mirrors POST /downloads/{id}/tasks/{taskId}/search: a person's own Soulseek search, answered after the wait a real one
+ *  takes (1.5 s here), with `query` being the text and a fresh search id and time. The list is the fixture list in another
+ *  order, so a change is visible; a text with `offline` in it is slskd's 409, `busy` its 429, `xyzzy` finds nothing. */
+export async function searchMockSongCandidates(downloadId: string, taskId: string, text: string): Promise<SongCandidatesResponse> {
+  await new Promise(resolve => setTimeout(resolve, 1500))
+  if (/offline/i.test(text)) throw new ApiError('conflict', 409, 'Conflict', { reason: 'SOULSEEK_OFFLINE', message: 'Soulseek is offline right now, so the search could not run.' })
+  if (/busy/i.test(text)) throw new ApiError('busy', 429, 'Too Many Requests', { reason: 'SOULSEEK_BUSY', message: 'Soulseek is busy with other searches; try again in a moment.' })
+  const song = findMockSong(downloadId, taskId)
+  if (!song) throw new ApiError('not found', 404, 'Not Found', { message: 'No such song in this download' })
+  const base = { taskId, query: text, searchId: `mock-search-${Date.now().toString(36)}`, searchedAt: iso(Date.now()), songStage: song.stage, current: null }
+  if (/xyzzy/i.test(text)) return { ...base, status: 'NONE', reason: 'NO_RESULTS', candidates: [] }
+  const list = mockCandidateList(song, `${taskId}:${text}`).map(c => ({ ...c, isCurrent: false }))
+  return { ...base, status: 'READY', reason: null, candidates: list }
+}
+
 /** Mirrors POST /downloads/{id}/tasks/{taskId}/pick. The song restarts in place with the chosen file:
  *  a fixture song is rewritten (stage DOWNLOADING from 0 %, its parent reopened and re-tallied), a
  *  simulator song's clock is moved to the start of its transfer. 409 with the current card when the

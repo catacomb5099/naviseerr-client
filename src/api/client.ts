@@ -13,9 +13,9 @@ export const SERVER_UNREACHABLE_MESSAGE = "Can't reach the Naviseerr server. Che
 
 /** The caller's signal plus the timeout where the browser can combine them (Chrome 116+, Safari
  *  17.4+, Firefox 124+); an older browser keeps the caller's signal alone and no timeout. */
-function withTimeout(signal: AbortSignal | null | undefined): AbortSignal | undefined {
+function withTimeout(signal: AbortSignal | null | undefined, ms = REQUEST_TIMEOUT_MS): AbortSignal | undefined {
   if (typeof AbortSignal.timeout !== 'function') return signal ?? undefined
-  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  const timeout = AbortSignal.timeout(ms)
   if (!signal) return timeout
   return typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, timeout]) : signal
 }
@@ -39,6 +39,9 @@ export interface ApiOptions extends RequestInit {
   cacheMs?: number
   /** GET only: forget a reused answer and ask again. Still joins a request already in flight. */
   fresh?: boolean
+  /** How long to wait for the answer before the server counts as unreachable; the default suits every call but a
+   *  Soulseek search run while the person waits (the server holds that one up to 30 s). */
+  timeoutMs?: number
 }
 
 /**
@@ -47,16 +50,16 @@ export interface ApiOptions extends RequestInit {
  */
 export function apiClient<T>(endpoint: string, options?: ApiOptions): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
-  const { cacheMs, fresh, signal, ...init } = options ?? {}
-  if (init.method && init.method.toUpperCase() !== 'GET') return request<T>(url, { ...init, signal })
-  return share(url, s => request<T>(url, { ...init, signal: s }), { signal: signal ?? undefined, cacheMs, fresh })
+  const { cacheMs, fresh, signal, timeoutMs, ...init } = options ?? {}
+  if (init.method && init.method.toUpperCase() !== 'GET') return request<T>(url, { ...init, signal }, timeoutMs)
+  return share(url, s => request<T>(url, { ...init, signal: s }, timeoutMs), { signal: signal ?? undefined, cacheMs, fresh })
 }
 
-async function request<T>(url: string, init: RequestInit): Promise<T> {
+async function request<T>(url: string, init: RequestInit, timeoutMs?: number): Promise<T> {
   try {
     const response = await fetch(url, {
       ...init,
-      signal: withTimeout(init.signal),
+      signal: withTimeout(init.signal, timeoutMs),
       headers: {
         // Only with a body: on a GET this header is not on the CORS safe list, so the browser would
         // send an OPTIONS preflight first - the second row per request in the Network tab.

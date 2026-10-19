@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Search, X } from 'lucide-react'
-import { AlbumPick, CandidatePick } from '../api/endpoints'
+import { AlbumPick, CandidatePick, searchSongCandidates } from '../api/endpoints'
 import { AlbumFolder, SongCandidate } from '../api/types'
 import { ActOutcome } from '../hooks/useActiveDownloads'
-import { CandidatesLoad, ManualImportTarget, useCandidates } from '../hooks/useCandidates'
+import { CandidatesLoad, ManualImportTarget, messageOf, useCandidates } from '../hooks/useCandidates'
 import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
-  GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, lastFolders, qualityLabel,
-  qualityRank, qualityText, searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
+  GRADE_HINT, GRADE_LABEL, NOTHING_FOUND_HINT, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, lastFolders,
+  manualSearchAllowed, qualityLabel, qualityRank, qualityText, searchAgainAllowed, searchLine, searchingCopy, slotLabel, slotRank, sortRows,
+  statusCopy,
 } from '../lib/candidates'
 import { formatDuration } from '../lib/utils'
 import { CandidateTable, Column, Sort } from './CandidateTable'
@@ -150,14 +151,32 @@ const ALBUM_COLUMNS: Column<AlbumFolder>[] = [
 
 const ALBUM_HAYSTACK = (f: AlbumFolder) => [f.username, f.folder, ...f.files.map(x => x.extension)]
 
-/** Sort, filter and pick state shared by the song and the album views. Mounted fresh per target. */
-function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => void, refetch: () => void) {
+/** Sort, filter, pick and own-search state shared by the song and the album views. Mounted fresh per target. */
+function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => void, refetch: () => void,
+                      replace: (next: CandidatesLoad) => void) {
   const [sort, setSort] = useState<Sort | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filter, setFilter] = useState('')
   // The row whose pick is on its way, and what the last pick said.
   const [pending, setPending] = useState<string | null>(null)
   const [pickError, setPickError] = useState<string | null>(null)
+  // The text a person's own Soulseek search is running for (19-10-2026), and what the last one said when it failed.
+  const [searching, setSearching] = useState<string | null>(null)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  /** One search the person typed: the server holds the call 3-30 s, then the answer REPLACES the list in the same table. */
+  const search = async (text: string, call: () => Promise<CandidatesLoad>) => {
+    if (pending || searching) return
+    setSearching(text)
+    setSearchError(null)
+    setPickError(null)
+    try {
+      replace(await call())
+    } catch (err) {
+      setSearchError(messageOf(err, err instanceof Error && err.message ? err.message : REQUEST_FAILED_COPY))
+    } finally {
+      setSearching(null)
+    }
+  }
   /** One call through the downloads feed; a pick and "Try again" share the pending key and the error line. */
   const run = async (key: string, call: () => Promise<ActOutcome>, onOk: () => void, conflictCopy: string) => {
     if (pending) return
@@ -175,7 +194,51 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
   // After the 202 the server reads SEARCHING, and useCandidates' own 3-second loop fills the list in.
   const searchAgain = (call: () => Promise<ActOutcome>) => run(SEARCH_AGAIN_KEY, call, refetch, SEARCH_CONFLICT_COPY)
   const toggleSearch = () => { setSearchOpen(o => !o); if (searchOpen) setFilter('') }
-  return { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain: pending === SEARCH_AGAIN_KEY }
+  return {
+    sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain,
+    searchingAgain: pending === SEARCH_AGAIN_KEY, searching, searchError, search,
+  }
+}
+
+/**
+ * The "Search Soulseek for" box (19-10-2026): slskd's own search page, bolted under the header. Prefilled with the
+ * wording of the list on screen (Naviseerr's own, or the last text typed); Enter or the button runs ONE Soulseek
+ * search with the words as typed, the button says "Searching…" meanwhile, and the answer replaces the table. Keyed
+ * by the parent on the list's wording, so it starts clean with each new list.
+ */
+function SoulseekSearch({ initial, searching, error, onSearch }: {
+  initial: string; searching: string | null; error: string | null; onSearch: (text: string) => void
+}) {
+  const [text, setText] = useState(initial)
+  const blank = text.trim().length === 0
+  return (
+    <form
+      className="mt-4 flex items-end gap-2 flex-wrap"
+      onSubmit={e => { e.preventDefault(); if (!blank && !searching) onSearch(text.trim()) }}
+    >
+      <div className="min-w-0 flex-1 basis-56">
+        <label htmlFor="soulseek-search" className="block text-xs text-zinc-400 mb-1">Search Soulseek for</label>
+        <Input
+          id="soulseek-search"
+          type="search"
+          value={text}
+          onChange={e => setText(e.target.value)}
+          maxLength={200}
+          aria-describedby={error ? 'soulseek-search-error' : undefined}
+          className="h-9 bg-zinc-900 border-zinc-800 placeholder:text-zinc-500 text-sm"
+        />
+      </div>
+      <button
+        type="submit"
+        aria-disabled={searching !== null || blank}
+        className={`${BUTTON} inline-flex items-center gap-2 ${searching !== null || blank ? 'text-zinc-500 hover:bg-transparent' : ''}`}
+      >
+        {searching && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+        {searching ? 'Searching…' : 'Search Soulseek'}
+      </button>
+      {error && <p id="soulseek-search-error" role="status" className="basis-full text-sm text-red-400">{error}</p>}
+    </form>
+  )
 }
 
 /** The header every view shares: title, what Soulseek was asked for, slskd's own id and time for that search
@@ -282,13 +345,16 @@ function RowAction({ current, currentLabel, disabled, hint, pending, onClick }: 
 }
 
 type ViewProps = {
-  target: ManualImportTarget; load: CandidatesLoad; refetch: () => void; onClose: () => void
+  target: ManualImportTarget; load: CandidatesLoad; refetch: () => void; replace: (next: CandidatesLoad) => void; onClose: () => void
   onPick: ManualImportDialogProps['onPick']; onRetry: ManualImportDialogProps['onRetry']
 }
 
-/** The file list for one song: sort, filter, the empty/searching/none states, Download per row. */
-function SongCandidates({ target, load, refetch, onClose, onPick, onRetry }: ViewProps) {
-  const { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain } = usePickState(onPick, onClose, refetch)
+/** The file list for one song: sort, filter, the empty/searching/none states, Download per row, your own search. */
+function SongCandidates({ target, load, refetch, replace, onClose, onPick, onRetry }: ViewProps) {
+  const {
+    sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain,
+    searching, searchError, search,
+  } = usePickState(onPick, onClose, refetch, replace)
   // The row waiting for "Replace?".
   const [confirm, setConfirm] = useState<SongCandidate | null>(null)
 
@@ -302,7 +368,7 @@ function SongCandidates({ target, load, refetch, onClose, onPick, onRetry }: Vie
   }, [all, filter, sort])
 
   const message = load.status === 'error' ? load.message : data ? statusCopy('SONG', data.status, data.reason, data.query, data.searchedAt) : null
-  const searching = data?.status === 'SEARCHING'
+  const stillSearching = data?.status === 'SEARCHING'
   const empty = data?.status === 'READY' && all.length === 0
   const showTable = load.status === 'loading' || (data?.status === 'READY' && all.length > 0)
   const filtering = filter.trim().length > 0
@@ -317,9 +383,15 @@ function SongCandidates({ target, load, refetch, onClose, onPick, onRetry }: Vie
     : data && canSearchAgain
       ? { label: 'Try again', pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId, data.taskId)) }
       : undefined
-  const note = data?.status === 'NONE' && !canSearchAgain
-    ? succeeded ? SUCCEEDED_HINT : !isTerminal(data.songStage) ? LIVE_SONG_NOTE : null
-    : null
+  // The person's own search box: whenever a new search could help and its list could be kept (19-10-2026). With the
+  // box on screen, "nothing found" gets the fewer-words hint rather than the note about cancelling first: the box IS
+  // the way to search again.
+  const canSearch = data ? manualSearchAllowed(data.status, data.reason, data.songStage) : false
+  const note = data?.reason === 'NO_RESULTS' && canSearch
+    ? NOTHING_FOUND_HINT
+    : data?.status === 'NONE' && !canSearchAgain
+      ? succeeded ? SUCCEEDED_HINT : !isTerminal(data.songStage) ? LIVE_SONG_NOTE : null
+      : null
 
   const rowKey = (c: SongCandidate) => `${c.username}|${c.filename}`
   const pickRow = (c: SongCandidate) => {
@@ -346,11 +418,25 @@ function SongCandidates({ target, load, refetch, onClose, onPick, onRetry }: Vie
         onClose={onClose}
       />
 
-      {(message || empty) && (
-        <EmptyState message={message ?? 'The search found no files for this song.'} searching={searching} action={action} note={note} error={pickError} />
+      {data && canSearch && (
+        <SoulseekSearch
+          key={data.query ?? ''}
+          initial={data.query ?? target.title}
+          searching={searching}
+          error={searchError}
+          onSearch={text => void search(text, async () => ({
+            status: 'ready', kind: 'SONG', data: await searchSongCandidates(target.downloadId, data.taskId, text),
+          }))}
+        />
       )}
 
-      {showTable && (
+      {searching && <EmptyState message={searchingCopy(searching)} searching />}
+
+      {!searching && (message || empty) && (
+        <EmptyState message={message ?? 'The search found no files for this song.'} searching={stillSearching} action={action} note={note} error={pickError} />
+      )}
+
+      {!searching && showTable && (
         <div className="mt-4 space-y-2">
           <div className="flex items-baseline justify-between gap-3 flex-wrap text-xs">
             <p role="status" className="text-zinc-400 tabular-nums">
@@ -425,8 +511,8 @@ function FolderFiles({ folder }: { folder: AlbumFolder }) {
 }
 
 /** The folder list for a whole album: one row per sharer, unfolding into the files it holds. */
-function AlbumCandidates({ target, load, refetch, onClose, onPick, onRetry }: ViewProps) {
-  const { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain } = usePickState(onPick, onClose, refetch)
+function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRetry }: ViewProps) {
+  const { sort, setSort, searchOpen, toggleSearch, filter, setFilter, pending, pickError, send, searchAgain, searchingAgain } = usePickState(onPick, onClose, refetch, replace)
   const [confirm, setConfirm] = useState<AlbumFolder | null>(null)
 
   const data = load.status === 'ready' && load.kind === 'ALBUM' ? load.data : null
@@ -585,7 +671,7 @@ function ConfirmDialog({ open, message, onConfirm, onCancel }: { open: boolean; 
  *  stray click cannot wipe a sort or a filter. */
 export function ManualImportDialog({ target, onClose, onPick, onRetry }: ManualImportDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const { load, refetch } = useCandidates(target)
+  const { load, refetch, replace } = useCandidates(target)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -605,8 +691,8 @@ export function ManualImportDialog({ target, onClose, onPick, onRetry }: ManualI
     >
       {/* Keyed per target so the sort, filter and confirm start clean every time it opens. */}
       {target.kind === 'ALBUM'
-        ? <AlbumCandidates key={`ALBUM:${target.downloadId}`} target={target} load={load} refetch={refetch} onClose={onClose} onPick={onPick} onRetry={onRetry} />
-        : <SongCandidates key={`SONG:${target.downloadId}:${target.taskId ?? ''}`} target={target} load={load} refetch={refetch} onClose={onClose} onPick={onPick} onRetry={onRetry} />}
+        ? <AlbumCandidates key={`ALBUM:${target.downloadId}`} target={target} load={load} refetch={refetch} replace={replace} onClose={onClose} onPick={onPick} onRetry={onRetry} />
+        : <SongCandidates key={`SONG:${target.downloadId}:${target.taskId ?? ''}`} target={target} load={load} refetch={refetch} replace={replace} onClose={onClose} onPick={onPick} onRetry={onRetry} />}
     </dialog>
   )
 }

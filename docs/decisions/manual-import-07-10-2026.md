@@ -129,3 +129,37 @@ Decisions:
 5. The `dir="rtl"` + `<bdi>` left-cut of decision 8 goes (plain end-cut like Sonarr; the start of the tail is the
    folder's name, the useful part). The hidden ", in " joiner stays only below `md`, where name and folder share a
    cell; above it the Folder column has its own header, which is better for a screen reader anyway.
+
+## Addendum of 19-10-2026: type your own Soulseek search (song pop-up)
+
+The owner: "change manual import to allow users to search for a certain text." The only text box in the pop-up was
+the filter, which narrows the rows already loaded, and "Try again" re-runs Naviseerr's own wordings; nothing let a
+person's words reach Soulseek.
+
+Decisions (with naviseerr's `POST /downloads/{id}/tasks/{taskId}/search`, same date):
+
+1. **A "Search Soulseek for" box under the header** (`SoulseekSearch`), prefilled with the wording of the list on
+   screen (Naviseerr's own, or the last text typed), a labelled `<input type="search">` with a real submit button:
+   Enter or the button runs one Soulseek search with the words as typed. Blank text does nothing. slskd's own Search
+   page is the model for the box (free text, results underneath); Sonarr's Interactive Search for the wait (a spinner
+   while the indexers are asked, then one results table with a grab button per row). Sonarr, Radarr and Lidarr have no
+   free-text box in that modal, only "search again", which is what Try again is; Spotify, YouTube Music and Apple
+   Music have no equivalent (they do not let you choose a source file).
+2. **The pop-up waits**: while the server holds the call (3-30 s) the table and the empty state give way to one line,
+   "Searching Soulseek for “…”… this usually takes 5 to 20 seconds." with the spinner the pop-up already has, and the
+   button reads "Searching…". This one call gets a 45 s fetch timeout (`ApiOptions.timeoutMs`; the server's cap is
+   30 s plus slskd's own 15 s per call); every other request keeps 20 s.
+3. **The answer replaces the list in the same table** (`useCandidates.replace`): the header now says "Soulseek was
+   asked for: “<your words>”" with slskd's new id and time, the count line reads as before, the filter and the sort
+   still apply, and Download on any row picks it (the server stored the list as the song's). Each search is its own
+   result, as on slskd's page.
+4. **When the box shows** (`manualSearchAllowed`): not while Naviseerr's own search still runs (its result would
+   overwrite the person's list when it completes; the box returns when it ends), not for a song already downloaded
+   and filed (it cannot be re-picked), and not for an album with no search on record. A full list gets the box too:
+   the point is to search again when Naviseerr's wording found the wrong things.
+5. **Errors read under the box** in the server's own sentence (`messageOf`): Soulseek offline (409), busy with other
+   searches (429), slskd not answering (502), the generic request-failed line otherwise. Nothing found keeps the
+   existing dated sentence naming the text, plus a hint: Soulseek returns nothing for some artist names, try fewer
+   words or the title alone (the blocked-phrase finding of 28-09-2026).
+6. **Not stored**: after closing and reopening, the header names Naviseerr's own wording again while the list is the
+   one the person's search found (the server keeps no typed text yet). Said in the server ADR; a later migration fixes it.
