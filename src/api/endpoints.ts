@@ -5,6 +5,7 @@ import {
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
+  SoulseekAccount,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -462,6 +463,28 @@ export function turnOffLogin(): Promise<void> {
  */
 export function authentikStartUrl(to: string): string {
   return `${API_BASE_URL}/auth/authentik/start?to=${encodeURIComponent(to)}`
+}
+
+/**
+ * The Soulseek account this install logs in with, and whether Soulseek accepted it. Never cached:
+ * the Settings page reads it once on open.
+ * GET /settings/soulseek  (404 {message} when the install keeps the account in its compose file)
+ */
+export async function getSoulseekAccount(signal?: AbortSignal): Promise<SoulseekAccount> {
+  if (USE_MOCK_DATA) {
+    return Promise.resolve({ username: 'naviseerr-ab12cd', generated: true, password: 'mock-password-24chars', loggedIn: false })
+  }
+  return apiClient<SoulseekAccount>('/settings/soulseek', { signal })
+}
+
+/**
+ * Use another Soulseek account: the server rewrites its Soulseek client's settings and asks it to log
+ * in again; whether Soulseek accepts it shows on GET /status within about 30 s.
+ * PUT /settings/soulseek {username, password}  (202; 400 {message} when the name breaks Soulseek's rules)
+ */
+export async function putSoulseekAccount(username: string, password: string): Promise<SoulseekAccount> {
+  if (USE_MOCK_DATA) return Promise.resolve({ username, generated: false, password: null, loggedIn: null })
+  return apiClient<SoulseekAccount>('/settings/soulseek', { method: 'PUT', body: JSON.stringify({ username, password }) })
 }
 
 /** Server-side cap on GET /downloads?ids= */
