@@ -7,7 +7,7 @@ import { CandidatesLoad, ManualImportTarget, messageOf, useCandidates } from '..
 import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
-  GRADE_HINT, GRADE_LABEL, NOTHING_FOUND_HINT, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, lastFolders,
+  GRADE_HINT, GRADE_LABEL, NOTHING_FOUND_HINT, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank,
   manualSearchAllowed, qualityLabel, qualityRank, qualityText, searchAgainAllowed, searchLine, searchingCopy, slotLabel, slotRank, sortRows,
   statusCopy,
 } from '../lib/candidates'
@@ -56,41 +56,39 @@ const GRADE_CLASS: Record<string, string> = {
 }
 
 const fmt = (c: SongCandidate) => formatOf(c.filename) || c.extension
+/** The sort a header button stands for: a column, or the second button a column carries (the File header's Folder). */
+const sortKeyOf = <T,>(columns: Column<T>[], key: string) => columns.flatMap(c => c.alsoSort ? [c, c.alsoSort] : [c]).find(k => k.key === key)
 
-/** A file's name, the whole slskd path on hover. On a phone the Folder column is gone, so the file's last two
- *  folders stack under the name instead (a hidden ", in " keeps the two apart for screen readers). The cell is
- *  10.5 rem at EVERY width (was 18 rem): on a phone that keeps it clear of the pinned Download button, and at 1280 px
- *  it is what makes room for the Folder column (0 px to spare there), so long names cut sooner on a laptop too. */
+/** Wrapping text for a slskd path: breaks at spaces, and inside a word only when that word alone is wider than the
+ *  cell (`overflow-wrap: anywhere`, which also lets the table keep the column at its set width), so no path is ever cut.
+ *  The rest of the table stays on one line (`whitespace-nowrap` on the table). */
+const WRAP = 'whitespace-normal [overflow-wrap:anywhere]'
+
+/** The file's name over its WHOLE folder path in smaller muted text, both wrapping, at every width: slskd's own search
+ *  results. Nothing is cut and nothing hides behind a hover (the owner's call of 19-10-2026). 10.5 rem on a phone keeps
+ *  the cell clear of the pinned Download button; from md the cell is at least 18 rem and takes every spare pixel of the
+ *  row, since no other cell wraps. The hidden ", in " keeps name and folder apart for a screen reader. */
 function FileCell({ path }: { path: string }) {
   const dir = folderOf(path)
   return (
-    <span title={path} className="block max-w-[10.5rem]">
-      <span className="block truncate">{basename(path)}</span>
-      {dir && <span className="sr-only md:hidden">, in </span>}
-      {dir && <span className="block truncate text-[11px] text-zinc-500 md:hidden">{lastFolders(dir)}</span>}
+    <span className={`block min-w-[10.5rem] md:min-w-[18rem] ${WRAP}`}>
+      {basename(path)}
+      {dir && <span className="sr-only">, in </span>}
+      {dir && <span className="block text-xs text-zinc-400">{dir}</span>}
     </span>
   )
 }
 
-/** The last two folders of a shared path, cut at the END with the ellipsis (Sonarr's Relative Path column), the
- *  whole path on hover. `leafOnPhone`: below md only the LAST folder, the one that tells editions apart, since a
- *  136 px cell loses it behind the artist folder and a touch screen has no hover. */
-function FolderCell({ dir, className, leafOnPhone = false }: { dir: string; className: string; leafOnPhone?: boolean }) {
-  return (
-    <span title={dir} className={`block truncate ${className}`}>
-      {leafOnPhone && <span className="md:hidden">{lastFolders(dir, 1)}</span>}
-      <span className={leafOnPhone ? 'hidden md:inline' : undefined}>{lastFolders(dir)}</span>
-    </span>
-  )
-}
+/** A sharer's whole folder path, wrapping. 8.5 rem on a phone: the chevron column and the cell padding take 52 px, and
+ *  52 + 136 ends before the pinned Download button in a 375 px window; at least 18 rem from md. */
+const FOLDER_CELL = `block min-w-[8.5rem] md:min-w-[18rem] ${WRAP}`
 
 const SONG_COLUMNS: Column<SongCandidate>[] = [
-  { key: 'file', label: 'File', sortValue: c => basename(c.filename), render: c => <FileCell path={c.filename} /> },
-  // Sorting by the WHOLE folder path keeps one sharer's folder together; the cell shows its last two pieces. Phones
-  // do without the column (the File cell stacks the folder instead), hence the class.
   {
-    key: 'folder', label: 'Folder', className: 'hidden md:table-cell', sortValue: c => folderOf(c.filename),
-    render: c => <FolderCell dir={folderOf(c.filename)} className="max-w-[11rem] text-zinc-400" />,
+    // Name over folder in ONE cell (slskd's shape); the header keeps a second button so the list still sorts by the
+    // WHOLE folder path, which keeps one sharer's folder together (`@@alias\` shares first).
+    key: 'file', label: 'File', sortValue: c => basename(c.filename), render: c => <FileCell path={c.filename} />,
+    alsoSort: { key: 'folder', label: 'Folder', sortValue: c => folderOf(c.filename) },
   },
   {
     // Format and quality in one cell ("FLAC · Lossless", "MP3 · 320 kbps"), as Sonarr's Quality column names
@@ -105,9 +103,10 @@ const SONG_COLUMNS: Column<SongCandidate>[] = [
   },
   { key: 'size', label: 'Size', align: 'right', firstDir: 'desc', sortValue: c => c.size, render: c => formatBytes(c.size) },
   { key: 'speed', label: 'Speed', align: 'right', firstDir: 'desc', sortValue: c => c.uploadSpeed, render: c => formatSpeed(c.uploadSpeed) },
-  // Cut with the whole name on hover: a 20-character Soulseek name (real ones run to 30) pushed the Match badge under the
-  // pinned button at 1280 px (measured 19-10-2026: 39 px over without this and the two cuts above).
-  { key: 'sharer', label: 'Sharer', sortValue: c => c.username, render: c => <span title={c.username} className="block max-w-[7.5rem] truncate">{c.username}</span> },
+  // Capped at 7.5 rem (a 20-character Soulseek name, real ones run to 30, pushed the Match badge under the pinned button
+  // at 1280 px) and wrapping inside the cap. break-words, not WRAP: with the cap, break-word keeps the column at that
+  // width and only folds a longer name; anywhere would let the column shrink to its narrowest character.
+  { key: 'sharer', label: 'Sharer', sortValue: c => c.username, render: c => <span className="block max-w-[7.5rem] whitespace-normal break-words">{c.username}</span> },
   { key: 'slot', label: 'Slot / Queue', sortValue: c => slotRank(c), render: c => slotLabel(c) },
   {
     key: 'match', label: 'Match', sortValue: c => gradeRank(c.grade),
@@ -123,10 +122,9 @@ const SONG_COLUMNS: Column<SongCandidate>[] = [
 const SONG_HAYSTACK = (c: SongCandidate) => [c.filename, c.username, fmt(c)]
 
 const ALBUM_COLUMNS: Column<AlbumFolder>[] = [
-  // The folder first, as Sonarr and Lidarr list the path first and slskd heads each group with its folder; sorted by
-  // the whole path. 8.5 rem on a phone: the chevron column and the cell padding take 52 px, 52 + 136 = 188 < 191 where
-  // the pinned Download button starts in a 375 px window (measured 19-10-2026).
-  { key: 'folder', label: 'Folder', sortValue: f => f.folder, render: f => <FolderCell dir={f.folder} className="max-w-[8.5rem] md:max-w-[18rem]" leafOnPhone /> },
+  // The folder first, as Sonarr and Lidarr list the path first and slskd heads each group with its folder; the whole
+  // path, wrapping; sorted by it.
+  { key: 'folder', label: 'Folder', sortValue: f => f.folder, render: f => <span className={FOLDER_CELL}>{f.folder}</span> },
   { key: 'sharer', label: 'Sharer', sortValue: f => f.username, render: f => f.username },
   { key: 'files', label: 'Files', align: 'right', firstDir: 'desc', sortValue: f => f.fileCount, render: f => `${f.fileCount}` },
   { key: 'size', label: 'Size', align: 'right', firstDir: 'desc', sortValue: f => f.totalSize, render: f => formatBytes(f.totalSize) },
@@ -372,8 +370,8 @@ function SongCandidates({ target, load, refetch, replace, onClose, onPick, onRet
   const rows = useMemo(() => {
     const filtered = filterRows(all, filter, SONG_HAYSTACK)
     if (!sort) return filtered
-    const col = SONG_COLUMNS.find(c => c.key === sort.key)
-    return col ? sortRows(filtered, col.sortValue, sort.dir) : filtered
+    const by = sortKeyOf(SONG_COLUMNS, sort.key)
+    return by ? sortRows(filtered, by.sortValue, sort.dir) : filtered
   }, [all, filter, sort])
 
   const message = load.status === 'error' ? load.message : data ? statusCopy('SONG', data.status, data.reason, data.query, data.searchedAt) : null
@@ -486,7 +484,8 @@ function SongCandidates({ target, load, refetch, replace, onClose, onPick, onRet
   )
 }
 
-/** The folder's files, Sonarr-season style under the folder row: #, Name, Quality, Length, Size. */
+/** The folder's files, Sonarr-season style under the folder row: #, Name, Quality, Length, Size. Name only (the
+ *  folder is the row above), wrapping when long. */
 function FolderFiles({ folder }: { folder: AlbumFolder }) {
   return (
     <div className="ml-8 my-1 mr-2 bg-zinc-900/40 border-l-2 border-zinc-800 rounded-r-md">
@@ -504,7 +503,7 @@ function FolderFiles({ folder }: { folder: AlbumFolder }) {
           {folder.files.map(f => (
             <tr key={f.taskId}>
               <td className="px-2.5 py-1 text-right tabular-nums text-zinc-500">{f.index}</td>
-              <td className="px-2.5 py-1" title={`${folder.folder}\\${f.name}`}>{f.name}</td>
+              <td className={`px-2.5 py-1 ${WRAP}`}>{f.name}</td>
               <td className="px-2.5 py-1">{qualityLabel({ extension: formatOf(f.name) || f.extension, bitrateKbps: f.bitrateKbps })}</td>
               <td className="px-2.5 py-1 text-right tabular-nums">{f.lengthSeconds == null ? '—' : formatDuration(f.lengthSeconds)}</td>
               <td className="px-2.5 py-1 text-right tabular-nums">{formatBytes(f.size)}</td>
@@ -532,8 +531,8 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
   const rows = useMemo(() => {
     const filtered = filterRows(all, filter, ALBUM_HAYSTACK)
     if (!sort) return filtered
-    const col = ALBUM_COLUMNS.find(c => c.key === sort.key)
-    return col ? sortRows(filtered, col.sortValue, sort.dir) : filtered
+    const by = sortKeyOf(ALBUM_COLUMNS, sort.key)
+    return by ? sortRows(filtered, by.sortValue, sort.dir) : filtered
   }, [all, filter, sort])
   const songCount = data?.songCount ?? 0
   const columns = useMemo(() => ALBUM_COLUMNS.map(col => col.key === 'files'

@@ -130,6 +130,44 @@ Decisions:
    folder's name, the useful part). The hidden ", in " joiner stays only below `md`, where name and folder share a
    cell; above it the Folder column has its own header, which is better for a screen reader anyway.
 
+## Addendum of 19-10-2026, evening: the whole path, always (supersedes the Folder-column addendum's cuts)
+
+The owner tried the Folder column the same day and rejected it: "the folder view for songs is completely useless. It
+tries to expose a part of the folder that it thinks is useful; I need the whole folder view to judge. Either a way to
+expand it, or don't have it on the same row, have it underneath the listing. Same with the file name: as soon as it
+expands past the viewport you cannot make out what it is, it doesn't wrap to the next line." The two-folder tail, the
+10.5 rem file cell and the hover title were all cuts, and a cut path cannot be judged.
+
+Decisions:
+
+1. **Song table: ONE File cell, the file name over the WHOLE folder path** in smaller muted text, both wrapping onto as
+   many lines as they need, at every width. That is the shape of slskd's own web search results (file name, the full
+   directory beneath it in smaller type) and of Sonarr's manual import, whose relative path wraps inside its cell.
+   Nothing is shortened, nothing sits behind a hover: the `title` attributes and `lastFolders` are gone (deleted from
+   `src/lib/candidates.ts`, with its asserts). The separate Folder column is gone too, since the same information now
+   sits under every name.
+2. **Sorting by folder stays**, as a second button in the File header ("File", then "Folder", the same size): `Column.alsoSort`
+   on `CandidateTable`, and `aria-sort` on the header marks either. Flip: drop `alsoSort` from the `file` column and the
+   list sorts by name only.
+3. **How the wrapping works**: `white-space: normal` plus `overflow-wrap: anywhere` on the File cell (`WRAP` in
+   `ManualImportDialog.tsx`). Lines break at spaces; a word wider than the cell (a `[FLAC]_Oasis_Discography…` token)
+   breaks inside, and only then. `anywhere` rather than `break-word` because only `anywhere` lets the table keep the
+   column at its set width: with `break-word` one long token would widen the column (and on a phone push it under the
+   pinned button). The rest of the table keeps `whitespace-nowrap`, so Quality, Length, Size, Speed, Sharer, Slot /
+   Queue, Match and the button stay on one line and the File cell takes every spare pixel of the row. The cell is at
+   least 18 rem from `md` (measured: no sideways scroll at 1280 with the 101 real paths) and 10.5 rem on a phone, where
+   the table still scrolls sideways for the other columns and the cell ends before the pinned Download button.
+4. **Album table: the Folder column shows the whole path, wrapping**, same rule, at least 18 rem from `md` and 8.5 rem on
+   a phone (the chevron and padding take 52 px; 52 + 136 ends before the button). The unfolded files keep the name only
+   (their folder is the row above), now wrapping when long, no hover path.
+5. Rows get taller for long paths (the longest real one, 221 characters, takes four lines at 1280); that is the point.
+   The dialog already scrolls vertically.
+6. **The Sharer cell wraps too** (`break-words` inside its 7.5 rem cap: the column keeps its width and only a longer
+   name folds onto a second line; `anywhere` would let that column shrink to one character), and the table box is
+   `relative`, so the hidden ", sort" labels in the header buttons stay inside it: before, their containing block was
+   the dialog's scroller, which they widened by 500 px on a phone (231 px at 768), so a sideways swipe on the text above
+   the table slid the whole pop-up. Both from the review of the fix.
+
 ## Addendum of 19-10-2026: type your own Soulseek search (song pop-up)
 
 The owner: "change manual import to allow users to search for a certain text." The only text box in the pop-up was

@@ -1,6 +1,6 @@
 /** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
 import {
-  GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, lastFolders, qualityLabel,
+  GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel,
   manualSearchAllowed, qualityRank, qualityText, searchAgainAllowed, searchingCopy, searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../src/lib/candidates'
 import { shortDate } from '../src/lib/utils'
@@ -21,14 +21,6 @@ assert(folderOf('music/oasis/x.mp3') === 'music/oasis', 'folderOf on forward sla
 assert(folderOf('bare.flac') === '', 'a bare name has no folder')
 assert(folderOf('\\x.flac') === '', 'a leading separator alone is not a folder')
 assert(`${folderOf(path)}\\${basename(path)}` === path, 'folder + name is the whole path')
-
-// The Folder column shows the last two folders, "…\" first when more were cut (19-10-2026); the hover has the rest.
-assert(lastFolders('@@music\\Oasis\\(1994) Definitely Maybe') === '…\\Oasis\\(1994) Definitely Maybe', 'the last two folders, marked as cut')
-assert(lastFolders('media\\Oasis') === 'media\\Oasis', 'two folders are shown whole, without the mark')
-assert(lastFolders('Music') === 'Music', 'one folder is shown whole')
-assert(lastFolders('') === '', 'no folder, nothing')
-assert(lastFolders('music/oasis/x') === '…\\oasis\\x', 'forward slashes split too and are written back as slskd writes them')
-assert(lastFolders('@@viny\\Archive\\2009\\Jay Sean', 3) === '…\\Archive\\2009\\Jay Sean', 'keep is how many')
 
 // The format comes from the suffix only; slskd's extension field is not consulted.
 assert(formatOf('@@a\\x\\Song.FLAC') === 'flac', 'formatOf lower-cases the suffix')
