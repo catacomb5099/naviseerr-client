@@ -127,6 +127,8 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
       meta.push('Picked by YouTube Music')
     } else {
       meta.push(`By ${artists[0] ?? 'Unknown Artist'}`)
+      // YouTube Music's own line order: views, then songs, then length; nothing where it shows none.
+      if (detail.views) meta.push(detail.views)
     }
     meta.push(`${detail.trackCount} songs`)
     const total = formatTotal(detail.tracks)

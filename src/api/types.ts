@@ -101,6 +101,10 @@ export interface CollectionDetail {
   /** What YouTube Music plays this as: an album's OLAK5uy_ id, a playlist's bare id. Absent from an
    *  older server; null when YouTube gave none. */
   playlistId?: string | null
+  /** How often the playlist itself was viewed, in YouTube Music's own wording ("6.9M views"), shown
+   *  as-is and never parsed. Only user-made playlists have one: null for albums, radios and YouTube
+   *  Music's own editorial playlists (which show no count there either); absent from an older server. */
+  views?: string | null
 }
 
 /** GET /artists/{id} - an artist's page: header plus the shelves YouTube Music shows. Every list is

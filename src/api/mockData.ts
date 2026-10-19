@@ -234,6 +234,8 @@ export function getMockCollection(id: string, type: CollectionType): CollectionD
     iconURL: album?.iconURL ?? playlist.iconURL,
     year: album?.year ?? null,
     trackCount: COLLECTION_TRACKS.length,
+    // Like the real server: YouTube's own wording on a user playlist, nothing on an album.
+    views: type === 'PLAYLIST' ? '6.9M views' : null,
     tracks: COLLECTION_TRACKS.map((t, i) => ({
       id: t.id,
       name: t.name,
