@@ -21,6 +21,19 @@ export function apiErrorMessage(url: string, status: number, statusText: string,
     : 'The server is not available right now. Try again in a minute.'
 }
 
+/** The server's own sentence from a failed load when something behind it is down (a 502 body with
+ *  `message`, since 19-10-2026: YouTube Music not answering, or rate-limiting it), for a page to print
+ *  under its own "Couldn't load…" line. Null for anything else, a bodiless 502 from an older server
+ *  included, so the headline stands alone rather than blaming the Naviseerr server for a YouTube outage.
+ *  Reads the error structurally (an ApiError has `status` and `body`): this file must not import the
+ *  API client, which imports it. */
+export function providerMessage(err: unknown): string | null {
+  const e = err as { status?: unknown; body?: unknown } | null
+  if (!e || typeof e !== 'object' || e.status !== 502) return null
+  const said = (e.body as { message?: unknown } | null | undefined)?.message
+  return typeof said === 'string' && said ? said : null
+}
+
 /** "3:05" - a track length. Floors the seconds too: the server can send fractional durations. */
 export function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`

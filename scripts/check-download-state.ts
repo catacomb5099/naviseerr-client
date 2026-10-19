@@ -15,7 +15,7 @@ import './check-candidates'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, alreadyCopy, failureCopy, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
-import { apiErrorMessage, formatPlays, formatViews } from '../src/lib/utils'
+import { apiErrorMessage, formatPlays, formatViews, providerMessage } from '../src/lib/utils'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -135,6 +135,13 @@ assert(apiErrorMessage('/api/artists/UC1', 502, 'Bad Gateway', { message: '' }) 
 assert(apiErrorMessage('/api/artists/UC1', 502, 'Bad Gateway', 'Bad Gateway') === 'The server is not available right now. Try again in a minute.', 'a non-JSON body falls back')
 assert(apiErrorMessage('/api/artists/UC1', 502, 'Bad Gateway', null) === 'The server is not available right now. Try again in a minute.', 'a null body falls back')
 assert(apiErrorMessage('/api/downloads/x', 404, 'Not Found', { message: 'No such download' }) === 'API request failed: Not Found', 'a 404 body is not printed here')
+// providerMessage (the line under a page's own "Couldn't load…") prints only what a 502 body said: a bodiless
+// 502 from an older server, which apiErrorMessage words as a server problem, prints nothing extra.
+assert(providerMessage({ status: 502, body: saidSo, message: saidSo.message }) === saidSo.message, 'the 502 body sentence goes under the headline')
+assert(providerMessage({ status: 502, body: undefined, message: 'The server is not available right now. Try again in a minute.' }) === null, 'a bodiless 502 (older server) adds nothing')
+assert(providerMessage({ status: 502, body: { message: '' } }) === null, 'an empty sentence adds nothing')
+assert(providerMessage({ status: 404, body: saidSo }) === null, 'a 404 body is not printed')
+assert(providerMessage(new TypeError('Failed to fetch')) === null, 'a network failure adds nothing')
 assert(isCancelled({ stage: 'FAILED', failureCode: 'CANCELLED' }), 'a failed card with the cancelled code is cancelled')
 assert(!isCancelled({ stage: 'DOWNLOADING', failureCode: 'CANCELLED' }), 'a live album with one cancelled song is not itself cancelled')
 assert(!isCancelled({ stage: 'PARTIAL_SUCCESS', failureCode: 'CANCELLED' }), 'a partly downloaded album is not cancelled')
