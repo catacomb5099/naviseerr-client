@@ -43,7 +43,9 @@ export function OwnSlskdCard({ settings, onSaved, onCancel }: {
         <label htmlFor="slskd-url" className="mb-1 block text-sm font-medium">slskd address</label>
         <Input id="slskd-url" value={url} onChange={e => setUrl(e.target.value)} autoComplete="off" spellCheck={false}
           placeholder="http://192.168.1.20:5030" aria-describedby="slskd-url-help" className={field} />
-        <p id="slskd-url-help" className="mt-1 text-xs text-zinc-400">{OWN_SLSKD_FOLDER_HELP}</p>
+        <p id="slskd-url-help" className="mt-1 text-xs text-zinc-400">
+          {OWN_SLSKD_FOLDER_HELP} Downloads under way when you switch fail within a minute; Retry starts them on the new slskd.
+        </p>
       </div>
       <div>
         <label htmlFor="slskd-api-key" className="mb-1 block text-sm font-medium">API key</label>
