@@ -15,7 +15,8 @@ import { Input } from '../ui/input'
  * URLs the same way), "Save and test" (the server reads Authentik's OpenID configuration before storing
  * anything, as Audiobookshelf's "Auto-populate" does), then "Continue with Authentik" to sign in once,
  * which is what turns the login on. Stands alone on the Settings page today; `onDone` makes it a wizard
- * step ("Skip for now" / "Done" move on).
+ * step: the ghost button moves on, reading "Skip for now" with nothing saved, "Next" once Authentik is saved
+ * (the done screen says it is not on yet), "Done" once the login is on.
  */
 export function AuthentikStep({ onDone }: { onDone?: () => void }) {
   const [settings, setSettings] = useState<LoginSettings | null>(null)
@@ -154,7 +155,7 @@ export function AuthentikStep({ onDone }: { onDone?: () => void }) {
           )}
           {onDone && (
             <Button type="button" variant="ghost" onClick={onDone} className="text-zinc-300 hover:bg-zinc-800 hover:text-white">
-              {settings.enabled ? 'Done' : 'Skip for now'}
+              {settings.enabled ? 'Done' : connected ? 'Next' : 'Skip for now'}
             </Button>
           )}
         </div>
