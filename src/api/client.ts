@@ -73,7 +73,7 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
         ? await response.json().catch(() => undefined)
         : undefined
       throw new ApiError(
-        apiErrorMessage(url, response.status, response.statusText),
+        apiErrorMessage(url, response.status, response.statusText, body),
         response.status,
         response.statusText,
         body
