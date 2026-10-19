@@ -117,7 +117,7 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-3 right-3 h-8 w-8 inline-flex items-center justify-center rounded-full text-zinc-400 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+          className="absolute top-3 right-3 h-10 w-10 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-full text-zinc-400 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
         >
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
@@ -175,7 +175,7 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
                     {(facts.length > 0 || info.explicit) && (
                       <p className="text-xs text-zinc-400 flex items-center gap-2 flex-wrap">
                         {info.explicit && (
-                          <span className="rounded bg-zinc-700 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-200">Explicit</span>
+                          <span className="rounded bg-zinc-700 px-1.5 py-0.5 text-xs sm:text-[10px] font-semibold uppercase tracking-wide text-zinc-200">Explicit</span>
                         )}
                         {facts.join(' · ')}
                       </p>

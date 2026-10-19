@@ -113,16 +113,16 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCance
   // hidden may shrink below its content. Without it a full panel squashes every card into the
   // space instead of scrolling.
   return (
-    <div className={`flex-none overflow-hidden transition-[max-height] duration-150 ${exiting ? 'max-h-0' : 'max-h-16'}`}>
+    <div className={`flex-none overflow-hidden transition-[max-height] duration-150 ${exiting ? 'max-h-0' : 'max-h-20 sm:max-h-16'}`}>
       <div
         className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-800 ${exiting ? 'animate-download-card-exit' : 'animate-download-card-enter'}`}
       >
         <span className="w-5 flex-none flex items-center justify-center">{glyph}</span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-white truncate">{title}</p>
+          <p className="text-sm sm:text-xs text-white truncate">{title}</p>
           {collection ? (
             <>
-              <CollectionSummary id={summaryId} tokens={collectionSummary(card)} className="text-[11px] mt-0.5" />
+              <CollectionSummary id={summaryId} tokens={collectionSummary(card)} className="text-xs sm:text-[11px] mt-0.5" />
               <div className="mt-1.5">
                 <CollectionProgress
                   songCount={card.songCount}
@@ -137,7 +137,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCance
               </div>
             </>
           ) : (
-            <p className={`text-[11px] mt-0.5 ${subColor}`}>{subLabel}</p>
+            <p className={`text-xs sm:text-[11px] mt-0.5 ${subColor}`}>{subLabel}</p>
           )}
           {!collection && card.stage === 'DOWNLOADING' && (
             <div className="h-[3px] bg-zinc-700 rounded-full overflow-hidden mt-1.5">
