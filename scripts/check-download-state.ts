@@ -13,7 +13,7 @@ import './check-youtube-music'
 import './check-artist-names'
 import './check-candidates'
 import { ActiveDownloadView } from '../src/api/types'
-import { DownloadCardState, alreadyCopy, failureCopy, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
+import { DownloadCardState, alreadyCopy, failureCopy, initialMinimized, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
 import { apiErrorMessage, formatPlays, formatViews, providerMessage } from '../src/lib/utils'
 
@@ -245,5 +245,14 @@ assert(alreadyCopy({ stage: 'SEARCHING' }, 'Song 2') === 'Already downloading So
 assert(alreadyCopy({ stage: 'QUEUED' }, 'Song 2') === 'Already downloading Song 2', '409 for a queued download')
 assert(alreadyCopy({ stage: 'SUCCEEDED' }, 'Wonderwall') === 'You already have Wonderwall', '409 for a finished download')
 assert(alreadyCopy({ stage: 'PARTIAL_SUCCESS' }, 'Definitely Maybe').startsWith('You already have part of Definitely Maybe'), '409 for a partly downloaded one')
+
+// How the downloads panel starts: the snapshot is autosaved on every visit, so only a fold/unfold the
+// user made counts as a preference; otherwise a phone starts folded and a desktop keeps the old value.
+assert(initialMinimized(null, true) && !initialMinimized(null, false), 'no snapshot: folded on a phone, open elsewhere')
+assert(initialMinimized({ minimized: false }, true), 'an autosaved open panel does not keep a phone open')
+assert(!initialMinimized({ minimized: false }, false), 'an autosaved open panel stays open on a desktop')
+assert(initialMinimized({ minimized: true }, false), 'a desktop folded before the flag existed stays folded')
+assert(!initialMinimized({ minimized: false, minimizedByUser: true }, true), 'a phone the user unfolded starts open')
+assert(initialMinimized({ minimized: true, minimizedByUser: true }, false), 'a desktop the user folded starts folded')
 
 console.log('check-download-state: ok')

@@ -29,7 +29,7 @@ function App() {
     exiting: exitingDownloadIds,
     pollIntervalMs,
     minimized: downloadsMinimized,
-    setMinimized: setDownloadsMinimized,
+    toggleMinimized: toggleDownloadsMinimized,
     dismiss: dismissDownload,
     requestDownload,
     cancel: cancelDownload,
@@ -67,7 +67,8 @@ function App() {
 
   return (
     <DownloadCardsContext.Provider value={downloadCards}>
-    <div className="min-h-screen bg-black text-white">
+    {/* On a phone the folded downloads pill sits over the bottom edge: leave room so the last row stays reachable. */}
+    <div className={`min-h-screen bg-black text-white ${downloadCards.length ? 'pb-16 sm:pb-0' : ''}`}>
       {/* Above the routes, so it spans the window and survives every page change. */}
       <ConnectivityBar />
       <SoulseekStatusBar loggedIn={soulseekLoggedIn} username={soulseekUsername} libraryProblem={libraryProblem} youtubeMusicDown={youtubeMusicDown} />
@@ -120,7 +121,7 @@ function App() {
         exiting={exitingDownloadIds}
         pollIntervalMs={pollIntervalMs}
         minimized={downloadsMinimized}
-        onToggleMinimized={() => setDownloadsMinimized(m => !m)}
+        onToggleMinimized={toggleDownloadsMinimized}
         onDismiss={dismissDownload}
         onCancel={cancelDownload}
         onRetry={retryDownload}

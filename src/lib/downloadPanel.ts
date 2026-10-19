@@ -85,6 +85,16 @@ export function itemDownloadLabel(card: DownloadCardState | undefined): string |
   return 'Downloading…'
 }
 
+/**
+ * Which way the downloads panel starts. The snapshot is autosaved on every visit, so a saved
+ * `minimized` counts only when the user set it by folding or unfolding (`minimizedByUser`); without
+ * that flag a phone starts folded and anything wider keeps what was saved (the old default, false).
+ */
+export function initialMinimized(saved: { minimized: boolean; minimizedByUser?: boolean } | null, isPhone: boolean): boolean {
+  if (saved?.minimizedByUser) return saved.minimized
+  return isPhone || (saved?.minimized ?? false)
+}
+
 export function dismissTtlMs(cardCount: number, terminalRetentionMs: number): number {
   const base = cardCount <= 3 ? 30000 : cardCount <= 10 ? 10000 : 5000
   return Math.min(base, terminalRetentionMs)

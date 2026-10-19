@@ -68,7 +68,7 @@ export function DownloadPanel({
     return (
       <button
         onClick={onToggleMinimized}
-        className="fixed bottom-4 right-4 flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-2 text-white hover:bg-zinc-800"
+        className="fixed bottom-4 right-4 flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-full px-4 py-3 sm:px-3 sm:py-2 text-white hover:bg-zinc-800"
         style={{ zIndex: 'var(--z-download-panel)' }}
         aria-label="Expand active downloads"
       >
@@ -80,16 +80,18 @@ export function DownloadPanel({
     )
   }
 
+  // On a phone the panel is a sheet across the bottom edge (YouTube Music / Spotify shape), not a
+  // floating box over the page; from tablet up it keeps its corner. App reserves the room under it.
   return (
     <div
       role="region"
       aria-label="Active downloads"
-      className="fixed bottom-4 right-4 w-[322px] bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden"
+      className="fixed inset-x-0 bottom-0 rounded-t-xl border-b-0 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[322px] sm:rounded-xl sm:border-b bg-zinc-900 border border-zinc-800 overflow-hidden"
       style={{ zIndex: 'var(--z-download-panel)' }}
     >
       <button
         onClick={onToggleMinimized}
-        className="w-full flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800 text-left hover:bg-zinc-800"
+        className="w-full flex items-center gap-2 px-3 py-3 sm:py-2.5 border-b border-zinc-800 text-left hover:bg-zinc-800"
       >
         <DownloadIcon className="w-4 h-4 text-green-500 flex-none" aria-hidden="true" />
         <span className="text-xs text-white flex-1">Active downloads</span>
@@ -98,7 +100,7 @@ export function DownloadPanel({
           role="button"
           tabIndex={0}
           aria-label={muted ? 'Unmute download sounds' : 'Mute download sounds'}
-          className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+          className="inline-flex h-10 w-10 items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-zinc-700 sm:h-auto sm:w-auto sm:p-1"
           onClick={e => { e.stopPropagation(); onToggleMuted() }}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onToggleMuted() } }}
         >

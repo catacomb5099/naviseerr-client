@@ -34,6 +34,9 @@ function useNow(active: boolean): number {
   return now
 }
 
+// 40 px on phones (a thumb), the old padding-only size with a mouse.
+const CARD_BUTTON = 'flex-none inline-flex h-10 w-10 items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50 sm:h-auto sm:w-auto sm:p-1'
+
 export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCancel, onRetry, inFlight }: DownloadCardProps) {
   const fillRef = useRef<HTMLDivElement>(null)
   const shownRef = useRef(0)
@@ -158,7 +161,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCance
         {!terminal && (
           <button
             type="button"
-            className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+            className={CARD_BUTTON}
             aria-label={`Cancel ${title}`}
             disabled={inFlight}
             onClick={onCancel}
@@ -171,7 +174,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCance
             {(card.stage === 'FAILED' || card.stage === 'PARTIAL_SUCCESS') && (
               <button
                 type="button"
-                className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-50"
+                className={CARD_BUTTON}
                 aria-label={`Retry ${title}`}
                 disabled={inFlight}
                 onClick={onRetry}
@@ -180,7 +183,7 @@ export function DownloadCard({ card, exiting, pollIntervalMs, onDismiss, onCance
               </button>
             )}
             <button
-              className="flex-none p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700"
+              className={CARD_BUTTON}
               aria-label={`Dismiss ${title}`}
               onClick={onDismiss}
             >
