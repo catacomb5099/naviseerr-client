@@ -215,6 +215,25 @@ export function searchAgainAllowed(status: string, reason: string | null, stage:
   return stage === 'FAILED' || stage === 'PARTIAL_SUCCESS'
 }
 
+/**
+ * Whether the pop-up offers the "Search Soulseek for" box (19-10-2026): not while the server's own search still runs
+ * (its result would overwrite the person's list when it completes), not for a song already downloaded and filed (it
+ * cannot be re-picked), and not for an album with no search on record (there is no row to hold the folders). Any other
+ * state, a full list included: the point is to search when Naviseerr's wording found the wrong things too.
+ */
+export function manualSearchAllowed(status: string, reason: string | null, stage: DownloadStage): boolean {
+  if (status === 'SEARCHING' || stage === 'SUCCEEDED') return false
+  return reason !== 'NO_ALBUM_SEARCH'
+}
+
+/** The one line while a person's own search runs; the time span is what the 27-09-2026 trial measured. */
+export function searchingCopy(text: string): string {
+  return `Searching Soulseek for “${text}”… this usually takes 5 to 20 seconds.`
+}
+
+/** The hint under "nothing found" for a search a person typed: Soulseek drops a search naming some artists (28-09-2026). */
+export const NOTHING_FOUND_HINT = 'Soulseek returns nothing for some artist names; try fewer words.'
+
 /** The grey line under the header that lets a person find the search in slskd's own Searches page:
  *  "Soulseek search <id> · 5 Oct 09:23" (local time), the id alone when the time is unknown, null when
  *  slskd never took a search (nothing to look up: that is the point). */

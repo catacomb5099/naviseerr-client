@@ -1,7 +1,7 @@
 /** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
 import {
   GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, lastFolders, qualityLabel,
-  qualityRank, qualityText, searchAgainAllowed, searchLine, slotLabel, slotRank, sortRows, statusCopy,
+  manualSearchAllowed, qualityRank, qualityText, searchAgainAllowed, searchingCopy, searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../src/lib/candidates'
 import { shortDate } from '../src/lib/utils'
 
@@ -144,6 +144,15 @@ assert(searchAgainAllowed('NONE', 'SEARCH_FAILED', 'PARTIAL_SUCCESS') && searchA
 assert(!searchAgainAllowed('NONE', 'NO_WHOLE_FOLDER', 'DOWNLOADING') && !searchAgainAllowed('NONE', 'NO_WHOLE_FOLDER', 'SEARCHING'), 'a live album waits or is cancelled first')
 assert(!searchAgainAllowed('NONE', 'NO_ALBUM_SEARCH', 'FAILED'), 'an album with no search on record has nothing to restart')
 assert(!statusCopy('SONG', 'NONE', 'NO_RESULTS', 'x')!.includes('Retry'), 'NO_RESULTS leaves the retrying to the button')
+
+// The "Search Soulseek for" box (19-10-2026) is offered whenever a person's own search could help and be kept.
+assert(manualSearchAllowed('NONE', 'NO_RESULTS', 'FAILED'), 'a failed song that found nothing')
+assert(manualSearchAllowed('READY', null, 'FAILED') && manualSearchAllowed('READY', null, 'DOWNLOADING'), 'a full list too: our wording may have found the wrong things')
+assert(manualSearchAllowed('NONE', 'NO_OWN_SEARCH', 'DOWNLOADING'), 'a song fed by the album folder can get its own list')
+assert(!manualSearchAllowed('SEARCHING', null, 'SEARCHING'), 'not while our own search runs: it would overwrite the list')
+assert(!manualSearchAllowed('READY', null, 'SUCCEEDED') && !manualSearchAllowed('NONE', 'BEFORE_CACHE', 'SUCCEEDED'), 'a downloaded song cannot be re-picked')
+assert(!manualSearchAllowed('NONE', 'NO_ALBUM_SEARCH', 'FAILED'), 'an album with no search row has nowhere to keep folders')
+assert(searchingCopy('Live Forever Oasis').startsWith('Searching Soulseek for “Live Forever Oasis”'), 'the searching line names the text')
 
 // The grey line names slskd's own search so a person can find it in slskd's Searches page.
 assert(searchLine(null, NOON) === null && searchLine(undefined, null) === null, 'no search id, no line (slskd never took one)')

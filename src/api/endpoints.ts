@@ -10,7 +10,7 @@ import {
   getMockDownloadDetail, getMockAllDownloads, getMockCollection, getMockArtist, getMockSongInfo,
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
   cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates, pickMockSongCandidate,
-  getMockAlbumCandidates, pickMockAlbumFolder,
+  getMockAlbumCandidates, pickMockAlbumFolder, searchMockSongCandidates,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -296,6 +296,25 @@ export async function pickSongCandidate(downloadId: string, taskId: string, body
   return apiClient<ActiveDownloadView>(
     `/downloads/${encodeURIComponent(downloadId)}/tasks/${encodeURIComponent(taskId)}/pick`,
     { method: 'POST', body: JSON.stringify(body) })
+}
+
+/** The server holds a person's own Soulseek search open for up to 30 s of polling, which starts only once slskd has
+ *  accepted the search (its own 15 s per call), plus the last read and the write: 60 s so the browser never gives up on a
+ *  search the server then finishes and stores. */
+const SOULSEEK_SEARCH_TIMEOUT_MS = 60_000
+
+/**
+ * Search Soulseek with your own words for this song and wait for it: the server runs ONE slskd search with the text as
+ * typed (3-30 s), grades every file it found and stores that list as the song's, so any row can then be picked. Answers
+ * the same shape as getSongCandidates, `query` being the text.
+ * POST /downloads/{id}/tasks/{taskId}/search {text}  (200 the list; 400 blank text; 404 unknown; 409 {reason: SOULSEEK_OFFLINE, message};
+ * 429 {reason: SOULSEEK_BUSY, message}; 502 {reason: SLSKD_UNREACHABLE, message})
+ */
+export async function searchSongCandidates(downloadId: string, taskId: string, text: string): Promise<SongCandidatesResponse> {
+  if (USE_MOCK_DATA) return searchMockSongCandidates(downloadId, taskId, text)
+  return apiClient<SongCandidatesResponse>(
+    `/downloads/${encodeURIComponent(downloadId)}/tasks/${encodeURIComponent(taskId)}/search`,
+    { method: 'POST', body: JSON.stringify({ text }), timeoutMs: SOULSEEK_SEARCH_TIMEOUT_MS })
 }
 
 /**

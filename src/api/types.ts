@@ -431,7 +431,8 @@ export interface SongCandidatesResponse {
   taskId: string
   status: CandidateStatus
   reason: string | null
-  /** What Soulseek was asked for (the title alone); null when never searched. */
+  /** What Soulseek was asked for: Naviseerr's own wording (the title alone, then "title - artist"), or, in the answer to a
+   *  search a person typed (POST .../search, 19-10-2026), their text; null when never searched. */
   query: string | null
   /** slskd's own id for the song's search, as its Searches page lists it; null when slskd never took one.
    *  Absent from servers older than 09-10-2026. */

@@ -19,21 +19,23 @@ export type CandidatesLoad =
 /** How often the dialog asks again while the server says the search is still running. */
 export const SEARCHING_POLL_MS = 3000
 
-/** The server's own sentence for a failed call when it sent one (`{ message }`), else the error's. */
-function messageOf(err: unknown): string {
+/** The server's own sentence for a failed call when it sent one (`{ message }`), else `fallback`. */
+export function messageOf(err: unknown, fallback = "Couldn't load what Soulseek found."): string {
   if (err instanceof ApiError) {
     const body = err.body as { message?: unknown } | undefined
     if (body && typeof body.message === 'string') return body.message
   }
-  return "Couldn't load what Soulseek found."
+  return fallback
 }
 
 /**
  * The candidate list for `target`: fetched fresh every time the dialog opens (never cached - the server
  * holds the cache), re-asked every few seconds while the song is still SEARCHING, and dropped when the
- * dialog closes. `refetch` is "Try again" and what a 409 on a pick calls.
+ * dialog closes. `refetch` is "Try again" and what a 409 on a pick calls. `replace` hands the dialog a list it fetched
+ * itself (a search the person typed, 19-10-2026); the poll only runs while the server says SEARCHING, when the search
+ * box is hidden, so the two never fight.
  */
-export function useCandidates(target: ManualImportTarget | null): { load: CandidatesLoad; refetch: () => void } {
+export function useCandidates(target: ManualImportTarget | null): { load: CandidatesLoad; refetch: () => void; replace: (next: CandidatesLoad) => void } {
   const [load, setLoad] = useState<CandidatesLoad>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const key = target ? `${target.kind}:${target.downloadId}:${target.kind === 'SONG' ? target.taskId ?? '' : ''}` : null
@@ -75,5 +77,5 @@ export function useCandidates(target: ManualImportTarget | null): { load: Candid
   }, [key, attempt])
 
   const refetch = useCallback(() => setAttempt(a => a + 1), [])
-  return { load, refetch }
+  return { load, refetch, replace: setLoad }
 }
