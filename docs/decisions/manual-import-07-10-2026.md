@@ -89,3 +89,43 @@ The filter box still matches the format word (`SONG_HAYSTACK` keeps `fmt(c)`). T
 Folder column of the next addendum fits a 1280 px window only without the separate Format column (measured: 1200 px
 with it folded, 1270 px with it kept, in a 1190 px box). Flip: restore the `format` column in `SONG_COLUMNS` and
 render `qualityLabel` alone; the table then scrolls about 95 px sideways on a laptop.
+
+## Addendum of 19-10-2026: a Folder column (supersedes decision 8)
+
+The owner, on the latest version: the manual-import tables "don't consistently (if at all) expose the file directory
+from slskd, not just file name". The folder WAS there, as decision 8 left it: an 11 px grey second line under the name,
+cut from the left, with no header and no sort, and on a phone that second line is the part of the cell that sits under
+the pinned Download button (108 of the 288 px of the song cell, 202 of the 257 px of the album cell, measured at 390
+px), so there it was effectively invisible. The server has always sent the full slskd path for every file and folder;
+this was a client-only gap.
+
+Decisions:
+
+1. **A real "Folder" column in BOTH tables**, sortable by the whole folder path (so one sharer's folder stays
+   together, `@@alias\...` shares first), showing the last two folders of the path (`…\Oasis\(1994) Definitely Maybe`,
+   `…\2009\Jay Sean`; `lastFolders` in `src/lib/candidates.ts`), cut at the END with a plain CSS ellipsis, the whole
+   path on hover (`title`). Two folders, not three: on 101 real rows the two-folder tail is median 39 / p90 53
+   characters and a 12 rem cell holds about 28, so even two truncate often and the hover does real work. Sonarr's
+   manual import lists the path first as a sortable "Relative Path" column with the path in the hover title; Lidarr
+   the same with "Path"; slskd's own search page heads each group of files with its folder. Spotify, YouTube Music
+   and Apple Music have nothing comparable (no source files). Flip: `keep` in `lastFolders`.
+2. **Song table: File, then Folder.** The file name is its own column again (`basename`, title = whole path); the
+   Folder column is hidden below `md` (`Column.className` on `CandidateTable`, applied to header, skeleton and
+   cells), and the File cell then stacks the folder tail under the name as before, right-cut. The File cell is 10.5 rem
+   wide at EVERY width (it was 18 rem): on a phone so it ends before the pinned button (measured at 375 px with real
+   paths), and at 1280 px because that is what makes room for the Folder column, so long file names are cut sooner on
+   a laptop too (7 of the first 12 Wonderwall names at 1280 px; the whole path stays on hover). If that is the wrong
+   trade, Length (78 px) is the column to drop, not the name. The Sharer cell is cut at 7.5 rem with the whole name
+   on hover: real Soulseek names run to 20-30 characters and pushed the Match badge under the pinned button at 1280 px
+   (39 px over before the cuts; the table now fits a 1280 px window with real paths, 15 px to spare).
+3. **Album table: Folder FIRST, then Sharer** (Sonarr/Lidarr put the path first; slskd heads the group with the
+   folder); 8.5 rem on a phone (the chevron column and the cell padding take 52 px; 52 + 136 = 188, under the 191 px
+   where the pinned button starts in a 375 px window), 18 rem from `md`. Below `md` the cell shows only the LAST
+   folder (`lastFolders(dir, 1)`; review of 19-10-2026): in 136 px the two-folder tail read "…\Oasis\(1994) Def…",
+   the artist taking the room from the edition, and a touch screen has no hover; from `md` the two folders as in
+   the song table. The unfolded files keep name only, and the expand button keeps the leaf name.
+4. **The Format column is folded into Quality** (previous addendum, its own PR) so the song table fits a 1280 px window
+   with the new column; without it the table scrolls about 95 px sideways there.
+5. The `dir="rtl"` + `<bdi>` left-cut of decision 8 goes (plain end-cut like Sonarr; the start of the tail is the
+   folder's name, the useful part). The hidden ", in " joiner stays only below `md`, where name and folder share a
+   cell; above it the Folder column has its own header, which is better for a screen reader anyway.
