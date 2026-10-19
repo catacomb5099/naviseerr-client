@@ -39,6 +39,8 @@ const GONE_COPY = 'This download no longer exists.'
 const BUSY_COPY = 'Another action on this song is still running. Try again in a moment.'
 const SEARCH_CONFLICT_COPY = 'Nothing could be searched again right now — the list has been refreshed.'
 const LIVE_SONG_NOTE = 'The song is still downloading. Cancel it on its row first to search again.'
+/** Hover text of Try again, which sits next to the search box: the two look alike but do different things. */
+const TRY_AGAIN_HINT = "Searches again with Naviseerr's own wording and restarts the download; the box above searches with yours."
 const LIVE_ALBUM_NOTE = 'The songs are still being searched one by one. Try again is available once the download has finished, or after you cancel it.'
 /** The pending key of "Try again"; never a row key (those read "sharer|path"). */
 const SEARCH_AGAIN_KEY = 'search-again'
@@ -163,6 +165,10 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
   // The text a person's own Soulseek search is running for (19-10-2026), and what the last one said when it failed.
   const [searching, setSearching] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
+  // `replace` belongs to the dialog, which outlives this view (keyed per target): a search that answers after the
+  // pop-up was closed, or another song's opened, must not land its list in the next pop-up.
+  const alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   /** One search the person typed: the server holds the call 3-30 s, then the answer REPLACES the list in the same table. */
   const search = async (text: string, call: () => Promise<CandidatesLoad>) => {
     if (pending || searching) return
@@ -170,7 +176,8 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
     setSearchError(null)
     setPickError(null)
     try {
-      replace(await call())
+      const next = await call()
+      if (alive.current) replace(next)
     } catch (err) {
       setSearchError(messageOf(err, err instanceof Error && err.message ? err.message : REQUEST_FAILED_COPY))
     } finally {
@@ -291,11 +298,12 @@ function DialogHeader({ title, query, search, searchOpen, onToggleSearch, filter
 
 /** The one line when there is no table: the server's status sentence, an error, or "nothing found". Under it
  *  either the action ("Try again" runs the search again, "Reload" re-reads the list) or a note saying why there
- *  is none; while a search is being started the button spins and says so. Nothing while SEARCHING. */
+ *  is none; while a search is being started the button spins and says so. Nothing while SEARCHING. `hint` is the
+ *  button's hover text: next to the search box, Try again needs to say it runs Naviseerr's OWN wording. */
 function EmptyState({ message, searching, action, note, error }: {
   message: string
   searching: boolean
-  action?: { label: string; pending: boolean; onClick: () => void }
+  action?: { label: string; hint?: string; pending: boolean; onClick: () => void }
   note?: string | null
   error?: string | null
 }) {
@@ -312,6 +320,7 @@ function EmptyState({ message, searching, action, note, error }: {
           <button
             type="button"
             aria-disabled={action.pending}
+            title={action.hint}
             onClick={() => { if (!action.pending) action.onClick() }}
             className={`mt-3 inline-flex items-center gap-2 ${BUTTON}`}
           >
@@ -381,7 +390,7 @@ function SongCandidates({ target, load, refetch, replace, onClose, onPick, onRet
   const action = load.status === 'error' || empty
     ? { label: 'Reload', pending: false, onClick: refetch }
     : data && canSearchAgain
-      ? { label: 'Try again', pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId, data.taskId)) }
+      ? { label: 'Try again', hint: TRY_AGAIN_HINT, pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId, data.taskId)) }
       : undefined
   // The person's own search box: whenever a new search could help and its list could be kept (19-10-2026). With the
   // box on screen, "nothing found" gets the fewer-words hint rather than the note about cancelling first: the box IS

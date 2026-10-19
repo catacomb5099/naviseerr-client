@@ -232,7 +232,7 @@ export function searchingCopy(text: string): string {
 }
 
 /** The hint under "nothing found" for a search a person typed: Soulseek drops a search naming some artists (28-09-2026). */
-export const NOTHING_FOUND_HINT = 'Soulseek returns nothing for some artist names; try fewer words, or the title alone.'
+export const NOTHING_FOUND_HINT = 'Soulseek returns nothing for some artist names; try fewer words.'
 
 /** The grey line under the header that lets a person find the search in slskd's own Searches page:
  *  "Soulseek search <id> · 5 Oct 09:23" (local time), the id alone when the time is unknown, null when

@@ -298,8 +298,10 @@ export async function pickSongCandidate(downloadId: string, taskId: string, body
     { method: 'POST', body: JSON.stringify(body) })
 }
 
-/** The server holds a person's own Soulseek search open for up to 30 s, plus slskd's own 15 s per call behind it. */
-const SOULSEEK_SEARCH_TIMEOUT_MS = 45_000
+/** The server holds a person's own Soulseek search open for up to 30 s of polling, which starts only once slskd has
+ *  accepted the search (its own 15 s per call), plus the last read and the write: 60 s so the browser never gives up on a
+ *  search the server then finishes and stores. */
+const SOULSEEK_SEARCH_TIMEOUT_MS = 60_000
 
 /**
  * Search Soulseek with your own words for this song and wait for it: the server runs ONE slskd search with the text as

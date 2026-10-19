@@ -147,8 +147,9 @@ Decisions (with naviseerr's `POST /downloads/{id}/tasks/{taskId}/search`, same d
    Music have no equivalent (they do not let you choose a source file).
 2. **The pop-up waits**: while the server holds the call (3-30 s) the table and the empty state give way to one line,
    "Searching Soulseek for “…”… this usually takes 5 to 20 seconds." with the spinner the pop-up already has, and the
-   button reads "Searching…". This one call gets a 45 s fetch timeout (`ApiOptions.timeoutMs`; the server's cap is
-   30 s plus slskd's own 15 s per call); every other request keeps 20 s.
+   button reads "Searching…". This one call gets a 60 s fetch timeout (`ApiOptions.timeoutMs`; the server's 30 s of
+   polling starts only once slskd has accepted the search, which is its own 15 s per call, so 45 s could give up on a
+   search the server then finished and stored; review of 19-10-2026); every other request keeps 20 s.
 3. **The answer replaces the list in the same table** (`useCandidates.replace`): the header now says "Soulseek was
    asked for: “<your words>”" with slskd's new id and time, the count line reads as before, the filter and the sort
    still apply, and Download on any row picks it (the server stored the list as the song's). Each search is its own
@@ -160,6 +161,12 @@ Decisions (with naviseerr's `POST /downloads/{id}/tasks/{taskId}/search`, same d
 5. **Errors read under the box** in the server's own sentence (`messageOf`): Soulseek offline (409), busy with other
    searches (429), slskd not answering (502), the generic request-failed line otherwise. Nothing found keeps the
    existing dated sentence naming the text, plus a hint: Soulseek returns nothing for some artist names, try fewer
-   words or the title alone (the blocked-phrase finding of 28-09-2026).
+   words (the blocked-phrase finding of 28-09-2026; "or the title alone" was dropped in the review of 19-10-2026
+   because the header above already says the title alone was what Naviseerr asked for).
 6. **Not stored**: after closing and reopening, the header names Naviseerr's own wording again while the list is the
-   one the person's search found (the server keeps no typed text yet). Said in the server ADR; a later migration fixes it.
+   one the person's search found (the server keeps no typed text yet; since the review of 19-10-2026 the grey line
+   does carry the person's search's slskd id and time). Said in the server ADR; a later migration fixes the wording.
+7. **From the review of 19-10-2026**: a search whose pop-up was closed, or replaced by another song's, before the
+   server answered is dropped (`alive` ref in `usePickState`; `replace` belongs to the dialog, which outlives the
+   view, so the stale list would have landed in the next pop-up). "Try again" gets a hover text saying it runs
+   Naviseerr's own wording and restarts the download, since it sits one line under the box that runs yours.
