@@ -173,6 +173,8 @@ export const mockPlaylists: Playlist[] = [
     name: 'Jay Sean Essentials',
     artists: ['YouTube Music'],
     trackCount: 4,
+    // Like the real server: the row's view count in YouTube's words; null where YouTube shows "N songs".
+    views: '375K views',
   },
 ]
 

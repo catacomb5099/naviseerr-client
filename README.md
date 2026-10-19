@@ -4,7 +4,7 @@ React-based music search and download client with Spotify-inspired UI.
 
 ## Features
 
-- Search for songs, albums, artists, and playlists
+- Search for songs, albums, artists, and playlists; a playlist card says how many times the playlist was viewed on YouTube Music ("375K views", YouTube's own words) where YouTube Music's own search row shows it; album cards show no count, as on YouTube Music
 - Filter results by category (All, Songs, Albums, Artists, Playlists)
 - Open an album or playlist and download one song or all of them; a playlist's header also says how many times it was viewed on YouTube Music, in YouTube's own words, when YouTube Music shows a count for it
 - Open an artist to see their top songs, albums, singles, the playlists they are featured on, and similar artists
