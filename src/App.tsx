@@ -184,6 +184,7 @@ function App() {
         <Route path="/artist/:id" element={<ArtistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/artist/:id/albums" element={<ArtistShelfPage shelf="albums" />} />
         <Route path="/artist/:id/singles" element={<ArtistShelfPage shelf="singles" />} />
+        <Route path="/artist/:id/playlists" element={<ArtistShelfPage shelf="playlists" />} />
         <Route path="/suggested/:category" element={<SuggestedPlaylistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/settings" element={<SettingsPage onNavigateHome={() => navigate('/')} />} />
         <Route path="/library" element={<LibraryPage onNavigateHome={() => navigate('/')} />} />

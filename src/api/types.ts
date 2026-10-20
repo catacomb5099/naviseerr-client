@@ -159,6 +159,10 @@ export interface ArtistDetail {
   /** YouTube Music's own featured playlists linked to the artist, minus those titled after the artist or a
    *  related artist (those are effectively "best of" lists, not appearances). */
   playlists: Playlist[]
+  /** The artist's own channel playlists, YouTube Music's "Playlists by <artist>" row (often one per album, plus
+   *  "Music Videos" and the like), up to 100; `views` is YouTube's wording ("2.1M views"). Absent from an older
+   *  server, and then there is no row. */
+  artistPlaylists?: Playlist[]
   /** `iconUrl` is the related artist's largest thumbnail, passed through by the adapter since 28-09-2026;
    *  "" only from an older adapter (the card then shows a plain disc). */
   similarArtists: Artist[]
