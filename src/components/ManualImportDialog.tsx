@@ -208,6 +208,11 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
   }
 }
 
+/** Words typed in a box but not searched yet, per song (`SONG:<taskId>`) or album (`ALBUM:<downloadId>`), so closing the
+ *  pop-up keeps them (20-10-2026), as Spotify's Search keeps your words while you move around the app.
+ *  ponytail: module memory, so a page reload forgets them; sessionStorage is the upgrade. */
+const drafts = new Map<string, string>()
+
 /**
  * The "Search Soulseek for" box (19-10-2026): slskd's own search page, bolted under the header. Prefilled with the
  * wording of the list on screen (Naviseerr's own, or the last text typed), or of the search still running; Enter or the
@@ -215,15 +220,15 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
  * runs (here or on the server, 20-10-2026), and the answer replaces the table. Keyed by the parent on the list's
  * wording, so it starts clean with each new list.
  */
-function SoulseekSearch({ initial, busy, error, onSearch }: {
-  initial: string; busy: boolean; error: string | null; onSearch: (text: string) => void
+function SoulseekSearch({ draftKey, initial, busy, error, onSearch }: {
+  draftKey: string; initial: string; busy: boolean; error: string | null; onSearch: (text: string) => void
 }) {
-  const [text, setText] = useState(initial)
+  const [text, setText] = useState(() => drafts.get(draftKey) ?? initial)
   const blank = text.trim().length === 0
   return (
     <form
       className="mt-4 flex items-end gap-2 flex-wrap"
-      onSubmit={e => { e.preventDefault(); if (!blank && !busy) onSearch(text.trim()) }}
+      onSubmit={e => { e.preventDefault(); if (!blank && !busy) { drafts.delete(draftKey); onSearch(text.trim()) } }}
     >
       <div className="min-w-0 flex-1 basis-56">
         <label htmlFor="soulseek-search" className="block text-xs text-zinc-400 mb-1">Search Soulseek for</label>
@@ -231,7 +236,7 @@ function SoulseekSearch({ initial, busy, error, onSearch }: {
           id="soulseek-search"
           type="search"
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={e => { setText(e.target.value); drafts.set(draftKey, e.target.value) }}
           maxLength={200}
           aria-describedby={error ? 'soulseek-search-error' : undefined}
           className="h-9 bg-zinc-900 border-zinc-800 placeholder:text-zinc-500 text-sm"
@@ -437,6 +442,7 @@ function SongCandidates({ target, load, refetch, replace, onClose, onPick, onRet
       {data && canSearch && (
         <SoulseekSearch
           key={data.query ?? ''}
+          draftKey={`SONG:${data.taskId}`}
           initial={data.query ?? target.title}
           busy={searchBusy(searching, data.status)}
           error={searchError ?? data.searchError ?? null}
@@ -609,6 +615,7 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
       {data && canSearch && (
         <SoulseekSearch
           key={data.query ?? ''}
+          draftKey={`ALBUM:${target.downloadId}`}
           initial={data.query ?? target.title}
           busy={searchBusy(searching, data.status)}
           error={searchError ?? data.searchError ?? null}
