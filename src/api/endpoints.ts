@@ -7,6 +7,7 @@ import {
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
   SoulseekAccount, SetupStatus, MediaServerChange, MediaServerKind, MediaServersSettings, SuggestedPlaylistsSettings,
+  SlskdSettings,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -550,6 +551,27 @@ export function getSuggestedPlaylistsSettings(signal?: AbortSignal): Promise<Sug
  */
 export function putSuggestedPlaylistsSettings(on: boolean): Promise<SuggestedPlaylistsSettings> {
   return apiClient<SuggestedPlaylistsSettings>('/settings/suggested-playlists', { method: 'PUT', body: JSON.stringify({ on }) })
+}
+
+// --- Your own Soulseek client (slskd) (19-10-2026) ------------------------------------------------
+
+/** Which slskd this server talks to, and whether it is the install's own. GET /settings/slskd  (404 on an older server) */
+export function getSlskdSettings(signal?: AbortSignal): Promise<SlskdSettings> {
+  return apiClient<SlskdSettings>('/settings/slskd', { signal })
+}
+
+/**
+ * "Save and test": the server asks that slskd who it is with the typed key and, when it answers, uses it
+ * from now on. The address may be typed with or without its /api/v0/ tail.
+ * PUT /settings/slskd {url, apiKey}  (200 with `message`; 400 {message}, nothing stored)
+ */
+export function putSlskdSettings(url: string, apiKey: string): Promise<SlskdSettings> {
+  return apiClient<SlskdSettings>('/settings/slskd', { method: 'PUT', body: JSON.stringify({ url, apiKey }) })
+}
+
+/** Back to the install's own slskd, applied live. DELETE /settings/slskd  (204) */
+export function deleteSlskdSettings(): Promise<void> {
+  return apiClient<void>('/settings/slskd', { method: 'DELETE' })
 }
 
 /** Server-side cap on GET /downloads?ids= */

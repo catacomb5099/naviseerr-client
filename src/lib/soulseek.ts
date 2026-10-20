@@ -19,6 +19,15 @@ export function soulseekNameProblem(name: string): string | null {
   return null
 }
 
+/** The one thing "Use my own slskd" has to say: without it, nothing is filed and no playlist file is written. */
+export const OWN_SLSKD_FOLDER_HELP =
+  "naviseerr must see that slskd's downloads folder: in the install file, point the downloads volume at it."
+
+/** Save and test for your own slskd needs an http(s) address and the API key, unless one is stored for it already. */
+export function canSaveSlskd(url: string, apiKey: string, apiKeySet: boolean): boolean {
+  return /^https?:\/\/\S+$/.test(url.trim()) && (apiKey !== '' || apiKeySet)
+}
+
 /** How long after Save the page keeps asking whether Soulseek accepted the login before calling it refused. */
 export const LOGIN_CHECK_MS = 30_000
 /** How often it asks during that window; outside it, the page still refreshes the line, less often. */

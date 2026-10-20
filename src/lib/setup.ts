@@ -2,7 +2,7 @@
  * The first-run setup's pure parts (no React, no window): which screen an address names, and the
  * sentences the last screen says about what was set. Checked by scripts/check-setup.ts.
  */
-import type { LoginSettings, SessionResponse, SetupStatus, SoulseekAccount } from '../api/types'
+import type { LoginSettings, SessionResponse, SetupStatus, SlskdSettings, SoulseekAccount } from '../api/types'
 
 /** What GET /settings/setup is taken to say on a server that does not have it (404): nothing to set up. */
 export const SETUP_DONE: SetupStatus = { completed: true, libraryRoot: null }
@@ -16,8 +16,10 @@ export function stepIndex(step: string | undefined, count: number): number {
 /** The address of a 0-based screen. */
 export const stepPath = (index: number): string => `/setup/${index + 1}`
 
-/** The done screen's Soulseek line; null is the install that keeps its account in the install file (a 404). */
-export function soulseekSummary(account: SoulseekAccount | null): string {
+/** The done screen's Soulseek line: your own slskd when one was saved (the account files are the bundled one's),
+ *  else the account; `account` null is the install that keeps it in the install file (a 404). */
+export function soulseekSummary(account: SoulseekAccount | null, slskd: SlskdSettings | null = null): string {
+  if (slskd && !slskd.fromInstallFile) return `Soulseek: your own slskd at ${slskd.url}.`
   return account ? `Soulseek: logging in as ${account.username}.` : 'Soulseek: the account from the install file.'
 }
 

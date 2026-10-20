@@ -1,34 +1,47 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { ApiError } from '../../api/client'
-import { getSoulseekAccount, getStatus, putSoulseekAccount } from '../../api/endpoints'
-import { SoulseekAccount } from '../../api/types'
+import { deleteSlskdSettings, getSlskdSettings, getSoulseekAccount, getStatus, putSoulseekAccount } from '../../api/endpoints'
+import { SlskdSettings, SoulseekAccount } from '../../api/types'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { OwnSlskdCard } from './OwnSlskdCard'
 import {
   IDLE_POLL_MS, LOGIN_POLL_MS, SOULSEEK_NAME_RULES, loginState, loginStatusCopy, soulseekNameProblem,
 } from '../../lib/soulseek'
 
+const PRIMARY = 'bg-green-600 text-white hover:bg-green-500'
+const OUTLINE = 'border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800 hover:text-white'
+const GHOST = 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+
 /**
  * One step: the Soulseek account this install logs in with. Shows the one setup made up (its name, and
  * the password behind Show, since it cannot be reset) or the one a person chose, says whether Soulseek
- * accepted it, and lets them switch to their own account. Wording follows Jellyfin's first-run wizard
- * and Navidrome's "Create Admin" step: one question per screen, plain words, the rules as helper text.
- * Stands alone on the Settings page today; `onDone` makes it a wizard step ("Keep it" moves on).
+ * accepted it, and lets them switch to their own account, or to a Soulseek client (slskd) they already
+ * run ("Use my own slskd", the third choice; once saved, the step shows that slskd instead of the
+ * account, since the account files belong to the bundled one). Wording follows Jellyfin's first-run
+ * wizard and Navidrome's "Create Admin" step: one question per screen, plain words, the rules as helper
+ * text. Stands alone on the Settings page; `onDone` makes it a setup step ("Keep it" / Next move on).
  */
 export function SoulseekStep({ onDone }: { onDone?: () => void }) {
   const [account, setAccount] = useState<SoulseekAccount | null>(null)
   // The server's own sentence when the install keeps the account in its compose file (404).
   const [off, setOff] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // Which slskd the server talks to; null until known, and on a server too old to say (no own-slskd choice then).
+  const [slskd, setSlskd] = useState<SlskdSettings | null>(null)
+  const [editingSlskd, setEditingSlskd] = useState(false)
+  const [slskdResult, setSlskdResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  // When the account was last changed here: for 30 s after that the line reads "Checking with Soulseek…".
+  // When the account (or the slskd) was last changed here: for 30 s after that the line reads "Checking with Soulseek…".
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null)
+  // The account the server's slskd is logging in as, from /status: for your own slskd that is its account, not the files'.
+  const [statusUser, setStatusUser] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
@@ -41,22 +54,24 @@ export function SoulseekStep({ onDone }: { onDone?: () => void }) {
         else setLoadError(err instanceof Error ? err.message : String(err))
       },
     )
+    getSlskdSettings(controller.signal).then(setSlskd, () => { /* an older server: the account alone */ })
     return () => controller.abort()
   }, [])
 
+  const ownSlskd = slskd !== null && !slskd.fromInstallFile
   // Asks the server whether Soulseek accepted the login: every 2 s while "Checking…" after a save, every 10 s otherwise.
   const state = loginState(loggedIn, savedAt, now)
   const checking = state === 'checking'
   useEffect(() => {
-    if (!account) return
+    if (!account && !ownSlskd) return
     const controller = new AbortController()
     const tick = () => getStatus(controller.signal).then(
-      s => { setLoggedIn(s.soulseek.loggedIn); setNow(Date.now()) },
+      s => { setLoggedIn(s.soulseek.loggedIn); setStatusUser(s.soulseek.username ?? null); setNow(Date.now()) },
       () => { if (!controller.signal.aborted) { setLoggedIn(null); setNow(Date.now()) } },
     )
     const timer = window.setInterval(tick, checking ? LOGIN_POLL_MS : IDLE_POLL_MS)
     return () => { controller.abort(); window.clearInterval(timer) }
-  }, [account, checking])
+  }, [account, ownSlskd, checking])
 
   const save = async (e: FormEvent) => {
     e.preventDefault()
@@ -78,12 +93,71 @@ export function SoulseekStep({ onDone }: { onDone?: () => void }) {
     }
   }
 
-  if (off) return <p className="text-zinc-400">{off}</p>
+  const slskdSaved = (saved: SlskdSettings) => {
+    setSlskd(saved)
+    setEditingSlskd(false)
+    setSlskdResult({ ok: true, message: saved.message ?? 'Saved.' })
+    setLoggedIn(null)
+    setSavedAt(Date.now())
+    setNow(Date.now())
+  }
+
+  const backToBundled = async () => {
+    setSlskdResult(null)
+    try {
+      await deleteSlskdSettings()
+      setSlskd(await getSlskdSettings())
+      setSlskdResult({ ok: true, message: "Back to the install's own slskd." })
+      setLoggedIn(null)
+      setSavedAt(Date.now())
+      setNow(Date.now())
+    } catch (err) {
+      setSlskdResult({ ok: false, message: (err instanceof ApiError && messageOf(err.body)) || (err instanceof Error ? err.message : String(err)) })
+    }
+  }
+
+  const statusColour = state === 'connected' ? 'text-green-400' : state === 'checking' ? 'text-zinc-300' : 'text-amber-400'
+  const slskdResultLine = slskdResult && (
+    <p role={slskdResult.ok ? 'status' : 'alert'} className={`text-sm ${slskdResult.ok ? 'text-green-400' : 'text-amber-400'}`}>{slskdResult.message}</p>
+  )
+  const ownSlskdButton = slskd && !editingSlskd && (
+    <Button type="button" variant="outline" onClick={() => { setEditingSlskd(true); setEditing(false); setSlskdResult(null) }} className={OUTLINE}>
+      {ownSlskd ? 'Change' : 'Use my own slskd'}
+    </Button>
+  )
+
+  if (editingSlskd && slskd) {
+    return <OwnSlskdCard settings={slskd} onSaved={slskdSaved} onCancel={() => setEditingSlskd(false)} />
+  }
+
+  if (ownSlskd) {
+    return (
+      <div className="space-y-4">
+        <p>This install uses your own slskd at <strong className="font-semibold">{slskd.url}</strong>.</p>
+        <p aria-live="polite" className={`text-sm ${statusColour}`}>{loginStatusCopy(state, statusUser ?? 'its account')}</p>
+        {slskdResultLine}
+        <div className="flex flex-wrap gap-3">
+          {onDone && <Button type="button" onClick={onDone} className={PRIMARY}>Next</Button>}
+          {ownSlskdButton}
+          <Button type="button" variant="ghost" onClick={backToBundled} className={GHOST}>Back to the bundled slskd</Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (off) {
+    return (
+      <div className="space-y-4">
+        <p className="text-zinc-400">{off}</p>
+        {slskdResultLine}
+        {ownSlskdButton && <div className="flex flex-wrap gap-3">{ownSlskdButton}</div>}
+      </div>
+    )
+  }
   if (loadError) return <p role="alert" className="text-amber-400">{loadError}</p>
   if (!account) return <p className="text-zinc-400">Looking up your Soulseek account…</p>
 
   const nameProblem = soulseekNameProblem(name)
-  const statusColour = state === 'connected' ? 'text-green-400' : state === 'checking' ? 'text-zinc-300' : 'text-amber-400'
 
   return (
     <div className="space-y-4">
@@ -117,20 +191,22 @@ export function SoulseekStep({ onDone }: { onDone?: () => void }) {
           <code className="font-mono">SOULSEEK_PASSWORD</code>) on the <code className="font-mono">setup</code> line.
         </p>
       )}
+      {slskdResultLine}
 
       {!editing ? (
         <div className="flex flex-wrap gap-3">
           {onDone && (
-            <Button type="button" onClick={onDone} className="bg-green-600 text-white hover:bg-green-500">Keep it</Button>
+            <Button type="button" onClick={onDone} className={PRIMARY}>Keep it</Button>
           )}
           <Button
             type="button"
             variant="outline"
             onClick={() => { setEditing(true); setSaveError(null) }}
-            className="border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800 hover:text-white"
+            className={OUTLINE}
           >
             Use my own account
           </Button>
+          {ownSlskdButton}
         </div>
       ) : (
         <form onSubmit={save} className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4" aria-label="Your own Soulseek account">
@@ -167,10 +243,10 @@ export function SoulseekStep({ onDone }: { onDone?: () => void }) {
           </div>
           {saveError && <p role="alert" className="text-sm text-amber-400">{saveError}</p>}
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" disabled={saving || nameProblem !== null || password === ''} className="bg-green-600 text-white hover:bg-green-500">
+            <Button type="submit" disabled={saving || nameProblem !== null || password === ''} className={PRIMARY}>
               {saving ? 'Saving…' : 'Save'}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => setEditing(false)} className="text-zinc-300 hover:bg-zinc-800 hover:text-white">
+            <Button type="button" variant="ghost" onClick={() => setEditing(false)} className={GHOST}>
               Cancel
             </Button>
           </div>
