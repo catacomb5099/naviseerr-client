@@ -6,6 +6,7 @@ import { DownloadQualityStep } from '../components/setup/DownloadQualityStep'
 import { MediaServerStep } from '../components/setup/MediaServerStep'
 import { PlaylistsStep } from '../components/setup/PlaylistsStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
+import { QUALITY_FALLBACK } from '../lib/downloadQuality'
 
 /**
  * Settings: one section per thing a person may change about their install, in the first-run setup's
@@ -23,10 +24,8 @@ export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void })
       <section id="download-quality" aria-labelledby="download-quality-heading" className="max-w-2xl space-y-3">
         <h3 id="download-quality-heading" className="text-lg font-semibold">Download quality</h3>
         <p className="text-sm text-zinc-400">
-          The quality every download aims for, songs, albums and playlists alike. When Soulseek has none at that quality,
-          the next quality up is taken, and lower ones only when nothing higher exists; a song&rsquo;s Choose a file
-          pop-up (the person icon on the Downloads page) shows every file&rsquo;s quality and marks the one taken. Saved
-          the moment you pick one.
+          The quality every download aims for: songs, albums and playlists alike. {QUALITY_FALLBACK} Saved the moment
+          you pick one. To see which quality a song came in, press the person icon on its row in Downloads.
         </p>
         <DownloadQualityStep />
       </section>

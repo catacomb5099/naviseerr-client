@@ -1,5 +1,5 @@
 /** Pins the download quality setting's pure parts (src/lib/downloadQuality.ts). Runs from check-download-state.ts. */
-import { QUALITY_TIERS, qualitySummary } from '../src/lib/downloadQuality'
+import { QUALITY_FALLBACK, QUALITY_TIERS, qualitySummary } from '../src/lib/downloadQuality'
 import { DownloadQuality } from '../src/api/types'
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -17,5 +17,8 @@ assert(QUALITY_TIERS.find(t => t.quality === 'LOSSLESS')?.bitrate.startsWith('FL
 assert(qualitySummary({ quality: 'LOSSLESS', default: true }) === 'Download quality: Lossless (the default).', 'nothing chosen: the default, named')
 assert(qualitySummary({ quality: 'HIGH', default: false }) === 'Download quality: High.', 'a chosen tier by its word')
 assert(qualitySummary({ quality: 'HI_RES' as DownloadQuality, default: false }) === 'Download quality: HI_RES.', 'a newer server\'s word is shown as it came')
+
+// The server tries higher tiers before lower ones (DownloadQuality.distance); the sentence must say it in that order.
+assert(QUALITY_FALLBACK.indexOf('higher') < QUALITY_FALLBACK.indexOf('lower'), 'the fallback sentence names higher before lower')
 
 console.log('check-quality: ok')
