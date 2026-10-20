@@ -3,9 +3,9 @@ import { DownloadType } from '../api/types'
 import { cn } from '../lib/utils'
 
 // A suggested playlist is a playlist to the user: same word, same icon. Its author line already
-// says "Naviseerr", which is all that sets it apart.
-const LABEL: Record<DownloadType, string> = { SONG: 'Song', ALBUM: 'Album', PLAYLIST: 'Playlist', CURATED: 'Playlist', RADIO: 'Radio' }
-const ICON = { SONG: Music, ALBUM: Disc3, PLAYLIST: ListMusic, CURATED: ListMusic, RADIO: Radio } as const
+// says "Naviseerr", which is all that sets it apart. Your own playlist is a playlist too.
+const LABEL: Record<DownloadType, string> = { SONG: 'Song', ALBUM: 'Album', PLAYLIST: 'Playlist', CURATED: 'Playlist', RADIO: 'Radio', CUSTOM: 'Playlist' }
+const ICON = { SONG: Music, ALBUM: Disc3, PLAYLIST: ListMusic, CURATED: ListMusic, RADIO: Radio, CUSTOM: ListMusic } as const
 
 interface TypeBadgeProps {
   type: DownloadType | 'RADIO'

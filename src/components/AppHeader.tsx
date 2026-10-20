@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings } from 'lucide-react'
+import { ListMusic, Settings } from 'lucide-react'
 import { Button } from './ui/button'
 import { LogoutButton } from './LogoutButton'
 
@@ -26,6 +26,10 @@ export function AppHeader({ action, children }: AppHeaderProps) {
         </h1>
         <div className="flex items-center gap-2">
           {action}
+          {/* Your own playlists, an icon like the gear (YouTube Music's Library, Spotify's Your Library). */}
+          <Button asChild variant="outline" size="icon" className="flex-none bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white">
+            <Link to="/library" aria-label="Your playlists" title="Your playlists"><ListMusic className="w-4 h-4" /></Link>
+          </Button>
           {/* Settings on every page (the gear, as in Navidrome and Jellyfin). */}
           <Button asChild variant="outline" size="icon" className="flex-none bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white">
             <Link to="/settings" aria-label="Settings" title="Settings"><Settings className="w-4 h-4" /></Link>

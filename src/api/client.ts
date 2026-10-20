@@ -5,6 +5,13 @@ import { apiErrorMessage } from '../lib/utils'
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
+/** A picture's address for an <img>: one the server serves itself (your playlist's picture, "/playlists/…")
+ *  comes as a path and needs the server in front; YouTube's are full URLs already. */
+export function imageSrc(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  return url.startsWith('/') ? `${API_BASE_URL}${url}` : url
+}
+
 /** A request the server has not answered in this long counts as unreachable: a hung server (port
  *  open, nothing behind it) would otherwise hold "Searching..." for minutes. The All search takes
  *  up to 9 s on a bad day, so this is well clear of a slow real answer. */

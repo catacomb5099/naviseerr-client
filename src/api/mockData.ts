@@ -1,6 +1,7 @@
 import {
   Track, Album, Artist, Playlist, SearchResponse, CollectionDetail, CollectionType, ArtistDetail,
   SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse, SuggestedPlaylistSummary, CuratorRun,
+  CollectionTrack, PlaylistDetail, PlaylistSummary,
 } from './types'
 import { ApiError } from './client'
 
@@ -511,6 +512,7 @@ export function getMockDownload(youtubeId: string, downloadType: DownloadType): 
   const suggested = downloadType === 'CURATED' ? getMockSuggestedPlaylist(youtubeId) : null
   const collection = downloadType === 'SONG' || downloadType === 'CURATED'
     ? null
+    : downloadType === 'CUSTOM' ? createdMockCollection(youtubeId)
     : getMockCollection(youtubeId, downloadType === 'RADIO' ? 'PLAYLIST' : downloadType)
   const createdAt = Date.now()
   mockDownloads.set(downloadId, {
@@ -1160,4 +1162,130 @@ export function pickMockAlbumFolder(downloadId: string, body: { username: string
     progressPercent: Math.round(songs.reduce((sum, s) => sum + (s.progressPercent ?? 0), 0) / songs.length),
   })
   return fixture
+}
+
+// --- Your playlists (20-10-2026) ------------------------------------------------------------------
+// The server's rules in miniature: drafts change, created ones refuse with 409, no song twice.
+
+interface MockPlaylist {
+  id: string
+  title: string
+  description: string
+  songs: CollectionTrack[]
+  coverUrl: string | null
+  updatedAt: number
+  downloadedAt: string | null
+}
+
+const MOCK_PLAYLISTS_KEY = 'naviseerr.mock.playlists.v1'
+
+function seedPlaylists(): MockPlaylist[] {
+  const songs = (ids: string[]) => ids.map((id, i) => {
+    const t = mockTracks.find(m => m.id === id)!
+    return { id: t.id, name: t.name, artists: t.artists, artistIds: t.artistIds, iconURL: t.iconURL, durationSeconds: 200 + i * 13, plays: null, position: i + 1 }
+  })
+  const now = Date.now()
+  return [
+    { id: 'mock-pl-1', title: 'Road trip', description: 'Windows down.', songs: songs(['song-1', 'song-2', 'song-3']), coverUrl: null, updatedAt: now, downloadedAt: null },
+    { id: 'mock-pl-2', title: 'Summer 2026', description: '', songs: songs(['song-4', 'song-5']), coverUrl: null, updatedAt: now - 86_400_000, downloadedAt: iso(now - 86_400_000) },
+  ]
+}
+
+function loadMockPlaylists(): MockPlaylist[] {
+  try {
+    const raw = localStorage.getItem(MOCK_PLAYLISTS_KEY)
+    return raw ? JSON.parse(raw) as MockPlaylist[] : seedPlaylists()
+  } catch {
+    return seedPlaylists()
+  }
+}
+
+const mockPlaylistStore = loadMockPlaylists()
+
+function savePlaylists() {
+  try { localStorage.setItem(MOCK_PLAYLISTS_KEY, JSON.stringify(mockPlaylistStore)) } catch { /* in memory only */ }
+}
+
+function playlistOr404(id: string): MockPlaylist {
+  const p = mockPlaylistStore.find(m => m.id === id)
+  if (!p) throw new ApiError('API request failed: Not Found', 404, 'Not Found')
+  return p
+}
+
+/** A draft for an edit; 409 once created, like the server. */
+function draftOr409(id: string): MockPlaylist {
+  const p = playlistOr404(id)
+  if (p.downloadedAt) throw new ApiError('API request failed: Conflict', 409, 'Conflict', { message: 'This playlist was created; duplicate it to change it.' })
+  return p
+}
+
+function touched(p: MockPlaylist) {
+  p.songs = p.songs.map((s, i) => ({ ...s, position: i + 1 }))
+  p.updatedAt = Date.now()
+  savePlaylists()
+}
+
+function summaryOf(p: MockPlaylist): PlaylistSummary {
+  return {
+    id: p.id, title: p.title, description: p.description, trackCount: p.songs.length, coverUrl: p.coverUrl,
+    mosaic: Array.from(new Set(p.songs.map(s => s.iconURL).filter((u): u is string => !!u))).slice(0, 4),
+    downloadedAt: p.downloadedAt,
+  }
+}
+
+export function getMockPlaylists(): PlaylistSummary[] {
+  return [...mockPlaylistStore].sort((a, b) => b.updatedAt - a.updatedAt).map(summaryOf)
+}
+
+export function getMockPlaylist(id: string): PlaylistDetail {
+  const p = playlistOr404(id)
+  return { ...summaryOf(p), tracks: p.songs }
+}
+
+export function createMockPlaylist(title?: string): PlaylistSummary {
+  const p: MockPlaylist = {
+    id: `mock-pl-${Math.random().toString(36).slice(2, 10)}`,
+    title: title?.trim() || `My playlist #${mockPlaylistStore.length + 1}`,
+    description: '', songs: [], coverUrl: null, updatedAt: Date.now(), downloadedAt: null,
+  }
+  mockPlaylistStore.push(p)
+  savePlaylists()
+  return summaryOf(p)
+}
+
+export function updateMockPlaylist(id: string, change: { title?: string; description?: string }): void {
+  const p = draftOr409(id)
+  if (change.title !== undefined) p.title = change.title.trim()
+  if (change.description !== undefined) p.description = change.description
+  touched(p)
+}
+
+export function removeMockPlaylistSong(id: string, videoId: string): void {
+  const p = draftOr409(id)
+  p.songs = p.songs.filter(s => s.id !== videoId)
+  touched(p)
+}
+
+export function copyMockPlaylist(id: string): PlaylistSummary {
+  const from = playlistOr404(id)
+  const copy = createMockPlaylist(`Copy of ${from.title}`)
+  const p = playlistOr404(copy.id)
+  Object.assign(p, { description: from.description, songs: from.songs, coverUrl: from.coverUrl })
+  touched(p)
+  return summaryOf(p)
+}
+
+export function deleteMockPlaylist(id: string): void {
+  const p = draftOr409(id)
+  mockPlaylistStore.splice(mockPlaylistStore.indexOf(p), 1)
+  savePlaylists()
+}
+
+/** "Create": the draft is frozen, then downloaded like any playlist. */
+function createdMockCollection(id: string): CollectionDetail {
+  const p = playlistOr404(id)
+  if (p.songs.length === 0) throw new ApiError('API request failed: Bad Request', 400, 'Bad Request')
+  p.downloadedAt ??= iso(Date.now())
+  savePlaylists()
+  return { id, type: 'PLAYLIST', name: p.title, artists: [], iconURL: p.coverUrl ?? p.songs[0].iconURL, year: null, trackCount: p.songs.length, tracks: p.songs }
 }

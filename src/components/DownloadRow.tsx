@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertCircle, ArrowUpRight, Ban, ChevronRight, CircleCheck, Clock, Download, Loader2, RotateCcw, Square, UserRound } from 'lucide-react'
 import { getDownloadDetail } from '../api/endpoints'
+import { imageSrc } from '../api/client'
 import { DownloadSongView, DownloadStage } from '../api/types'
 import { ManualImportTarget } from '../hooks/useCandidates'
 import { DownloadItem, collectionPath, itemStageLabel } from '../lib/downloadLibrary'
@@ -244,7 +245,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
         <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
           {item.iconURL && !iconFailed ? (
             <img
-              src={item.iconURL}
+              src={imageSrc(item.iconURL)}
               alt={item.title}
               loading="lazy"
               decoding="async"

@@ -66,12 +66,33 @@ export type CollectionType = 'ALBUM' | 'PLAYLIST'
 export type CollectionPageType = CollectionType | 'RADIO'
 /** 'CURATED' is one edition of a suggested playlist, downloaded as ONE download: the id is the curator's
  *  category key (e.g. "80s-indie-pop"), not a YouTube id. It is not a CollectionType because
- *  GET /collections rejects it: a suggested playlist is read on GET /suggested-playlists/{category}. */
-export type DownloadType = 'SONG' | CollectionType | 'CURATED' | 'RADIO'
-/** `GET /downloads/all?type=`: the Downloads page's pills as the server takes them. No CURATED or
- *  RADIO: the server does accept them but there is no pill for either, and PLAYLIST already counts
- *  suggested playlists and radios in. A word the server has never heard of is a 400. */
-export type DownloadTypeFilter = Exclude<DownloadType, 'CURATED' | 'RADIO'>
+ *  GET /collections rejects it: a suggested playlist is read on GET /suggested-playlists/{category}.
+ *  'CUSTOM' is one of your own playlists (GET /playlists/{id}), keyed by its id; downloading it is "Create". */
+export type DownloadType = 'SONG' | CollectionType | 'CURATED' | 'RADIO' | 'CUSTOM'
+/** `GET /downloads/all?type=`: the Downloads page's pills as the server takes them. No CURATED, RADIO
+ *  or CUSTOM: there is no pill for them, and PLAYLIST already counts suggested playlists, radios and
+ *  your own playlists in. A word the server has never heard of is a 400. */
+export type DownloadTypeFilter = Exclude<DownloadType, 'CURATED' | 'RADIO' | 'CUSTOM'>
+
+/** GET /playlists row: one of your own playlists. A draft (`downloadedAt` null) can still change;
+ *  "Create" downloads it and freezes it. */
+export interface PlaylistSummary {
+  id: string
+  title: string
+  description: string
+  trackCount: number
+  /** The picture you chose, a path on the server ("/playlists/<id>/cover?v=..."); null = the mosaic. */
+  coverUrl: string | null
+  /** Up to four different song pictures, in playlist order, for the 2x2 cover. */
+  mosaic: string[]
+  /** When "Create" was pressed; null while it is a draft. */
+  downloadedAt: string | null
+}
+
+/** GET /playlists/{id}: the playlist with its songs in your order. */
+export interface PlaylistDetail extends PlaylistSummary {
+  tracks: CollectionTrack[]
+}
 
 /** One track inside a collection view. `id` is the YouTube videoId, `position` is 1-based. */
 export interface CollectionTrack {
