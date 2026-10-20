@@ -413,6 +413,20 @@ export interface LoginSettings {
   message?: string | null
 }
 
+/** GET/PUT /settings/soulseek (19-10-2026): the Soulseek account this install logs in with. `generated` is true
+ *  for a name setup made up (naviseerr-xxxxxx), and only then is `password` filled, so it can be written down from
+ *  the app (it cannot be reset); a name a person chose never has its password echoed. `loggedIn` is slskd's answer,
+ *  null when it cannot be reached. The server answers 404 when the install keeps the account in its compose file
+ *  (no data folder mounted), with `{message}` saying so. */
+export interface SoulseekAccount {
+  username: string
+  generated: boolean
+  password: string | null
+  loggedIn: boolean | null
+  /** The compose file sets the account and puts it back at the next start, undoing a change made here. */
+  setInComposeFile: boolean
+}
+
 // --- Manual import: the files Soulseek found for a song -------------------
 
 export type CandidateStatus = 'READY' | 'SEARCHING' | 'NONE'

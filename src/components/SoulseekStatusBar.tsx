@@ -18,6 +18,8 @@
  * When the connectivity work's offline bar lands it should reuse this markup, so the two read as one
  * family.
  */
+import { Link } from 'react-router-dom'
+
 export function SoulseekStatusBar({ loggedIn, username, libraryProblem, youtubeMusicDown }: {
   loggedIn: boolean | null
   username?: string | null
@@ -31,7 +33,14 @@ export function SoulseekStatusBar({ loggedIn, username, libraryProblem, youtubeM
     <div className="sticky top-0 z-50">
       {notLoggedIn && (
         <div role="status" className={strip}>
-          Not connected to Soulseek{username ? ` as ${username}` : ''} — downloads will wait until it is
+          Not connected to Soulseek{username ? ` as ${username}` : ''} — downloads will wait until it is.{' '}
+          {/* Where the account can be checked and changed (19-10-2026): a taken or mistyped name is fixed there. */}
+          <Link
+            to="/settings#soulseek"
+            className="rounded font-semibold underline underline-offset-2 hover:text-amber-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+          >
+            Fix
+          </Link>
         </div>
       )}
       {libraryProblem && (
