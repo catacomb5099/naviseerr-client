@@ -16,6 +16,7 @@ import { TypeBadge } from '../components/TypeBadge'
 import { PlaylistCover } from '../components/PlaylistCover'
 import { PlayOnYouTubeMusic } from '../components/PlayOnYouTubeMusic'
 import { ArtistNames } from '../components/ArtistNames'
+import { AddToPlaylistButton } from '../components/AddToPlaylistButton'
 
 interface PlaylistPageProps {
   /** "Create" is a CUSTOM download of this playlist, through the same plumbing as every Download button. */
@@ -263,6 +264,9 @@ export function PlaylistPage({ onDownload, onInfo }: PlaylistPageProps) {
                     {busy === 'copy' ? <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                     Duplicate
                   </button>
+                  {playlist && playlist.tracks.length > 0 && (
+                    <AddToPlaylistButton header target={{ type: 'CUSTOM', id, title: playlist.title, songs: playlist.tracks.map(t => ({ id: t.id, name: t.name })) }} />
+                  )}
                   {draft && (
                     <button type="button" onClick={() => deleteDialog.current?.showModal()} className={OUTLINE}>
                       <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -281,7 +285,7 @@ export function PlaylistPage({ onDownload, onInfo }: PlaylistPageProps) {
           <div className="mt-8">
             {playlist.tracks.length === 0 ? (
               <p className="py-8 text-center text-zinc-400">
-                No songs yet. <Link to="/" className="underline hover:text-white">Find songs to add</Link>
+                No songs yet. <Link to="/" className="underline hover:text-white">Find songs to add</Link>, then press Add to playlist on any song, album or playlist.
               </p>
             ) : (
               <ul className="space-y-0.5">

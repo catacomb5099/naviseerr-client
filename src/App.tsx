@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { DownloadsPage } from './pages/DownloadsPage'
@@ -13,6 +13,8 @@ import { LoginPage } from './pages/LoginPage'
 import { ConnectivityBar } from './components/ConnectivityBar'
 import { DownloadPanel } from './components/DownloadPanel'
 import { SongInfoDialog } from './components/SongInfoDialog'
+import { AddToPlaylistDialog, AddedNote } from './components/AddToPlaylistDialog'
+import { AddTarget, AddToPlaylistContext } from './hooks/useAddToPlaylist'
 import { SoulseekStatusBar } from './components/SoulseekStatusBar'
 import { useActiveDownloads } from './hooks/useActiveDownloads'
 import { useSession } from './hooks/useSession'
@@ -86,6 +88,16 @@ function App() {
   const songInfoId = songInfo?.pathname === pathname ? songInfo.id : null
   const openSongInfo = (id: string, plays?: string | null) => setSongInfo({ id, pathname, plays: plays ?? null })
   const closeSongInfo = () => setSongInfo(null)
+  // The one "Add to playlist" pop-up, mounted afresh for each opening (the count is its key), and the line
+  // that says what was added. Like the song pop-up, it belongs to the page it was opened on.
+  const opened = useRef(0)
+  const [adding, setAdding] = useState<{ target: AddTarget; pathname: string; n: number } | null>(null)
+  const openAddToPlaylist = useCallback((target: AddTarget) => {
+    setSongInfo(null)
+    setAdding({ target, pathname, n: ++opened.current })
+  }, [pathname])
+  const [added, setAdded] = useState<{ message: string; playlistId: string; n: number } | null>(null)
+  const clearAdded = useCallback(() => setAdded(null), [])
 
   /** How the request ended - what the page that asked announces. */
   const handleDownload = async (
@@ -130,6 +142,7 @@ function App() {
 
   return (
     <DownloadCardsContext.Provider value={downloadCards}>
+    <AddToPlaylistContext.Provider value={openAddToPlaylist}>
     {/* On a phone the folded downloads pill sits over the bottom edge: leave room so the last row stays reachable. */}
     <div className={`min-h-screen bg-black text-white ${downloadCards.length ? 'pb-16 sm:pb-0' : ''}`}>
       {/* Above the routes, so it spans the window and survives every page change. */}
@@ -182,6 +195,16 @@ function App() {
         onDownload={handleDownload}
       />
 
+      {adding && adding.pathname === pathname && (
+        <AddToPlaylistDialog
+          key={adding.n}
+          target={adding.target}
+          onClose={() => setAdding(null)}
+          onAdded={(message, playlistId) => setAdded({ message, playlistId, n: adding.n })}
+        />
+      )}
+      {added && <AddedNote key={added.n} message={added.message} playlistId={added.playlistId} onDone={clearAdded} />}
+
       <DownloadPanel
         cards={downloadCards}
         exiting={exitingDownloadIds}
@@ -196,6 +219,7 @@ function App() {
         onToggleMuted={toggleMuted}
       />
     </div>
+    </AddToPlaylistContext.Provider>
     </DownloadCardsContext.Provider>
   )
 }

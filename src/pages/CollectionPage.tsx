@@ -15,6 +15,7 @@ import { TypeBadge } from '../components/TypeBadge'
 import { PlayOnYouTubeMusic } from '../components/PlayOnYouTubeMusic'
 import { StartRadioButton } from '../components/StartRadioButton'
 import { ArtistNames } from '../components/ArtistNames'
+import { AddToPlaylistButton } from '../components/AddToPlaylistButton'
 
 interface CollectionPageProps {
   /** From the route: /album/:id, /playlist/:id or /radio/:id. The id is read from the URL. */
@@ -243,6 +244,9 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                   </a>
                 )}
                 {!isRadio && <StartRadioButton seedId={id} />}
+                {detail && !isEmpty && (
+                  <AddToPlaylistButton header target={{ type, id, title: name, songs: detail.tracks.map(t => ({ id: t.id, name: t.name })) }} />
+                )}
               </div>
               {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
             </div>
@@ -317,6 +321,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                       {track.durationSeconds != null && formatDuration(track.durationSeconds)}
                     </span>
                     <PlayOnYouTubeMusic videoId={track.id} title={track.name} artists={track.artists} />
+                    <AddToPlaylistButton target={{ type: 'SONG', id: track.id, title: track.name }} />
                     <button
                       type="button"
                       onClick={() => onInfo(track.id, plays)}

@@ -1,7 +1,7 @@
 import {
   Track, Album, Artist, Playlist, SearchResponse, CollectionDetail, CollectionType, ArtistDetail,
   SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse, SuggestedPlaylistSummary, CuratorRun,
-  CollectionTrack, PlaylistDetail, PlaylistSummary,
+  CollectionTrack, PlaylistAddResult, PlaylistDetail, PlaylistSummary,
 } from './types'
 import { ApiError } from './client'
 
@@ -1279,6 +1279,25 @@ export function deleteMockPlaylist(id: string): void {
   const p = draftOr409(id)
   mockPlaylistStore.splice(mockPlaylistStore.indexOf(p), 1)
   savePlaylists()
+}
+
+/** The songs a (type, id) stands for, as the server's one track-list switch would read them. */
+function mockSongsOf(type: DownloadType, id: string): CollectionTrack[] {
+  const asRow = (t: { id: string; name: string; artists: string[]; iconURL: string | null }, i: number): CollectionTrack =>
+    ({ id: t.id, name: t.name, artists: t.artists, iconURL: t.iconURL, durationSeconds: 190 + i * 11, plays: null, position: i + 1 })
+  if (type === 'SONG') return mockTracks.filter(t => t.id === id).map(asRow)
+  if (type === 'CUSTOM') return playlistOr404(id).songs
+  if (type === 'CURATED') return getMockSuggestedPlaylist(id).tracks.map(asRow)
+  return getMockCollection(id, type === 'ALBUM' ? 'ALBUM' : 'PLAYLIST').tracks
+}
+
+export function addMockToPlaylist(id: string, source: { type: DownloadType; id: string; songIds?: string[] }): PlaylistAddResult {
+  const p = draftOr409(id)
+  const wanted = mockSongsOf(source.type, source.id).filter(s => !source.songIds || source.songIds.includes(s.id))
+  const fresh = wanted.filter((s, i) => !p.songs.some(o => o.id === s.id) && wanted.findIndex(w => w.id === s.id) === i)
+  p.songs = [...p.songs, ...fresh]
+  touched(p)
+  return { added: fresh.length, alreadyIn: wanted.length - fresh.length, trackCount: p.songs.length }
 }
 
 /** "Create": the draft is frozen, then downloaded like any playlist. */

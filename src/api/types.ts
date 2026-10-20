@@ -94,6 +94,13 @@ export interface PlaylistDetail extends PlaylistSummary {
   tracks: CollectionTrack[]
 }
 
+/** POST /playlists/{id}/songs: what was added (at the end, in the source's order) and what was there already. */
+export interface PlaylistAddResult {
+  added: number
+  alreadyIn: number
+  trackCount: number
+}
+
 /** One track inside a collection view. `id` is the YouTube videoId, `position` is 1-based. */
 export interface CollectionTrack {
   id: string
