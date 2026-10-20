@@ -107,6 +107,12 @@ server the public path it strips (`X-Forwarded-Prefix: /api`), which is why that
 `https://your.address/api/auth/authentik/callback`; a different proxy in front of the server itself
 must set the same header, or the shown URL lacks the prefix.
 
+**Browser hardening headers (19-10-2026):** every answer carries `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY` (the app cannot be framed by another site), `Referrer-Policy:
+strict-origin-when-cross-origin` and a `Permissions-Policy` denying camera, microphone and location; `/api`
+answers get `Cache-Control: no-store` unless the server set one. All in the Caddyfile, so an HTTPS proxy
+in front has nothing to add (HSTS belongs on that proxy, which owns the certificate).
+
 ## Project Structure
 
 ```
