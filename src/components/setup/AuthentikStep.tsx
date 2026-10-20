@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client'
 import { authentikStartUrl, getLoginSettings, getSession, putLoginSettings, turnOffLogin } from '../../api/endpoints'
 import { LoginSettings } from '../../api/types'
 import { useSession } from '../../hooks/useSession'
+import { returnTo } from '../../lib/embed'
 import { canSaveLogin, loginStatusCopy } from '../../lib/login'
 import { applySession } from '../../lib/session'
 import { serverMessage } from '../../lib/utils'
@@ -151,7 +152,7 @@ export function AuthentikStep({ onDone }: { onDone?: () => void }) {
           </Button>
           {settings.enabled && !signedIn && (
             <Button asChild className="bg-white text-black hover:bg-zinc-200">
-              <a href={authentikStartUrl(window.location.href)}>Continue with Authentik</a>
+              <a href={authentikStartUrl(returnTo())} target="_top">Continue with Authentik</a>
             </Button>
           )}
           {settings.enabled && signedIn && (
