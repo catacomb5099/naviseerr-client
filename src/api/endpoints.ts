@@ -1,9 +1,10 @@
-import { API_BASE_URL, apiClient } from './client'
+import { API_BASE_URL, ApiError, apiClient } from './client'
+import { NO_LOGIN } from '../lib/session'
 import {
   SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
-  CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings,
+  CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -407,6 +408,26 @@ export async function getStatus(signal?: AbortSignal): Promise<StatusResponse> {
 }
 
 // --- Login with Authentik (19-10-2026) -----------------------------------------------------------
+
+/**
+ * Is a login on, and is this browser signed in? Asked once when the app opens, and again after a 401.
+ * GET /auth/session. A 404 is a server from before the login existed: taken as "no login here", so the
+ * app works unchanged against it.
+ */
+export async function getSession(): Promise<SessionResponse> {
+  if (USE_MOCK_DATA) return NO_LOGIN
+  try {
+    return await apiClient<SessionResponse>('/auth/session')
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return NO_LOGIN
+    throw err
+  }
+}
+
+/** Ends this browser's naviseerr session; the cookie is cleared by the answer. POST /auth/logout */
+export function logout(): Promise<void> {
+  return apiClient<void>('/auth/logout', { method: 'POST' })
+}
 
 /**
  * How this install connects to Authentik, and whether the login is on. Never cached: the Settings

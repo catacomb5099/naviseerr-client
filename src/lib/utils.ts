@@ -10,9 +10,11 @@ export function cn(...inputs: ClassValue[]) {
  * now (the YouTube Music helper, or the server itself behind the web app's proxy), so it says that in
  * plain words instead of "Bad Gateway". When the server said which in its own sentence (a 502 body with
  * `message`, since 19-10-2026: "YouTube Music is not answering right now…"), that sentence wins; an
- * older server sends no body and the URL-based guess stands. Other statuses keep the status text.
+ * older server sends no body and the URL-based guess stands. A 401 is "log in" (the gate shows the login
+ * screen at the same time). Other statuses keep the status text.
  */
 export function apiErrorMessage(url: string, status: number, statusText: string, body?: unknown): string {
+  if (status === 401) return 'Log in to Naviseerr'
   if (status !== 502 && status !== 503) return `API request failed: ${statusText}`
   const said = (body as { message?: unknown } | null | undefined)?.message
   if (typeof said === 'string' && said) return said

@@ -1,3 +1,13 @@
+# A reverse proxy in front of the web app (TrueNAS, Nginx Proxy Manager, another Caddy doing HTTPS) sits
+# on your network or Docker network: trust its X-Forwarded-* headers, so naviseerr learns the request came
+# over HTTPS, marks the login cookie Secure and shows an https:// Redirect URL for Authentik. Without this
+# Caddy overwrites them with its own plain-HTTP view.
+{
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
 # Plain HTTP inside the container (no hostname, so Caddy does not try to set up HTTPS);
 # compose maps it to a port on your machine.
 :80 {
@@ -7,7 +17,11 @@
 	# such as %2F (AC/DC) intact, which nginx's usual prefix strip does not. naviseerr is looked
 	# up on every request, so the web app starts even while the server is still down.
 	handle_path /api/* {
-		reverse_proxy naviseerr:8080
+		# The server sees /auth/... without the /api stripped here; this header tells it the public
+		# path, so the Redirect URL it shows for Authentik (Settings -> Login) is the one browsers reach.
+		reverse_proxy naviseerr:8080 {
+			header_up X-Forwarded-Prefix /api
+		}
 	}
 
 	root * /srv

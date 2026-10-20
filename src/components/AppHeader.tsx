@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Settings } from 'lucide-react'
 import { Button } from './ui/button'
+import { LogoutButton } from './LogoutButton'
 
 interface AppHeaderProps {
   /** Rendered to the right of the title: the page-switch control. */
@@ -29,6 +30,7 @@ export function AppHeader({ action, children }: AppHeaderProps) {
           <Button asChild variant="outline" size="icon" className="flex-none bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white">
             <Link to="/settings" aria-label="Settings" title="Settings"><Settings className="w-4 h-4" /></Link>
           </Button>
+          <LogoutButton />
         </div>
       </div>
       {children}

@@ -29,6 +29,7 @@ React-based music search and download client with Spotify-inspired UI.
 - On the Downloads page, the person icon on a song opens every audio file Soulseek returned for it (format, quality, length, size, sharer speed, queue, and Naviseerr's own verdict: Exact, Other version, Unverified or Not a match) as a sortable, filterable table; press Download on any row to fetch that file instead (a download already under way asks before it is replaced). The same icon on an album lists every sharer folder holding any of the album's songs, the ones Naviseerr's own search would take first and the rest marked "Not judged", each unfolding into its files, and takes the remaining songs from the folder you pick
 - Responsive design for mobile and desktop: on a phone the active-downloads panel is a bottom sheet that starts folded and leaves the page room, list rows give the title the width (smaller art, status under the title, no duration), every button is at least 40 px and no text is smaller than 12 px
 - Settings (the gear top right, or `/settings`), with a Login section to connect your Authentik (19-10-2026): Authentik address, Client ID, Client secret (never shown again), the Redirect URL to paste into Authentik with a Copy button, "Save and test" (the server reads Authentik's OpenID configuration first and says in plain words what to fix), then "Continue with Authentik" to sign in once, which turns the login on; "Turn off Authentik login" opens the app again. The fields follow Immich's OAuth settings; the check follows Audiobookshelf's "Auto-populate"
+- Log in with Authentik (19-10-2026): once Authentik is connected and someone has signed in through it, every visitor sees a login screen with one button, "Continue with Authentik" (Immich's "Login with OAuth", Grafana's "Sign in with ..."), lands back on the page they opened, stays signed in for 30 days per device, and has a "Log out" button top right; any API answer of 401 brings the login screen back. Against an install with no login on, or a server from before the login existed, nothing is asked and no button is shown
 - Responsive design for mobile and desktop
 - Docker deployment
 
@@ -98,6 +99,14 @@ It serves the app on port 80 and forwards `/api/*` to the server, which it expec
 (`docker compose ps` shows `healthy` once the app is served). `VITE_API_URL` is baked in when the
 image is built (`/api`), so it cannot be changed when the container starts.
 
+**Behind another reverse proxy** (TrueNAS, Nginx Proxy Manager, a Caddy doing HTTPS): the Caddyfile
+trusts `X-Forwarded-*` headers from private addresses (`trusted_proxies static private_ranges`), so the
+server sees that the request came over HTTPS, marks the login cookie Secure and shows an `https://`
+Redirect URL under Settings -> Login. A proxy on a public address is not trusted. Caddy also tells the
+server the public path it strips (`X-Forwarded-Prefix: /api`), which is why that Redirect URL reads
+`https://your.address/api/auth/authentik/callback`; a different proxy in front of the server itself
+must set the same header, or the shown URL lacks the prefix.
+
 ## Project Structure
 
 ```
@@ -126,7 +135,9 @@ Expected endpoints:
 - `POST /download/song/{videoId}` / `POST /download/collection/{id}?type=` - Trigger download
 - `GET /downloads/active`, `GET /downloads?ids=`, `GET /downloads/{id}` - Download progress
 - `GET /settings/login`, `PUT /settings/login`, `DELETE /settings/login` - How this install connects to Authentik (address, Client ID, whether a secret is set, whether the login is on, the Redirect URL), save and test it, turn the login off
-- `GET /auth/authentik/start?to=` - Where "Continue with Authentik" sends the browser (a redirect to Authentik)
+- `GET /auth/session` - Is a login on, and is this browser signed in (`{mode: open}` or `{mode: authentik, authenticated}`)
+- `GET /auth/authentik/start?to=` - Where "Continue with Authentik" sends the browser (a redirect to Authentik, then back to `to`)
+- `POST /auth/logout` - End this browser's session
 - `GET /status` - Whether the server's Soulseek client is connected, which Soulseek account it logs in with, and whether the music library folder can be written to (polled with the downloads feed)
 - `GET /downloads/all?pageSize=&pageNumber=&type=SONG|ALBUM|PLAYLIST` - Every download, paged, for the Downloads page; `type` is optional and narrows to one kind (PLAYLIST includes suggested playlists), with page counts per kind
 - `GET /downloads/{id}/tasks/{taskId}/candidates` - Every file Soulseek found for one song, from the server's cached search

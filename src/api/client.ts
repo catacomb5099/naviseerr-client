@@ -1,4 +1,5 @@
 import { isServerDown, reportServer } from '../lib/connectivity'
+import { reportLoggedOut } from '../lib/session'
 import { share } from '../lib/requestCache'
 import { apiErrorMessage } from '../lib/utils'
 
@@ -60,6 +61,9 @@ async function request<T>(url: string, init: RequestInit, timeoutMs?: number): P
     const response = await fetch(url, {
       ...init,
       signal: withTimeout(init.signal, timeoutMs),
+      // The session cookie travels with every call, also in the dev setup where the API is on another
+      // port (same-origin is fetch's default, and :5173 -> :8080 is not that).
+      credentials: 'include',
       headers: {
         // Only with a body: on a GET this header is not on the CORS safe list, so the browser would
         // send an OPTIONS preflight first - the second row per request in the Network tab.
@@ -70,6 +74,8 @@ async function request<T>(url: string, init: RequestInit, timeoutMs?: number): P
 
     // Any answer means the server is there, bar the one the web app's proxy gives for it in Docker.
     reportServer(!isServerDown(url, response.status))
+    // Not signed in (any more): the gate in App.tsx swaps the page for the login screen.
+    if (response.status === 401) reportLoggedOut()
 
     if (!response.ok) {
       const body = response.headers.get('content-type')?.includes('application/json')

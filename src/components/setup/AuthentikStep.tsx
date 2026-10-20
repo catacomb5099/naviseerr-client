@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { ApiError } from '../../api/client'
-import { authentikStartUrl, getLoginSettings, putLoginSettings, turnOffLogin } from '../../api/endpoints'
+import { authentikStartUrl, getLoginSettings, getSession, putLoginSettings, turnOffLogin } from '../../api/endpoints'
 import { LoginSettings } from '../../api/types'
 import { canSaveLogin, loginStatusCopy } from '../../lib/login'
+import { applySession } from '../../lib/session'
 import { serverMessage } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -63,6 +64,7 @@ export function AuthentikStep({ onDone }: { onDone?: () => void }) {
     try {
       await turnOffLogin()
       await load()
+      applySession(await getSession())   // the Log out button goes: there is nothing to log out of
       setResult({ ok: true, message: 'Authentik login is off. Everyone has been logged out; the settings are kept.' })
     } catch (err) {
       setResult({ ok: false, message: serverMessage(err) })

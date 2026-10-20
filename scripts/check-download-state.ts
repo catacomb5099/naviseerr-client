@@ -125,6 +125,7 @@ assert(failureCopy('SOMETHING_NEW') === 'Download failed', 'an unknown code fall
 // A 502 or 503 reads as plain words; search gets its own sentence; other statuses are unchanged.
 assert(apiErrorMessage('http://x/search/daft%20punk', 502, 'Bad Gateway') === 'Search is not available right now. Try again in a minute.', 'search 502')
 assert(apiErrorMessage('/api/search/daft/tracks?limit=40', 503, '') === 'Search is not available right now. Try again in a minute.', 'category search 503')
+assert(apiErrorMessage('/api/downloads/active', 401, 'Unauthorized') === 'Log in to Naviseerr', 'a 401 says log in')
 assert(apiErrorMessage('/api/downloads/active', 502, 'Bad Gateway') === 'The server is not available right now. Try again in a minute.', 'other call 502')
 assert(apiErrorMessage('/api/search/x', 404, 'Not Found') === 'API request failed: Not Found', 'other statuses unchanged')
 // A 502 that carries the server's own sentence (19-10-2026: it names YouTube Music) prints that sentence; a body
