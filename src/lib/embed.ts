@@ -40,3 +40,30 @@ export function embeddedIn(): string | null {
 export function returnTo(): string {
   return embeddedIn() ?? window.location.href
 }
+
+const ANSWER_WAIT_MS = 1500
+let asked = 0
+
+/** Asks the Feishin around this app to play the song from its own library. True when it did; false
+ *  when it does not have the song, does not answer in 1.5 s (a Feishin without this bridge), or the
+ *  app is not inside one. Messages go to Feishin's origin only, and only its answers count. */
+export function playInParent(title: string, artists: string[]): Promise<boolean> {
+  const page = embeddedIn()
+  if (!page) return Promise.resolve(false)
+  const origin = new URL(page).origin
+  const id = String(++asked)
+  return new Promise(resolve => {
+    const done = (played: boolean) => {
+      window.removeEventListener('message', onMessage)
+      window.clearTimeout(timer)
+      resolve(played)
+    }
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== origin || event.source !== window.parent) return
+      if (event.data?.type === 'naviseerr:played' && event.data.id === id) done(event.data.played === true)
+    }
+    const timer = window.setTimeout(() => done(false), ANSWER_WAIT_MS)
+    window.addEventListener('message', onMessage)
+    window.parent.postMessage({ type: 'naviseerr:play', id, title, artists }, origin)
+  })
+}
