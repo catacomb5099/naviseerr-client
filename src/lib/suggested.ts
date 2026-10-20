@@ -106,6 +106,12 @@ export function cadenceCopy(refreshDay: string | null): string {
   return `New edition every ${day}.`
 }
 
+/** The first-run setup's done-screen line for the weekly playlists switch (Settings → Suggested playlists). */
+export function playlistsSummary(s: { on: boolean; configured: boolean; refreshDay: string | null }): string {
+  if (!s.configured) return 'Weekly playlists: this install has no playlist maker.'
+  return s.on ? `Weekly playlists: on. ${cadenceCopy(s.refreshDay)}` : 'Weekly playlists: off (switch on in Settings → Suggested playlists).'
+}
+
 /** Plain words for a category's status inside a curator run; an unknown status shows its raw word. */
 export function categoryStatusCopy(status: string): string {
   switch (status) {

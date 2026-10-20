@@ -6,7 +6,7 @@ import {
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
-  SoulseekAccount, SetupStatus, MediaServerChange, MediaServerKind, MediaServersSettings,
+  SoulseekAccount, SetupStatus, MediaServerChange, MediaServerKind, MediaServersSettings, SuggestedPlaylistsSettings,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -535,6 +535,21 @@ export function putMediaServers(change: MediaServerChange): Promise<MediaServers
  */
 export function deleteMediaServer(kind: MediaServerKind): Promise<void> {
   return apiClient<void>(`/settings/media-servers/${kind}`, { method: 'DELETE' })
+}
+
+// --- Weekly suggested playlists: the opt-in (19-10-2026) ------------------------------------------
+
+/** Is the weekly playlist run on, and can it be? Never cached. GET /settings/suggested-playlists  (404 on an older server) */
+export function getSuggestedPlaylistsSettings(signal?: AbortSignal): Promise<SuggestedPlaylistsSettings> {
+  return apiClient<SuggestedPlaylistsSettings>('/settings/suggested-playlists', { signal })
+}
+
+/**
+ * Flip the switch. Switching on starts the first set at once when the install has none yet.
+ * PUT /settings/suggested-playlists {on}  (200 with `message`; 400 {message} when there is no playlist maker)
+ */
+export function putSuggestedPlaylistsSettings(on: boolean): Promise<SuggestedPlaylistsSettings> {
+  return apiClient<SuggestedPlaylistsSettings>('/settings/suggested-playlists', { method: 'PUT', body: JSON.stringify({ on }) })
 }
 
 /** Server-side cap on GET /downloads?ids= */

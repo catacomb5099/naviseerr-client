@@ -1,7 +1,7 @@
 /** Self-check for the suggested playlists' copy helpers; pulled in by check-download-state.ts. */
 import {
   ALL_TIME, cadenceCopy, categoryStatusCopy, coverGradient, editionDateLong, editionLabel, eraOf, filtersCopy,
-  runSummary, sectionsOf, tierCopy,
+  playlistsSummary, runSummary, sectionsOf, tierCopy,
 } from '../src/lib/suggested'
 import { CuratorRun, SuggestedPlaylistSummary } from '../src/api/types'
 
@@ -64,5 +64,10 @@ const sections = sectionsOf([
 assert(sections.map(s => s.era).join('|') === `${ALL_TIME}|2020s|2010s|1970s|`, 'all-time first, decades newest first, unknown last')
 assert(sections[3].playlists.map(p => p.category).join(',') === '70s-party,70s-rock', 'a section keeps the server\'s order')
 assert(sectionsOf([]).length === 0, 'nothing makes no sections')
+
+// The setup's done screen says where the switch stands, from the setting itself.
+assert(playlistsSummary({ on: false, configured: true, refreshDay: 'MONDAY' }).startsWith('Weekly playlists: off'), 'off says where to switch it on')
+assert(playlistsSummary({ on: true, configured: true, refreshDay: 'MONDAY' }) === 'Weekly playlists: on. New edition every Monday.', 'on names the day')
+assert(playlistsSummary({ on: true, configured: false, refreshDay: null }).includes('no playlist maker'), 'a developer run has no maker, on or not')
 
 console.log('check-suggested: ok')

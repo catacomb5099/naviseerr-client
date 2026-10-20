@@ -3,12 +3,13 @@ import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
 import { AuthentikStep } from '../components/setup/AuthentikStep'
 import { MediaServerStep } from '../components/setup/MediaServerStep'
+import { PlaylistsStep } from '../components/setup/PlaylistsStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
 
 /**
  * Settings: one section per thing a person may change about their install, in the first-run setup's
  * order and built from its step components (without `onDone`, each section saves itself): Soulseek, the
- * music app and the login today (19-10-2026). Reached from the gear on every page, the amber "Not connected to
+ * music app, the weekly playlists and the login (19-10-2026). Reached from the gear on every page, the amber "Not connected to
  * Soulseek" strip's Fix link, and directly at /settings#<section>.
  */
 export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void }) {
@@ -33,6 +34,15 @@ export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void })
           so new music shows up right away instead of at its next scheduled scan.
         </p>
         <MediaServerStep />
+      </section>
+      <section id="suggested-playlists" aria-labelledby="suggested-playlists-heading" className="mt-10 max-w-2xl space-y-3">
+        <h3 id="suggested-playlists-heading" className="text-lg font-semibold">Suggested playlists</h3>
+        <p className="text-sm text-zinc-400">
+          The &ldquo;Made for you&rdquo; shelf on the Home page: 49 playlists built from what is popular right now (naviseerr
+          asks Discogs and YouTube Music), a fresh set every week. Off unless you switch it on; the first set takes about 90
+          minutes.
+        </p>
+        <PlaylistsStep />
       </section>
       <section id="login" aria-labelledby="login-heading" className="mt-10 max-w-2xl space-y-3">
         <h3 id="login-heading" className="text-lg font-semibold">Login</h3>

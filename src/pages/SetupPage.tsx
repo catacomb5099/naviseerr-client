@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DoneStep } from '../components/setup/DoneStep'
 import { MediaServerStep } from '../components/setup/MediaServerStep'
+import { PlaylistsStep } from '../components/setup/PlaylistsStep'
 import { SetupStep } from '../components/setup/SetupStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
 import { stepIndex, stepPath } from '../lib/setup'
@@ -14,7 +15,8 @@ import { stepIndex, stepPath } from '../lib/setup'
  * hosts, given `onDone` to move on; the frame adds the question, the help line and the Skip link.
  * Skipping keeps the default and leads to the same last screen, whose Finish marks the setup done.
  */
-const steps: { title: string; help: string; body: (next: () => void) => ReactNode }[] = [
+/** `noSkip`: the screen's own controls are the choice, so no Skip link under them. */
+const steps: { title: string; help: string; body: (next: () => void) => ReactNode; noSkip?: boolean }[] = [
   {
     title: 'Your Soulseek account',
     help: 'naviseerr downloads from the Soulseek network as this account. Passwords cannot be reset, so write it down.',
@@ -24,6 +26,13 @@ const steps: { title: string; help: string; body: (next: () => void) => ReactNod
     title: 'Which app plays your music?',
     help: 'naviseerr asks that app to rescan the moment a song or playlist lands. Neither? Your app still finds new files on its own schedule.',
     body: next => <MediaServerStep onDone={next} />,
+  },
+  {
+    title: 'Want a fresh set of playlists every week?',
+    help: 'Every Monday night naviseerr builds 49 playlists from what is popular right now (about 90 minutes; it asks Discogs and YouTube Music). The first set starts as soon as you switch it on. Off unless you say yes.',
+    body: next => <PlaylistsStep onDone={next} />,
+    // The switch saves on flip, so Next with it off IS the skip (Home Assistant's shape); a Skip link beside a switch just turned on would read as undoing it, and would not.
+    noSkip: true,
   },
 ]
 
@@ -48,7 +57,7 @@ export function SetupPage({ libraryRoot, onFinished }: { libraryRoot: string | n
   const current = steps[index]
   return (
     <SetupStep step={index + 1} total={steps.length} intro={index === 0 ? welcome(libraryRoot) : undefined}
-      title={current.title} help={current.help} skipTo={stepPath(index + 1)}>
+      title={current.title} help={current.help} skipTo={current.noSkip ? undefined : stepPath(index + 1)}>
       {current.body(next)}
     </SetupStep>
   )
