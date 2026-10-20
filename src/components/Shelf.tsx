@@ -27,8 +27,9 @@ const ARROW = 'h-8 w-8 inline-flex items-center justify-center rounded-full bord
 
 /** A titled horizontally scrolling row of cards. Callers skip it when the list is empty. With a mouse or
  *  trackpad, a ‹ › pair beside the title pages the row (YouTube Music's desktop shelves): greyed at each
- *  end, absent when the row fits. Touch screens swipe instead, so they never see it. */
-export function Shelf({ title, children }: { title: string; children: ReactNode }) {
+ *  end, absent when the row fits. Touch screens swipe instead, so they never see it. `showAllTo` adds a
+ *  "Show all" link, on every device, when the row does not fit: a grid of what is already in view says nothing. */
+export function Shelf({ title, showAllTo, children }: { title: string; showAllTo?: string; children: ReactNode }) {
   const row = useRef<HTMLDivElement>(null)
   const [edge, setEdge] = useState({ start: true, end: true })
   const measure = useCallback(() => {
@@ -53,7 +54,7 @@ export function Shelf({ title, children }: { title: string; children: ReactNode 
 
   return (
     <section>
-      <SectionTitle title={title}>
+      <SectionTitle title={title} showAllTo={fits ? undefined : showAllTo}>
         {!fits && (
           <div className="hidden [@media(hover:hover)_and_(pointer:fine)]:flex gap-2">
             <button type="button" aria-label={`Scroll ${title} left`} disabled={edge.start} onClick={() => page(-1)} className={ARROW}>
