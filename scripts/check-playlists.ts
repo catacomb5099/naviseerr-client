@@ -1,5 +1,5 @@
 /** Self-check for your own playlists' helpers; pulled in by check-download-state.ts. */
-import { addedCopy, coverOf, mosaicOf, playlistMeta, titleClash } from '../src/lib/playlists'
+import { addedCopy, coverOf, dropIndex, mosaicOf, moveItem, playlistMeta, titleClash } from '../src/lib/playlists'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -32,5 +32,15 @@ assert(addedCopy({ added: 1, alreadyIn: 0 }, 'Down', 'Road trip') === 'Added Dow
 assert(addedCopy({ added: 0, alreadyIn: 1 }, 'Down', 'Road trip') === 'Down is already in Road trip', 'the song was there')
 assert(addedCopy({ added: 0, alreadyIn: 4 }, null, 'Gym') === 'All 4 songs are already in Gym', 'the whole album was there')
 assert(addedCopy({ added: 2, alreadyIn: 1 }, null, 'Gym') === 'Added 2 songs to Gym · 1 was already in it', 'one was in')
+
+// Reordering: one move, and where a drag lands among rows 40 px apart (middles 20, 60, 100, 140).
+assert(moveItem(['a', 'b', 'c', 'd'], 0, 2).join() === 'b,c,a,d', 'first to third')
+assert(moveItem(['a', 'b', 'c', 'd'], 3, 0).join() === 'd,a,b,c', 'last to first')
+assert(moveItem(['a', 'b'], 1, 5).join() === 'a,b', 'out of range changes nothing')
+const mids = [20, 60, 100, 140]
+assert(dropIndex(10, mids, 2) === 0, 'above everything is the top')
+assert(dropIndex(70, mids, 0) === 1, 'dragging the first just past the second swaps them')
+assert(dropIndex(50, mids, 0) === 0, 'not yet past the second stays first')
+assert(dropIndex(500, mids, 1) === 3, 'below everything is the bottom')
 
 console.log('check-playlists: ok')

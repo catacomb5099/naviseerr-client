@@ -16,7 +16,7 @@ import {
   cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates, pickMockSongCandidate,
   getMockAlbumCandidates, pickMockAlbumFolder, searchMockSongCandidates, searchMockAlbumFolders,
   getMockPlaylists, getMockPlaylist, createMockPlaylist, updateMockPlaylist, removeMockPlaylistSong, copyMockPlaylist,
-  deleteMockPlaylist, addMockToPlaylist,
+  deleteMockPlaylist, addMockToPlaylist, reorderMockPlaylist,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -208,6 +208,16 @@ export async function addToPlaylist(
 ): Promise<PlaylistAddResult> {
   if (USE_MOCK_DATA) return Promise.resolve(addMockToPlaylist(id, source))
   return apiClient<PlaylistAddResult>(`/playlists/${encodeURIComponent(id)}/songs`, { method: 'POST', body: JSON.stringify(source) })
+}
+
+/**
+ * Put a draft's songs in this order. Songs not listed (one just added from another tab) keep their place
+ * after them, and ids it does not hold are ignored, so a stale page never loses a song.
+ * PUT /playlists/{id}/order ["videoId", ...]  (409 once created)
+ */
+export async function reorderPlaylist(id: string, videoIds: string[]): Promise<void> {
+  if (USE_MOCK_DATA) return Promise.resolve(reorderMockPlaylist(id, videoIds))
+  await apiClient<unknown>(`/playlists/${encodeURIComponent(id)}/order`, { method: 'PUT', body: JSON.stringify(videoIds) })
 }
 
 /**

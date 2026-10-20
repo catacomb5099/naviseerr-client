@@ -38,6 +38,20 @@ export function titleClash(title: string, id: string, playlists: Pick<PlaylistSu
   return key !== '' && playlists.some(p => p.id !== id && p.title.trim().toLowerCase() === key)
 }
 
+/** The list with the item at `from` moved to `to` (both 0-based); the same list when either is out of range. */
+export function moveItem<T>(list: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return list
+  const next = [...list]
+  next.splice(to, 0, ...next.splice(from, 1))
+  return next
+}
+
+/** Where a dragged row lands: the number of OTHER rows whose middle is above the pointer. `mids` are the rows'
+ *  vertical middles in their current order, the dragged one (`from`) included. */
+export function dropIndex(pointerY: number, mids: number[], from: number): number {
+  return mids.filter((mid, i) => i !== from && mid < pointerY).length
+}
+
 /** What the app says after an add: "Added 9 songs to Road trip · 3 were already in it", "Added Down to Road
  *  trip", "Down is already in Road trip". `song` is the song's name when one song was added, else null. */
 export function addedCopy(result: { added: number; alreadyIn: number }, song: string | null, playlist: string): string {

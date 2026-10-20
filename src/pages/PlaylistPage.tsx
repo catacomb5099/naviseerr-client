@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Check, Copy, Info, Loader2, Trash2, X } from 'lucide-react'
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { ArrowLeft, Check, Copy, GripVertical, Info, Loader2, Trash2, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { copyPlaylist, deletePlaylist, getPlaylist, getPlaylists, removeFromPlaylist, updatePlaylist } from '../api/endpoints'
+import { copyPlaylist, deletePlaylist, getPlaylist, getPlaylists, removeFromPlaylist, reorderPlaylist, updatePlaylist } from '../api/endpoints'
 import { ApiError } from '../api/client'
-import { DownloadType, PlaylistDetail, PlaylistSummary } from '../api/types'
+import { CollectionTrack, DownloadType, PlaylistDetail, PlaylistSummary } from '../api/types'
 import { useRetry } from '../hooks/useRetry'
 import { useDownloadCards } from '../hooks/useItemDownload'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { RequestOutcome, alreadyCopy, itemDownload, itemDownloadLabel } from '../lib/downloadPanel'
-import { DESCRIPTION_MAX, TITLE_MAX, mosaicOf, playlistMeta, titleClash } from '../lib/playlists'
+import { DESCRIPTION_MAX, TITLE_MAX, dropIndex, mosaicOf, moveItem, playlistMeta, titleClash } from '../lib/playlists'
 import { formatDuration, providerMessage, shortDate } from '../lib/utils'
 import { AppHeader } from '../components/AppHeader'
 import { PageNavButton } from '../components/PageNavButton'
@@ -117,6 +117,47 @@ export function PlaylistPage({ onDownload, onInfo }: PlaylistPageProps) {
     setFetched(f => f?.status === 'ready' ? { ...f, playlist: { ...f.playlist, ...local } } : f)
     setProblem(null)
     save().catch(() => { setProblem(SAVE_FAILED); retry() })
+  }
+
+  // Reordering (no library: Pointer Events do mouse, touch and pen in one path, which HTML drag and drop does
+  // not on phones). The row moves while you drag; one save when you let go.
+  const list = useRef<HTMLUListElement>(null)
+  const [dragging, setDragging] = useState<{ id: string; before: CollectionTrack[] } | null>(null)
+  const reorder = (tracks: CollectionTrack[]) => tracks.map((t, i) => ({ ...t, position: i + 1 }))
+  const saveOrder = (tracks: CollectionTrack[]) => edit({ tracks: reorder(tracks) }, () => reorderPlaylist(id, tracks.map(t => t.id)))
+  const showOrder = (tracks: CollectionTrack[]) =>
+    setFetched(f => f?.status === 'ready' ? { ...f, playlist: { ...f.playlist, tracks: reorder(tracks) } } : f)
+
+  const dragMove = (clientY: number) => {
+    if (!dragging || !playlist || !list.current) return
+    const from = playlist.tracks.findIndex(t => t.id === dragging.id)
+    const mids = Array.from(list.current.children, row => { const r = row.getBoundingClientRect(); return r.top + r.height / 2 })
+    const to = dropIndex(clientY, mids, from)
+    if (to !== from) showOrder(moveItem(playlist.tracks, from, to))
+    // Near the window's edge the page scrolls, so a long list can be crossed in one drag.
+    if (clientY < 80) window.scrollBy(0, -12)
+    else if (clientY > window.innerHeight - 80) window.scrollBy(0, 12)
+  }
+
+  const dragEnd = () => {
+    if (!dragging || !playlist) return
+    const moved = playlist.tracks.some((t, i) => t.id !== dragging.before[i]?.id)
+    setDragging(null)
+    if (!moved) return
+    const position = playlist.tracks.findIndex(t => t.id === dragging.id) + 1
+    saveOrder(playlist.tracks)
+    setAnnouncement(`Moved ${playlist.tracks[position - 1].name} to position ${position} of ${playlist.tracks.length}`)
+  }
+
+  /** ArrowUp / ArrowDown on the grip moves the song one place; focus stays on it (rows are keyed by song). */
+  const keyMove = (e: KeyboardEvent, index: number) => {
+    if (!playlist || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return
+    e.preventDefault()
+    const to = index + (e.key === 'ArrowUp' ? -1 : 1)
+    if (to < 0 || to >= playlist.tracks.length) return
+    const tracks = moveItem(playlist.tracks, index, to)
+    saveOrder(tracks)
+    setAnnouncement(`Moved ${tracks[to].name} to position ${to + 1} of ${tracks.length}`)
   }
 
   const remove = (videoId: string, name: string) => {
@@ -288,9 +329,28 @@ export function PlaylistPage({ onDownload, onInfo }: PlaylistPageProps) {
                 No songs yet. <Link to="/" className="underline hover:text-white">Find songs to add</Link>, then press Add to playlist on any song, album or playlist.
               </p>
             ) : (
-              <ul className="space-y-0.5">
-                {playlist.tracks.map(track => (
-                  <li key={track.id} className="h-16 sm:h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
+              <ul ref={list} className="space-y-0.5">
+                {playlist.tracks.map((track, index) => (
+                  <li
+                    key={track.id}
+                    className={`h-16 sm:h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10 ${dragging?.id === track.id ? 'bg-zinc-800 shadow-lg ring-1 ring-green-600' : ''}`}
+                  >
+                    {draft && (
+                      <button
+                        type="button"
+                        aria-label={`Move ${track.name}`}
+                        aria-describedby="reorder-help"
+                        title="Drag to move, or use the arrow keys"
+                        onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); setDragging({ id: track.id, before: playlist.tracks }) }}
+                        onPointerMove={e => dragMove(e.clientY)}
+                        onPointerUp={dragEnd}
+                        onPointerCancel={() => { if (dragging) showOrder(dragging.before); setDragging(null) }}
+                        onKeyDown={e => keyMove(e, index)}
+                        className={`-ml-1 inline-flex h-10 w-8 sm:h-8 sm:w-6 flex-none touch-none select-none items-center justify-center rounded text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                      >
+                        <GripVertical className="w-4 h-4" aria-hidden="true" />
+                      </button>
+                    )}
                     {track.iconURL ? (
                       <img src={track.iconURL} alt="" referrerPolicy="no-referrer" className="h-10 w-10 rounded object-cover bg-zinc-800" />
                     ) : (
@@ -319,6 +379,7 @@ export function PlaylistPage({ onDownload, onInfo }: PlaylistPageProps) {
           </div>
         )}
 
+        <p id="reorder-help" className="sr-only">Drag to move the song, or press the up and down arrow keys.</p>
         <p role="status" className="sr-only">{announcement}</p>
       </main>
 

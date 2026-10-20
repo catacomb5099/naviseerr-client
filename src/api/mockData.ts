@@ -1266,6 +1266,13 @@ export function removeMockPlaylistSong(id: string, videoId: string): void {
   touched(p)
 }
 
+export function reorderMockPlaylist(id: string, videoIds: string[]): void {
+  const p = draftOr409(id)
+  const listed = videoIds.map(v => p.songs.find(s => s.id === v)).filter((s): s is CollectionTrack => !!s)
+  p.songs = [...listed, ...p.songs.filter(s => !videoIds.includes(s.id))]
+  touched(p)
+}
+
 export function copyMockPlaylist(id: string): PlaylistSummary {
   const from = playlistOr404(id)
   const copy = createMockPlaylist(`Copy of ${from.title}`)
