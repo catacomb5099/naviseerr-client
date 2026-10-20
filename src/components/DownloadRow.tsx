@@ -135,7 +135,7 @@ function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight
         className={SONG_ACTION}
         aria-label={`Choose file for ${song.title ?? 'song'}`}
         title="Choose the file yourself"
-        onClick={e => { e.stopPropagation(); onManualImport({ kind: 'SONG', downloadId, taskId: song.taskId, title: song.title ?? 'Untitled' }) }}
+        onClick={e => { e.stopPropagation(); onManualImport({ kind: 'SONG', downloadId, taskId: song.taskId, title: song.title ?? 'Untitled', artist: song.artists[0] ?? null }) }}
       >
         <UserRound className="w-3.5 h-3.5" aria-hidden="true" />
       </button>
@@ -358,7 +358,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
               className={ACTION_BUTTON}
               aria-label={`Choose file for ${item.title}`}
               title="Choose the file yourself"
-              onClick={e => { e.stopPropagation(); onManualImport({ kind: 'SONG', downloadId: item.downloadId, taskId: null, title: item.title }) }}
+              onClick={e => { e.stopPropagation(); onManualImport({ kind: 'SONG', downloadId: item.downloadId, taskId: null, title: item.title, artist: item.artistNames[0] ?? null }) }}
             >
               <UserRound className="w-4 h-4" aria-hidden="true" />
             </button>
@@ -369,7 +369,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
               className={ACTION_BUTTON}
               aria-label={`Choose sharer for ${item.title}`}
               title="Choose the sharer yourself"
-              onClick={e => { e.stopPropagation(); onManualImport({ kind: 'ALBUM', downloadId: item.downloadId, title: item.title, stage: item.stage }) }}
+              onClick={e => { e.stopPropagation(); onManualImport({ kind: 'ALBUM', downloadId: item.downloadId, title: item.title, artist: item.artistNames[0] ?? null, stage: item.stage }) }}
             >
               <UserRound className="w-4 h-4" aria-hidden="true" />
             </button>
