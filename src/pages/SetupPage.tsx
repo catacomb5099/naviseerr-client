@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DoneStep } from '../components/setup/DoneStep'
+import { ExposureStep } from '../components/setup/ExposureStep'
 import { MediaServerStep } from '../components/setup/MediaServerStep'
 import { PlaylistsStep } from '../components/setup/PlaylistsStep'
 import { SetupStep } from '../components/setup/SetupStep'
@@ -16,7 +17,7 @@ import { stepIndex, stepPath } from '../lib/setup'
  * Skipping keeps the default and leads to the same last screen, whose Finish marks the setup done.
  */
 /** `noSkip`: the screen's own controls are the choice, so no Skip link under them. */
-const steps: { title: string; help: string; body: (next: () => void) => ReactNode; noSkip?: boolean }[] = [
+const steps: { title: string; help?: string; body: (next: () => void) => ReactNode; noSkip?: boolean }[] = [
   {
     title: 'Your Soulseek account',
     help: 'naviseerr downloads from the Soulseek network as this account. Passwords cannot be reset, so write it down.',
@@ -34,10 +35,15 @@ const steps: { title: string; help: string; body: (next: () => void) => ReactNod
     // The switch saves on flip, so Next with it off IS the skip (Home Assistant's shape); a Skip link beside a switch just turned on would read as undoing it, and would not.
     noSkip: true,
   },
+  {
+    title: 'Will you reach naviseerr from outside your home?',
+    body: next => <ExposureStep onDone={next} />,
+    noSkip: true,
+  },
 ]
 
 const welcome = (libraryRoot: string | null) =>
-  'Welcome to naviseerr. A few short questions; skip any, change all of them later in Settings.'
+  'Welcome to naviseerr. Four short questions; skip any, change all of them later in Settings.'
   + (libraryRoot ? ` Your music lands in ${libraryRoot} (set in the install file).` : '')
 
 export function SetupPage({ libraryRoot, onFinished }: { libraryRoot: string | null; onFinished: () => void }) {
