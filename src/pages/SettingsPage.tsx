@@ -23,9 +23,10 @@ export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void })
       <section id="download-quality" aria-labelledby="download-quality-heading" className="max-w-2xl space-y-3">
         <h3 id="download-quality-heading" className="text-lg font-semibold">Download quality</h3>
         <p className="text-sm text-zinc-400">
-          The quality every download aims for, songs, albums and playlists alike. When Soulseek has nothing at that quality
-          the nearest is taken; a song&rsquo;s Choose a file pop-up (the person icon on the Downloads page) shows every
-          file&rsquo;s quality and marks the one taken. Saved the moment you pick one.
+          The quality every download aims for, songs, albums and playlists alike. When Soulseek has none at that quality,
+          the next quality up is taken, and lower ones only when nothing higher exists; a song&rsquo;s Choose a file
+          pop-up (the person icon on the Downloads page) shows every file&rsquo;s quality and marks the one taken. Saved
+          the moment you pick one.
         </p>
         <DownloadQualityStep />
       </section>
