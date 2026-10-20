@@ -6,7 +6,7 @@ import {
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
-  SoulseekAccount, SetupStatus,
+  SoulseekAccount, SetupStatus, MediaServerChange, MediaServerKind, MediaServersSettings,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -508,6 +508,33 @@ export async function getSetup(signal?: AbortSignal): Promise<SetupStatus> {
 /** Finish on the last screen: the setup is remembered as done and never shown again. POST /settings/setup/done (204) */
 export function finishSetup(): Promise<void> {
   return apiClient<void>('/settings/setup/done', { method: 'POST' })
+}
+
+// --- Your music app (19-10-2026) ------------------------------------------------------------------
+
+/**
+ * Which music app naviseerr asks to rescan (Navidrome or Jellyfin), and that app's last outcome. Never
+ * cached: read on open and after each change. GET /settings/media-servers  (404 on an older server)
+ */
+export function getMediaServers(signal?: AbortSignal): Promise<MediaServersSettings> {
+  return apiClient<MediaServersSettings>('/settings/media-servers', { signal })
+}
+
+/**
+ * "Save and test": the server asks that app for ONE rescan with the typed values and stores them only
+ * when it worked, then uses them from now on (no restart).
+ * PUT /settings/media-servers {navidrome: {…}} | {jellyfin: {…}}  (200 with `message`; 400 {message}, nothing stored)
+ */
+export function putMediaServers(change: MediaServerChange): Promise<MediaServersSettings> {
+  return apiClient<MediaServersSettings>('/settings/media-servers', { method: 'PUT', body: JSON.stringify(change) })
+}
+
+/**
+ * Forget what the app stored for that server; the install file's lines, if any, are the fallback again.
+ * DELETE /settings/media-servers/{navidrome|jellyfin}  (204)
+ */
+export function deleteMediaServer(kind: MediaServerKind): Promise<void> {
+  return apiClient<void>(`/settings/media-servers/${kind}`, { method: 'DELETE' })
 }
 
 /** Server-side cap on GET /downloads?ids= */

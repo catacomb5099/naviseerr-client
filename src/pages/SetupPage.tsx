@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DoneStep } from '../components/setup/DoneStep'
+import { MediaServerStep } from '../components/setup/MediaServerStep'
 import { SetupStep } from '../components/setup/SetupStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
 import { stepIndex, stepPath } from '../lib/setup'
@@ -18,6 +19,11 @@ const steps: { title: string; help: string; body: (next: () => void) => ReactNod
     title: 'Your Soulseek account',
     help: 'naviseerr downloads from the Soulseek network as this account. Passwords cannot be reset, so write it down.',
     body: next => <SoulseekStep onDone={next} />,
+  },
+  {
+    title: 'Which app plays your music?',
+    help: 'naviseerr asks that app to rescan the moment a song or playlist lands. Neither? Your app still finds new files on its own schedule.',
+    body: next => <MediaServerStep onDone={next} />,
   },
 ]
 
