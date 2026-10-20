@@ -35,6 +35,7 @@ React-based music search and download client with Spotify-inspired UI.
 - The setup's fifth and last question, "Will you reach naviseerr from outside your home?" (19-10-2026): a short plain-words note on why an app reachable from the internet needs a login in front (bots and strangers can hammer search until YouTube Music blocks your server, fill your disk with downloads and read your whole library), then two buttons: "Continue with Authentik" opens the same Authentik fields Settings → Login has (address, Client ID, Client secret, the Redirect URL to copy, Save and test, which turns the login on, then the sign-in), "Not now, it stays open" moves on with no login. Never a silent Next, and no Skip link: the second button is the skip. After a successful Save and test the login is on and the one way on is "Continue with Authentik" (no Skip, no Next until you are signed in); back from Authentik the screen says the login is on and offers Next. Jellyfin's "Set up Remote Access" (last step, one choice) is the position; Home Assistant's analytics question the explicit two-way choice; the Authentik screen itself is unchanged
 - Use your own slskd (19-10-2026): the Soulseek screen of the setup, and Settings → Soulseek, have a third choice next to "Keep it" and "Use my own account": "Use my own slskd", for people who already run a Soulseek client. Type its address and API key, press "Save and test": the server asks that slskd who it is and, when it answers, talks to it from then on (searches, downloads, the status strip), no restart; one line of help says the one thing that matters, that naviseerr must see that slskd's downloads folder (point the install file's downloads volume at it) or nothing is filed, and that downloads under way when you switch fail within a minute and can be retried. The section then shows your slskd's address with Change and "Back to the bundled slskd". Sonarr keeps "your own download client" in Settings the same way
 - Settings → Download quality, and the setup's first screen "What quality do you want your music in?" (19-10-2026): five rows, Spotify's Audio quality words with the bit rate under each (Low, about 128 kbit/s; Normal, about 192; High, about 256; Very high, about 320; Lossless, FLAC and other lossless files). Pressing a row saves it at once; from then on every download, songs, albums and playlists alike, looks for files at that quality first and, when Soulseek has none at that quality, takes the next quality up, and lower ones only when nothing higher exists; a song's Choose a file pop-up (the person icon on the Downloads page) shows every file's quality and marks the one taken. Until you choose, the default row says "(what naviseerr did until now)". In the setup, Next with a row marked is the way on (no Skip link: a row saves the moment it is pressed, so a Skip after one would read as undoing it). Follows Spotify's Audio quality setting (its words and list; the bit rates are what Soulseek files come in). On a server from before the setting the screen says so and downloads take lossless or 320 kbps files as before
+- Shown inside Feishin (20-10-2026): Feishin's Discover page can show this app in a frame, on the same domain; see "Using Naviseerr inside Feishin" below
 - Docker deployment
 
 ## Tech Stack
@@ -112,10 +113,27 @@ server the public path it strips (`X-Forwarded-Prefix: /api`), which is why that
 must set the same header, or the shown URL lacks the prefix.
 
 **Browser hardening headers (19-10-2026):** every answer carries `X-Content-Type-Options: nosniff`,
-`X-Frame-Options: DENY` (the app cannot be framed by another site), `Referrer-Policy:
+`Content-Security-Policy: frame-ancestors 'self'` (the app cannot be framed by another site; it replaced
+`X-Frame-Options: DENY` on 20-10-2026 so the addresses in `NAVISEERR_EMBED_ORIGINS` can), `Referrer-Policy:
 strict-origin-when-cross-origin` and a `Permissions-Policy` denying camera, microphone and location; `/api`
 answers get `Cache-Control: no-store` unless the server set one. All in the Caddyfile, so an HTTPS proxy
 in front has nothing to add (HSTS belongs on that proxy, which owns the certificate).
+
+### Using Naviseerr inside Feishin
+
+[Feishin](https://github.com/catacomb5099/feishin) (the music player for Navidrome and Jellyfin; the
+owner's fork) can show this whole web app on a **Discover** page in its sidebar. It works when both
+live under the same domain (for example `feishin.example.com` and `naviseerr.example.com`), in Feishin's
+web version. Three settings, all empty by default:
+
+| Where | Setting | Value |
+|---|---|---|
+| this web app's container | `NAVISEERR_EMBED_ORIGINS` | Feishin's address, e.g. `https://feishin.example.com` (several: space-separated). Lets that address show the app in a frame |
+| the naviseerr server | `AUTH_ALLOWED_ORIGINS` | the same address, so signing in from inside Feishin may come back to Feishin |
+| Feishin | Settings -> General -> Naviseerr address, or `FS_GENERAL_NAVISEERR_URL` in Docker | this web app's address, e.g. `https://naviseerr.example.com` |
+
+A proxy in front may add `X-Frame-Options: SAMEORIGIN`; the `frame-ancestors` rule above wins over it.
+A proxy that adds its own `Content-Security-Policy` with `frame-ancestors` must allow Feishin too.
 
 ## Project Structure
 

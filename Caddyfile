@@ -15,11 +15,13 @@
 
 	# Browser hardening on every answer (what Navidrome's and Jellyfin's reverse-proxy guides add, and
 	# what Spring Security would add if the server used it): browsers never guess a file's type, the
-	# app cannot be shown inside another site's frame (clickjacking), outside links learn the site but
-	# not the page, and no page may ask for the camera, microphone or location.
+	# app cannot be shown inside another site's frame (clickjacking) except by the addresses listed in
+	# NAVISEERR_EMBED_ORIGINS (your Feishin, space-separated, empty = none), outside links learn the
+	# site but not the page, and no page may ask for the camera, microphone or location.
+	# frame-ancestors also overrides an X-Frame-Options a proxy in front adds.
 	header {
 		X-Content-Type-Options nosniff
-		X-Frame-Options DENY
+		Content-Security-Policy "frame-ancestors 'self' {$NAVISEERR_EMBED_ORIGINS}"
 		Referrer-Policy strict-origin-when-cross-origin
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
