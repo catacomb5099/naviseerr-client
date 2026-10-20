@@ -5,6 +5,7 @@ import { DownloadsPage } from './pages/DownloadsPage'
 import { CollectionPage } from './pages/CollectionPage'
 import { ArtistPage } from './pages/ArtistPage'
 import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { ConnectivityBar } from './components/ConnectivityBar'
 import { DownloadPanel } from './components/DownloadPanel'
 import { SongInfoDialog } from './components/SongInfoDialog'
@@ -106,6 +107,7 @@ function App() {
         <Route path="/radio/:id" element={<CollectionPage type="RADIO" onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/artist/:id" element={<ArtistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/suggested/:category" element={<SuggestedPlaylistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
+        <Route path="/settings" element={<SettingsPage onNavigateHome={() => navigate('/')} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

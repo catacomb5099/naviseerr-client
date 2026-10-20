@@ -1,9 +1,9 @@
-import { apiClient } from './client'
+import { API_BASE_URL, apiClient } from './client'
 import {
   SearchResponse, Track, Album, Artist, Playlist, Download, DownloadType, ActiveDownloadsResponse,
   ActiveDownloadView, DownloadsByIdResponse, DownloadDetailView, AllDownloadsResponse, DownloadTypeFilter,
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
-  CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse,
+  CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -404,6 +404,43 @@ export async function getStatus(signal?: AbortSignal): Promise<StatusResponse> {
     })
   }
   return apiClient<StatusResponse>('/status', { signal })
+}
+
+// --- Login with Authentik (19-10-2026) -----------------------------------------------------------
+
+/**
+ * How this install connects to Authentik, and whether the login is on. Never cached: the Settings
+ * page reads it once on open and again after each change.
+ * GET /settings/login  (404 on a server from before the login existed)
+ */
+export function getLoginSettings(signal?: AbortSignal): Promise<LoginSettings> {
+  return apiClient<LoginSettings>('/settings/login', { signal })
+}
+
+/**
+ * "Save and test": the server reads Authentik's OpenID configuration first and stores the values only
+ * when that works; an empty `clientSecret` keeps the one already stored. Never turns the login on.
+ * PUT /settings/login {issuer, clientId, clientSecret}  (200 with `message`; 400 {message} saying what to fix)
+ */
+export function putLoginSettings(issuer: string, clientId: string, clientSecret: string): Promise<LoginSettings> {
+  return apiClient<LoginSettings>('/settings/login', { method: 'PUT', body: JSON.stringify({ issuer, clientId, clientSecret }) })
+}
+
+/**
+ * "Turn off Authentik login": the app is open again, everyone is logged out, the settings stay for later.
+ * DELETE /settings/login  (204; needs a session while the login is on)
+ */
+export function turnOffLogin(): Promise<void> {
+  return apiClient<void>('/settings/login', { method: 'DELETE' })
+}
+
+/**
+ * Where "Continue with Authentik" sends the browser: the server's sign-in start route, a full page
+ * navigation (it answers a redirect to Authentik, which a fetch could not follow). `to` is the page to
+ * land back on; the server keeps it when it is the app's own address.
+ */
+export function authentikStartUrl(to: string): string {
+  return `${API_BASE_URL}/auth/authentik/start?to=${encodeURIComponent(to)}`
 }
 
 /** Server-side cap on GET /downloads?ids= */
