@@ -460,6 +460,17 @@ export interface SuggestedPlaylistsSettings {
   message?: string | null
 }
 
+/** The five tiers of GET/PUT /settings/download-quality: Spotify's Audio quality words, lowest first. */
+export type DownloadQuality = 'LOW' | 'NORMAL' | 'HIGH' | 'VERY_HIGH' | 'LOSSLESS'
+
+/** GET/PUT /settings/download-quality (19-10-2026): the quality every download aims for, songs, albums and playlists
+ *  alike; the server takes the nearest tier when Soulseek has nothing at that one. `default` is true while nobody has
+ *  chosen, and `quality` is then what the server did before the setting existed. */
+export interface DownloadQualitySettings {
+  quality: DownloadQuality
+  default: boolean
+}
+
 /** GET/PUT /settings/slskd (19-10-2026): the Soulseek client (slskd) this server talks to. `fromInstallFile` true while
  *  it is the install's bundled one (or a developer's .env); false once your own slskd was saved here, which the server
  *  then uses for everything, no restart. The API key never comes back (`apiKeySet`). `message` is the "Save and test"
@@ -568,7 +579,7 @@ export interface AlbumFolder {
   songsCurrent: number
   isCurrent: boolean
   /** Whether Naviseerr's own album search would take this folder; false for one listed only for a person to
-   *  choose (too few of the album's songs, no artist in its path, a low bit rate, a sharer that stalls). */
+   *  choose (too few of the album's songs, no artist in its path, no reported bit rate, a sharer that stalls). */
   judged: boolean
   files: AlbumFolderFile[]
 }
