@@ -361,6 +361,7 @@ export function getMockArtist(id: string): ArtistDetail {
     description: null,
     subscribers: '1.2M',
     topSongs: mockTracks,
+    topSongsPlaylistId: mockPlaylists[0].id,
     albums: mockAlbums,
     singles: mockAlbums.slice(0, 2),
     playlists: mockPlaylists,
