@@ -15,12 +15,10 @@ export function frameParent(from: string | null, framed: boolean): string | null
   }
 }
 
-let parentPage: string | null | undefined
-
-/** The Feishin page this app is shown in, or null when opened on its own. `from` is on the first
- *  address only, so it is kept for the tab: later pages and a reload inside the frame still know it. */
-export function embeddedIn(): string | null {
-  if (parentPage !== undefined) return parentPage
+/** The Feishin page this app is shown in, or null when opened on its own. Read once as the app
+ *  starts: `from` is on the first address only and the app's own search soon replaces it. Kept for
+ *  the tab too, so a reload inside the frame still knows it. */
+function readParent(): string | null {
   let from = new URLSearchParams(window.location.search).get('from')
   try {
     if (from) sessionStorage.setItem(STORAGE_KEY, from)
@@ -28,7 +26,12 @@ export function embeddedIn(): string | null {
   } catch {
     // storage off: this page load still knows from its own address
   }
-  parentPage = frameParent(from, window.self !== window.top)
+  return frameParent(from, window.self !== window.top)
+}
+
+const parentPage = typeof window === 'undefined' ? null : readParent()
+
+export function embeddedIn(): string | null {
   return parentPage
 }
 
