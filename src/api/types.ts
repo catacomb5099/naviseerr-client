@@ -413,6 +413,14 @@ export interface LoginSettings {
   message?: string | null
 }
 
+/** GET /settings/setup (19-10-2026): has the first-run setup been finished (or skipped through) on this install?
+ *  `libraryRoot` is the folder downloads are filed into (the install file's music folder), null on a developer run
+ *  with no library. A server from before the setup existed answers 404: taken as completed, nothing is shown. */
+export interface SetupStatus {
+  completed: boolean
+  libraryRoot: string | null
+}
+
 /** GET/PUT /settings/soulseek (19-10-2026): the Soulseek account this install logs in with. `generated` is true
  *  for a name setup made up (naviseerr-xxxxxx), and only then is `password` filled, so it can be written down from
  *  the app (it cannot be reset); a name a person chose never has its password echoed. `loggedIn` is slskd's answer,

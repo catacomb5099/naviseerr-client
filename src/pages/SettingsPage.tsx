@@ -5,9 +5,10 @@ import { AuthentikStep } from '../components/setup/AuthentikStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
 
 /**
- * Settings: one section per thing a person may change about their install, each a step component
- * the first-run wizard will reuse: Soulseek and the login today (19-10-2026). Reached from the gear on
- * every page, the amber "Not connected to Soulseek" strip's Fix link, and directly at /settings.
+ * Settings: one section per thing a person may change about their install, in the first-run setup's
+ * order and built from its step components (without `onDone`, each section saves itself): Soulseek and
+ * the login today (19-10-2026). Reached from the gear on every page, the amber "Not connected to
+ * Soulseek" strip's Fix link, and directly at /settings#<section>.
  */
 export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void }) {
   return (
