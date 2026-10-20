@@ -47,8 +47,8 @@ export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void })
       <section id="login" aria-labelledby="login-heading" className="mt-10 max-w-2xl space-y-3">
         <h3 id="login-heading" className="text-lg font-semibold">Login</h3>
         <p className="text-sm text-zinc-400">
-          Without a login, anyone who can reach this web app can search and download. Connect your Authentik and sign in
-          once, and from then on every visitor has to sign in through it. Leave it off if naviseerr only lives on your
+          Without a login, anyone who can reach this web app can search and download. Connect your Authentik with Save and
+          test, and from that moment every visitor has to sign in through it. Leave it off if naviseerr only lives on your
           own network.
         </p>
         <AuthentikStep />

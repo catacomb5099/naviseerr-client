@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ApiError } from '../../api/client'
 import {
-  finishSetup, getLoginSettings, getMediaServers, getSession, getSlskdSettings, getSoulseekAccount, getSuggestedPlaylistsSettings,
+  finishSetup, getMediaServers, getSession, getSlskdSettings, getSoulseekAccount, getSuggestedPlaylistsSettings,
 } from '../../api/endpoints'
 import { musicAppSummary } from '../../lib/mediaServers'
 import { loginSummary, soulseekSummary } from '../../lib/setup'
@@ -22,22 +22,21 @@ export function DoneStep({ libraryRoot, onDone }: { libraryRoot: string | null; 
 
   useEffect(() => {
     const controller = new AbortController()
-    // A 404 on the account is the install that keeps it in its install file; on the login, an older server.
+    // A 404 on the account is the install that keeps it in its install file.
     const soulseek = getSoulseekAccount(controller.signal).catch(err => {
       if (err instanceof ApiError && err.status === 404) return null
       throw err
     })
-    const login = getLoginSettings(controller.signal).catch(() => null)
     // Null: an older server without that setting, so no line for it.
     const music = getMediaServers(controller.signal).catch(() => null)
     const playlists = getSuggestedPlaylistsSettings(controller.signal).catch(() => null)
     const slskd = getSlskdSettings(controller.signal).catch(() => null)
-    Promise.all([soulseek, slskd, music, playlists, getSession(), login]).then(
-      ([account, own, servers, weekly, session, settings]) => setLines([
+    Promise.all([soulseek, slskd, music, playlists, getSession()]).then(
+      ([account, own, servers, weekly, session]) => setLines([
         soulseekSummary(account, own),
         ...(servers ? [musicAppSummary(servers)] : []),
         ...(weekly ? [playlistsSummary(weekly)] : []),
-        loginSummary(session, settings),
+        loginSummary(session),
       ]),
       () => { if (!controller.signal.aborted) setLines([]) },
     )
