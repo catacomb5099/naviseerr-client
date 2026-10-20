@@ -464,8 +464,9 @@ export interface SuggestedPlaylistsSettings {
 export type DownloadQuality = 'LOW' | 'NORMAL' | 'HIGH' | 'VERY_HIGH' | 'LOSSLESS'
 
 /** GET/PUT /settings/download-quality (19-10-2026): the quality every download aims for, songs, albums and playlists
- *  alike; the server takes the nearest tier when Soulseek has nothing at that one. `default` is true while nobody has
- *  chosen, and `quality` is then what the server did before the setting existed. */
+ *  alike; when Soulseek has none at that quality the server takes the next quality up, and lower ones only when nothing
+ *  higher exists. `default` is true while nobody has chosen, and `quality` is then what the server did before the
+ *  setting existed. */
 export interface DownloadQualitySettings {
   quality: DownloadQuality
   default: boolean
