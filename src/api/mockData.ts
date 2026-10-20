@@ -1273,6 +1273,14 @@ export function reorderMockPlaylist(id: string, videoIds: string[]): void {
   touched(p)
 }
 
+/** The mock keeps the picture as a blob: address, which lasts until the tab reloads. */
+export function setMockPlaylistCover(id: string, jpeg: Blob | null): PlaylistDetail {
+  const p = draftOr409(id)
+  p.coverUrl = jpeg ? URL.createObjectURL(jpeg) : null
+  touched(p)
+  return getMockPlaylist(id)
+}
+
 export function copyMockPlaylist(id: string): PlaylistSummary {
   const from = playlistOr404(id)
   const copy = createMockPlaylist(`Copy of ${from.title}`)

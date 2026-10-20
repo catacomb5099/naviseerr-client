@@ -16,7 +16,7 @@ import {
   cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates, pickMockSongCandidate,
   getMockAlbumCandidates, pickMockAlbumFolder, searchMockSongCandidates, searchMockAlbumFolders,
   getMockPlaylists, getMockPlaylist, createMockPlaylist, updateMockPlaylist, removeMockPlaylistSong, copyMockPlaylist,
-  deleteMockPlaylist, addMockToPlaylist, reorderMockPlaylist,
+  deleteMockPlaylist, addMockToPlaylist, reorderMockPlaylist, setMockPlaylistCover,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -218,6 +218,26 @@ export async function addToPlaylist(
 export async function reorderPlaylist(id: string, videoIds: string[]): Promise<void> {
   if (USE_MOCK_DATA) return Promise.resolve(reorderMockPlaylist(id, videoIds))
   await apiClient<unknown>(`/playlists/${encodeURIComponent(id)}/order`, { method: 'PUT', body: JSON.stringify(videoIds) })
+}
+
+/**
+ * Your picture for a draft: the square JPEG the page made (src/lib/coverImage.ts). Answers the playlist, whose
+ * `coverUrl` is the picture's new address.
+ * PUT /playlists/{id}/cover (body image/jpeg, at most 4 MB)  (400 not a JPEG or too big; 409 once created)
+ */
+export async function setPlaylistCover(id: string, jpeg: Blob): Promise<PlaylistDetail> {
+  if (USE_MOCK_DATA) return Promise.resolve(setMockPlaylistCover(id, jpeg))
+  return apiClient<PlaylistDetail>(`/playlists/${encodeURIComponent(id)}/cover`,
+    { method: 'PUT', body: jpeg, headers: { 'Content-Type': 'image/jpeg' } })
+}
+
+/**
+ * Back to the four-picture mosaic
+ * DELETE /playlists/{id}/cover  (409 once created)
+ */
+export async function removePlaylistCover(id: string): Promise<PlaylistDetail> {
+  if (USE_MOCK_DATA) return Promise.resolve(setMockPlaylistCover(id, null))
+  return apiClient<PlaylistDetail>(`/playlists/${encodeURIComponent(id)}/cover`, { method: 'DELETE' })
 }
 
 /**

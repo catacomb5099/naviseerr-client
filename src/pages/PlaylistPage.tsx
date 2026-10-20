@@ -1,5 +1,5 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Check, Copy, GripVertical, Info, Loader2, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, Copy, GripVertical, ImagePlus, Info, Loader2, Trash2, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { copyPlaylist, deletePlaylist, getPlaylist, getPlaylists, removeFromPlaylist, reorderPlaylist, updatePlaylist } from '../api/endpoints'
 import { ApiError } from '../api/client'
@@ -17,6 +17,7 @@ import { PlaylistCover } from '../components/PlaylistCover'
 import { PlayOnYouTubeMusic } from '../components/PlayOnYouTubeMusic'
 import { ArtistNames } from '../components/ArtistNames'
 import { AddToPlaylistButton } from '../components/AddToPlaylistButton'
+import { PlaylistPictureDialog } from '../components/PlaylistPictureDialog'
 
 interface PlaylistPageProps {
   /** "Create" is a CUSTOM download of this playlist, through the same plumbing as every Download button. */
@@ -89,6 +90,7 @@ export function PlaylistPage({ onDownload, onInfo }: PlaylistPageProps) {
   const [problem, setProblem] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState('')
   const deleteDialog = useRef<HTMLDialogElement>(null)
+  const [picking, setPicking] = useState(false)
   const cards = useDownloadCards()
 
   useEffect(() => {
@@ -245,7 +247,22 @@ export function PlaylistPage({ onDownload, onInfo }: PlaylistPageProps) {
 
         {(load.status === 'loading' || playlist) && (
           <div className="flex flex-col sm:flex-row gap-6" aria-busy={load.status === 'loading'}>
-            {playlist ? (
+            {playlist && draft ? (
+              // Click the cover to choose a picture, as on Spotify's and YouTube Music's playlist pages.
+              <button
+                type="button"
+                onClick={() => setPicking(true)}
+                aria-label="Choose a picture for this playlist"
+                title="Choose picture"
+                className="group relative h-40 w-40 sm:h-48 sm:w-48 flex-shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+              >
+                <PlaylistCover coverUrl={playlist.coverUrl} mosaic={mosaicOf(playlist.tracks.map(t => t.iconURL))} className="h-full w-full" />
+                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-md bg-black/60 text-sm font-semibold opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity motion-reduce:transition-none">
+                  <ImagePlus className="w-6 h-6" aria-hidden="true" />
+                  Choose picture
+                </span>
+              </button>
+            ) : playlist ? (
               <PlaylistCover coverUrl={playlist.coverUrl} mosaic={mosaicOf(playlist.tracks.map(t => t.iconURL))} className="h-40 w-40 sm:h-48 sm:w-48 flex-shrink-0" />
             ) : (
               <div className="h-40 w-40 sm:h-48 sm:w-48 flex-shrink-0 rounded-md bg-zinc-800 animate-pulse motion-reduce:animate-none" />
@@ -382,6 +399,16 @@ export function PlaylistPage({ onDownload, onInfo }: PlaylistPageProps) {
         <p id="reorder-help" className="sr-only">Drag to move the song, or press the up and down arrow keys.</p>
         <p role="status" className="sr-only">{announcement}</p>
       </main>
+
+      {picking && playlist && (
+        <PlaylistPictureDialog
+          playlistId={id}
+          coverUrl={playlist.coverUrl}
+          mosaic={mosaicOf(playlist.tracks.map(t => t.iconURL))}
+          onClose={() => setPicking(false)}
+          onSaved={coverUrl => setFetched(f => f?.status === 'ready' ? { ...f, playlist: { ...f.playlist, coverUrl } } : f)}
+        />
+      )}
 
       {/* The app's own question, not window.confirm: a browser may silence that inside a frame (Feishin). */}
       <dialog
