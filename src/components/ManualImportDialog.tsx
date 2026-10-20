@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Search, X } from 'lucide-react'
+import { ApiError } from '../api/client'
 import { AlbumPick, CandidatePick, searchAlbumFolders, searchSongCandidates } from '../api/endpoints'
 import { AlbumFolder, SongCandidate } from '../api/types'
 import { ActOutcome } from '../hooks/useActiveDownloads'
@@ -8,7 +9,7 @@ import { isTerminal } from '../lib/downloadPanel'
 import { REQUEST_FAILED_COPY } from '../pages/CollectionPage'
 import {
   GRADE_HINT, GRADE_LABEL, NOTHING_FOUND_HINT, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank,
-  manualSearchAllowed, qualityLabel, qualityRank, qualityText, searchAgainAllowed, searchLine, searchingCopy, slotLabel, slotRank, sortRows,
+  manualSearchAllowed, qualityLabel, qualityRank, qualityText, searchAgainAllowed, searchBusy, searchLine, searchingCopy, slotLabel, slotRank, sortRows,
   statusCopy,
 } from '../lib/candidates'
 import { formatDuration } from '../lib/utils'
@@ -178,6 +179,8 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
       if (alive.current) replace(next)
     } catch (err) {
       setSearchError(messageOf(err, err instanceof Error && err.message ? err.message : REQUEST_FAILED_COPY))
+      // Your earlier search (from before the pop-up was closed) still runs: re-read, so the 3-second poll follows it.
+      if (err instanceof ApiError && (err.body as { reason?: unknown } | undefined)?.reason === 'MANUAL_SEARCH_RUNNING' && alive.current) refetch()
     } finally {
       setSearching(null)
     }
@@ -207,19 +210,20 @@ function usePickState(onPick: ManualImportDialogProps['onPick'], onClose: () => 
 
 /**
  * The "Search Soulseek for" box (19-10-2026): slskd's own search page, bolted under the header. Prefilled with the
- * wording of the list on screen (Naviseerr's own, or the last text typed); Enter or the button runs ONE Soulseek
- * search with the words as typed, the button says "Searching…" meanwhile, and the answer replaces the table. Keyed
- * by the parent on the list's wording, so it starts clean with each new list.
+ * wording of the list on screen (Naviseerr's own, or the last text typed), or of the search still running; Enter or the
+ * button runs ONE Soulseek search with the words as typed, the button says "Searching…" while any search for this song
+ * runs (here or on the server, 20-10-2026), and the answer replaces the table. Keyed by the parent on the list's
+ * wording, so it starts clean with each new list.
  */
-function SoulseekSearch({ initial, searching, error, onSearch }: {
-  initial: string; searching: string | null; error: string | null; onSearch: (text: string) => void
+function SoulseekSearch({ initial, busy, error, onSearch }: {
+  initial: string; busy: boolean; error: string | null; onSearch: (text: string) => void
 }) {
   const [text, setText] = useState(initial)
   const blank = text.trim().length === 0
   return (
     <form
       className="mt-4 flex items-end gap-2 flex-wrap"
-      onSubmit={e => { e.preventDefault(); if (!blank && !searching) onSearch(text.trim()) }}
+      onSubmit={e => { e.preventDefault(); if (!blank && !busy) onSearch(text.trim()) }}
     >
       <div className="min-w-0 flex-1 basis-56">
         <label htmlFor="soulseek-search" className="block text-xs text-zinc-400 mb-1">Search Soulseek for</label>
@@ -235,11 +239,11 @@ function SoulseekSearch({ initial, searching, error, onSearch }: {
       </div>
       <button
         type="submit"
-        aria-disabled={searching !== null || blank}
-        className={`${BUTTON} inline-flex items-center gap-2 ${searching !== null || blank ? 'text-zinc-500 hover:bg-transparent' : ''}`}
+        aria-disabled={busy || blank}
+        className={`${BUTTON} inline-flex items-center gap-2 ${busy || blank ? 'text-zinc-500 hover:bg-transparent' : ''}`}
       >
-        {searching && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
-        {searching ? 'Searching…' : 'Search Soulseek'}
+        {busy && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+        {busy ? 'Searching…' : 'Search Soulseek'}
       </button>
       {error && <p id="soulseek-search-error" role="status" className="basis-full text-sm text-red-400">{error}</p>}
     </form>
@@ -396,7 +400,7 @@ function SongCandidates({ target, load, refetch, replace, onClose, onPick, onRet
   // The person's own search box: whenever a new search could help and its list could be kept (19-10-2026). With the
   // box on screen, "nothing found" gets the fewer-words hint rather than the note about cancelling first: the box IS
   // the way to search again.
-  const canSearch = data ? manualSearchAllowed(data.status, data.reason, data.songStage) : false
+  const canSearch = data ? manualSearchAllowed(data.reason, data.songStage) : false
   const note = data?.reason === 'NO_RESULTS' && canSearch
     ? NOTHING_FOUND_HINT
     : data?.status === 'NONE' && !canSearchAgain
@@ -434,8 +438,8 @@ function SongCandidates({ target, load, refetch, replace, onClose, onPick, onRet
         <SoulseekSearch
           key={data.query ?? ''}
           initial={data.query ?? target.title}
-          searching={searching}
-          error={searchError}
+          busy={searchBusy(searching, data.status)}
+          error={searchError ?? data.searchError ?? null}
           onSearch={text => void search(text, async () => ({
             status: 'ready', kind: 'SONG', data: await searchSongCandidates(target.downloadId, data.taskId, text),
           }))}
@@ -567,7 +571,7 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
       ? { label: 'Try again', hint: TRY_AGAIN_HINT, pending: searchingAgain, onClick: () => void searchAgain(() => onRetry(target.downloadId)) }
       : undefined
   // The person's own search box (19-10-2026): same rule as the song view; an album with no search row has nowhere to keep folders.
-  const canSearch = data && stage ? manualSearchAllowed(data.status, data.reason, stage) : false
+  const canSearch = data && stage ? manualSearchAllowed(data.reason, stage) : false
   // NO_ALBUM_SEARCH gets no note: the sentence already says the album predates folder lists, nothing to restart. With the
   // box on screen, "nothing found" gets the fewer-words hint, as in the song view.
   const note = data?.reason === 'NO_RESULTS' && canSearch
@@ -606,8 +610,8 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
         <SoulseekSearch
           key={data.query ?? ''}
           initial={data.query ?? target.title}
-          searching={searching}
-          error={searchError}
+          busy={searchBusy(searching, data.status)}
+          error={searchError ?? data.searchError ?? null}
           onSearch={text => void search(text, async () => ({
             status: 'ready', kind: 'ALBUM', data: await searchAlbumFolders(target.downloadId, text),
           }))}

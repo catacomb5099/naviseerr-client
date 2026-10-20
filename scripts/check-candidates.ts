@@ -1,7 +1,7 @@
 /** Self-check for the manual-import table helpers; pulled in by check-download-state.ts. */
 import {
   GRADE_HINT, GRADE_LABEL, basename, filterRows, folderOf, formatBytes, formatOf, formatSpeed, gradeRank, qualityLabel,
-  manualSearchAllowed, qualityRank, qualityText, searchAgainAllowed, searchingCopy, searchLine, slotLabel, slotRank, sortRows, statusCopy,
+  manualSearchAllowed, qualityRank, searchBusy, qualityText, searchAgainAllowed, searchingCopy, searchLine, slotLabel, slotRank, sortRows, statusCopy,
 } from '../src/lib/candidates'
 import { shortDate } from '../src/lib/utils'
 
@@ -88,6 +88,8 @@ assert(filterRows([{ p: '@@a\\Music\\Oasis\\x.flac' }], 'oasis', r => [r.p]).len
 // Status wording follows the contract.
 assert(statusCopy('SONG', 'READY', null, 'x') === null, 'READY has no message')
 assert(statusCopy('SONG', 'SEARCHING', null, null)!.startsWith('Still searching'), 'SEARCHING wording')
+assert(statusCopy('SONG', 'SEARCHING', null, 'Pulp b-sides') === searchingCopy('Pulp b-sides'), 'a running search is named, the person\'s words included')
+assert(statusCopy('ALBUM', 'SEARCHING', null, 'Different Class flac')!.includes('“Different Class flac”'), 'the album variant too')
 assert(statusCopy('SONG', 'NONE', 'NO_RESULTS', 'Live Forever')!.includes('“Live Forever”'), 'NO_RESULTS names the query')
 assert(statusCopy('ALBUM', 'NONE', 'NO_WHOLE_FOLDER', null)!.includes('person icon on a song'), 'NO_WHOLE_FOLDER')
 assert(statusCopy('SONG', 'NONE', 'ALREADY_IN_LIBRARY', null)!.includes('already in your library'), 'ALREADY_IN_LIBRARY')
@@ -138,12 +140,13 @@ assert(!searchAgainAllowed('NONE', 'NO_ALBUM_SEARCH', 'FAILED'), 'an album with 
 assert(!statusCopy('SONG', 'NONE', 'NO_RESULTS', 'x')!.includes('Retry'), 'NO_RESULTS leaves the retrying to the button')
 
 // The "Search Soulseek for" box (19-10-2026) is offered whenever a person's own search could help and be kept.
-assert(manualSearchAllowed('NONE', 'NO_RESULTS', 'FAILED'), 'a failed song that found nothing')
-assert(manualSearchAllowed('READY', null, 'FAILED') && manualSearchAllowed('READY', null, 'DOWNLOADING'), 'a full list too: our wording may have found the wrong things')
-assert(manualSearchAllowed('NONE', 'NO_OWN_SEARCH', 'DOWNLOADING'), 'a song fed by the album folder can get its own list')
-assert(!manualSearchAllowed('SEARCHING', null, 'SEARCHING'), 'not while our own search runs: it would overwrite the list')
-assert(!manualSearchAllowed('READY', null, 'SUCCEEDED') && !manualSearchAllowed('NONE', 'BEFORE_CACHE', 'SUCCEEDED'), 'a downloaded song cannot be re-picked')
-assert(!manualSearchAllowed('NONE', 'NO_ALBUM_SEARCH', 'FAILED'), 'an album with no search row has nowhere to keep folders')
+assert(manualSearchAllowed('NO_RESULTS', 'FAILED'), 'a failed song that found nothing')
+assert(manualSearchAllowed(null, 'FAILED') && manualSearchAllowed(null, 'DOWNLOADING'), 'a full list too: our wording may have found the wrong things')
+assert(manualSearchAllowed('NO_OWN_SEARCH', 'DOWNLOADING'), 'a song fed by the album folder can get its own list')
+assert(manualSearchAllowed(null, 'SEARCHING'), 'shown while a search runs (disabled, below)')
+assert(searchBusy(null, 'SEARCHING') && searchBusy('typed', 'READY') && !searchBusy(null, 'READY') && !searchBusy(null, undefined), 'busy while a search runs here or on the server')
+assert(!manualSearchAllowed(null, 'SUCCEEDED') && !manualSearchAllowed('BEFORE_CACHE', 'SUCCEEDED'), 'a downloaded song cannot be re-picked')
+assert(!manualSearchAllowed('NO_ALBUM_SEARCH', 'FAILED'), 'an album with no search row has nowhere to keep folders')
 assert(searchingCopy('Live Forever Oasis').startsWith('Searching Soulseek for “Live Forever Oasis”'), 'the searching line names the text')
 
 // The grey line names slskd's own search so a person can find it in slskd's Searches page.

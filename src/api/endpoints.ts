@@ -422,8 +422,10 @@ const SOULSEEK_SEARCH_TIMEOUT_MS = 60_000
 /**
  * Search Soulseek with your own words for this song and wait for it: the server runs ONE slskd search with the text as
  * typed (3-30 s), grades every file it found and stores that list as the song's, so any row can then be picked. Answers
- * the same shape as getSongCandidates, `query` being the text.
- * POST /downloads/{id}/tasks/{taskId}/search {text}  (200 the list; 400 blank text; 404 unknown; 409 {reason: SOULSEEK_OFFLINE, message};
+ * the same shape as getSongCandidates, `query` being the text. The search runs on the server to the end even when this
+ * call is dropped (20-10-2026); getSongCandidates says SEARCHING meanwhile.
+ * POST /downloads/{id}/tasks/{taskId}/search {text}  (200 the list; 400 blank text; 404 unknown; 409 {reason: SOULSEEK_OFFLINE
+ * | SEARCH_RUNNING | MANUAL_SEARCH_RUNNING (your previous search still runs), message};
  * 429 {reason: SOULSEEK_BUSY, message}; 502 {reason: SLSKD_UNREACHABLE, message})
  */
 export async function searchSongCandidates(downloadId: string, taskId: string, text: string): Promise<SongCandidatesResponse> {

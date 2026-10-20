@@ -564,8 +564,9 @@ export interface SongCandidatesResponse {
   taskId: string
   status: CandidateStatus
   reason: string | null
-  /** What Soulseek was asked for: Naviseerr's own wording (the title alone, then "title - artist"), or, in the answer to a
-   *  search a person typed (POST .../search, 19-10-2026), their text; null when never searched. */
+  /** What Soulseek was asked for to find this list: Naviseerr's own wording (the title alone, then "title - artist") or a
+   *  person's typed text (POST .../search, 19-10-2026; stored with the list since 20-10-2026); while a person's search
+   *  runs (SEARCHING), their text; null when never searched. */
   query: string | null
   /** slskd's own id for the song's search, as its Searches page lists it; null when slskd never took one.
    *  Absent from servers older than 09-10-2026. */
@@ -576,6 +577,9 @@ export interface SongCandidatesResponse {
   /** The file being (or last) downloaded, or null. */
   current: { username: string; filename: string } | null
   candidates: SongCandidate[]
+  /** Why the person's last own search failed, when it failed after the pop-up was closed (20-10-2026); null otherwise.
+   *  Absent from older servers. */
+  searchError?: string | null
 }
 
 /** One of the album's songs as a sharer's folder holds it. `index` is the album position. */
@@ -632,4 +636,6 @@ export interface AlbumCandidatesResponse {
   searchedAt: string | null
   songCount: number
   folders: AlbumFolder[]
+  /** As on SongCandidatesResponse: the person's last own album search failed. */
+  searchError?: string | null
 }
