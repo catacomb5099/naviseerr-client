@@ -264,7 +264,8 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
             {item.title}
           </h3>
           <p className="text-sm text-zinc-400 leading-5 truncate">
-            <ArtistNames names={item.artistNames} ids={item.artistIds} />
+            {/* Your own playlist has no artist (the server keeps no user names), so not "Unknown Artist". */}
+            {item.downloadType === 'CUSTOM' ? 'Your playlist' : <ArtistNames names={item.artistNames} ids={item.artistIds} />}
             {kind && ` · ${kind}`}
           </p>
           {collection ? (
