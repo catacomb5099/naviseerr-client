@@ -495,6 +495,26 @@ export interface SuggestedPlaylistsSettings {
   message?: string | null
 }
 
+/**
+ * GET/PUT /settings/search-learning (20-10-2026): "Help improve search", off on every install. `sendsTo` is the
+ * receiver's host[:port] (null with no address set); `since` when it went on; `problem` the last send's problem.
+ */
+export interface SearchLearningSettings {
+  on: boolean
+  configured: boolean
+  sendsTo: string | null
+  since: string | null
+  waiting: number
+  sent: number
+  problem: string | null
+}
+
+/** GET /search-learning/reports: the reports exactly as they are sent. Shown as text, so the shape stays opaque. */
+export interface SearchReports {
+  schema: number
+  reports: unknown[]
+}
+
 /** The five tiers of GET/PUT /settings/download-quality: Spotify's Audio quality words, lowest first. */
 export type DownloadQuality = 'LOW' | 'NORMAL' | 'HIGH' | 'VERY_HIGH' | 'LOSSLESS'
 
