@@ -20,8 +20,9 @@ The page asks for a song's count only when its row comes within about 800 px of 
 ahead), using the browser's IntersectionObserver (it tells the page when an element scrolls into view). A scroll
 gathers the rows it reveals for 100 ms into one request of at most 25 songs, and only one request runs at a time, as
 before. Every answer is kept for as long as the browser tab is open, so Back and reopening a playlist, or the same
-song in another playlist, show the number with no request. A failed request is not kept: the rows stay blank and
-the next visit asks again.
+song in another playlist, show the number with no request. Only songs that came back with a number are kept:
+if the adapter is down or YouTube is busy, those rows stay blank and the next visit asks again (the 5-minute
+request cache stops quick repeats).
 
 Opening the 132-song playlist now asks for 22 songs (15 on a phone) instead of all of them; scrolling to the end asks
 for the rest, which is what it cost before; reopening it in the same tab asks for none.
