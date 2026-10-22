@@ -365,6 +365,7 @@ export function getMockArtist(id: string): ArtistDetail {
     albums: mockAlbums,
     singles: mockAlbums.slice(0, 2),
     playlists: mockPlaylists,
+    artistPlaylists: mockPlaylists.map(p => ({ ...p, artists: [artist.name], artistIds: [id], views: '2.1M views' })),
     similarArtists: mockArtists.filter(a => a.id !== id),
   }
 }

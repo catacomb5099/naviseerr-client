@@ -195,6 +195,12 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
                 {artist.playlists.map(playlist => <AlbumCard key={playlist.id} item={playlist} kind="PLAYLIST" />)}
               </Shelf>
             )}
+            {/* After "Featured on", YouTube Music's order. */}
+            {artist && (artist.artistPlaylists ?? []).length > 0 && (
+              <Shelf title={`Playlists by ${artist.name}`} showAllTo={`/artist/${encodeURIComponent(id)}/playlists`}>
+                {(artist.artistPlaylists ?? []).map(playlist => <AlbumCard key={playlist.id} item={playlist} kind="PLAYLIST" />)}
+              </Shelf>
+            )}
             {artist && artist.similarArtists.length > 0 && (
               <Shelf title="Similar artists">
                 {artist.similarArtists.map(similar => <ArtistCard key={similar.id} artist={similar} />)}
