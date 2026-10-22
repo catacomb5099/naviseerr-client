@@ -10,7 +10,7 @@ React-based music search and download client with Spotify-inspired UI.
 - Open an artist to see their top songs, albums, singles, the playlists they are featured on, and similar artists
 - Artist names under songs and albums, on album pages and on the Downloads page open the artist's page; playlist authors stay plain text
 - Press "i" on any song to see its details and credits before downloading
-- Songs in search results, on artist pages, in albums and in suggested playlists show their YouTube Music play count; playlist songs, which YouTube gives no play count, show how many times their video was viewed
+- Songs in search results, on artist pages, in albums and in suggested playlists show their YouTube Music play count; playlist songs, which YouTube gives no play count, show how many times their video was viewed, asked for only as you scroll to them (a 130-song playlist no longer makes the server look up every song when you only read the top)
 - A "Made for you" shelf shows the weekly suggested playlists the server's curator built, one row per era (all-time hits, then each decade); open one to see why each song is in, download a song, or download the whole playlist as one download
 - Download a song by its YouTube id; the server works out what to fetch
 - Downloads panel and history show server-resolved artwork and titles as they arrive

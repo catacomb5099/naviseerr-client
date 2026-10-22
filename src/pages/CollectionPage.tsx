@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowDownToLine, ArrowLeft, Check, Info, Loader2, Play } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { getCollection, getRadio, getSongViews } from '../api/endpoints'
+import { getCollection, getRadio } from '../api/endpoints'
 import { useRetry } from '../hooks/useRetry'
+import { useLazyViews } from '../hooks/useLazyViews'
 import { useDownloadCards } from '../hooks/useItemDownload'
 import { CollectionDetail, CollectionPageType, CollectionTrack, DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
@@ -38,9 +39,6 @@ export type RequestState = 'pending' | 'failed'
 
 export const REQUEST_FAILED_COPY = "Couldn't request this — try again"
 
-/** Ids per GET /songs/views. The server takes 50; half that fills the first rows sooner. */
-const VIEWS_CHUNK = 25
-
 /** "52 min" / "5 hr 34 min"; null when no track carried a duration. */
 function formatTotal(tracks: CollectionTrack[]): string | null {
   const known = tracks.filter(t => t.durationSeconds != null)
@@ -71,8 +69,6 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
   const cards = useDownloadCards()
   // What the live region reads out. Text, not an icon: the check alone says nothing to a reader.
   const [announcement, setAnnouncement] = useState('')
-  // How many times each video was viewed, by id, for the songs that came without plays.
-  const [views, setViews] = useState<Record<string, number>>({})
 
   const key = `${type}:${id}:${attempt}`
   useEffect(() => {
@@ -87,24 +83,10 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
 
   const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const detail = load.status === 'ready' ? load.detail : null
-  // Only songs YouTube Music gave no play count are asked about: playlist songs. An album's tracks all
-  // carry plays, so an album asks nothing.
-  useEffect(() => {
-    if (!detail) return
-    const ids = Array.from(new Set(detail.tracks.filter(t => t.plays == null).map(t => t.id)))
-    let cancelled = false
-    void (async () => {
-      // One chunk after another on purpose: the first rows fill first, and the server (one YouTube
-      // call per id) is not handed a whole playlist at once. A StrictMode remount stops the first run
-      // after its first chunk, which the request cache shares with the second, so nothing is asked twice.
-      for (let i = 0; i < ids.length && !cancelled; i += VIEWS_CHUNK) {
-        // A failed chunk is skipped: those rows just show no number.
-        const counts = await getSongViews(ids.slice(i, i + VIEWS_CHUNK)).catch(() => ({}))
-        if (!cancelled) setViews(prev => ({ ...prev, ...counts }))
-      }
-    })()
-    return () => { cancelled = true }
-  }, [detail])
+  // How many times each video was viewed, for the songs that came without plays (playlist songs; an
+  // album's tracks all carry plays, so an album asks nothing). Asked only as their rows scroll near.
+  const trackList = useRef<HTMLUListElement>(null)
+  const views = useLazyViews(trackList, detail?.tracks)
   const name = detail?.name ?? ''
   // The tab, bookmark and history entry are labelled by the page, not just "Naviseerr".
   useEffect(() => {
@@ -279,7 +261,7 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
           )}
           {isEmpty && <p role="status" className="py-8 text-center text-zinc-400">No downloadable songs.</p>}
           {detail && !isEmpty && (
-            <ul className="space-y-0.5">
+            <ul ref={trackList} className="space-y-0.5">
               {/* position, not id: a playlist can hold the same video twice. */}
               {detail.tracks.map(track => {
                 const thumb = track.iconURL || iconURL
@@ -289,9 +271,9 @@ export function CollectionPage({ type, onDownload, onInfo }: CollectionPageProps
                 // "plays" is YouTube Music's combined count, which album tracks carry. A playlist song
                 // (mostly music videos and fan uploads) has only its own video's count, a smaller
                 // number, so it reads "views": a views number is never labelled as plays.
-                const plays = track.plays ?? formatViews(views[track.id])
+                const plays = track.plays ?? formatViews(views.get(track.id))
                 return (
-                  <li key={track.position} className="h-16 sm:h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
+                  <li key={track.position} data-views-id={track.plays == null ? track.id : undefined} className="h-16 sm:h-14 flex items-center gap-3 rounded-md px-2 hover:bg-white/10">
                     {isAlbum ? (
                       <span className="w-8 text-right text-sm text-zinc-500 tabular-nums">{track.position}</span>
                     ) : thumb ? (
