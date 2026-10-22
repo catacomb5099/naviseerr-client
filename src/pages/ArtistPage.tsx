@@ -27,11 +27,28 @@ type Load =
   | { status: 'notFound' }
   | { status: 'ready'; artist: ArtistDetail }
 
-/** Top songs shows this many rows until "See more"; the server caps the list at 10. */
+/** Top songs shows this many rows until "See more"; the server sends up to 10. */
 const COLLAPSED_SONGS = 5
 
 const PULSE = 'bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
 const BUTTON = 'rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
+
+/** A section's title with an optional "Show all" link on its right (YouTube Music, Apple Music). */
+function SectionTitle({ title, showAllTo }: { title: string; showAllTo?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 mb-4">
+      <h3 className="text-xl font-semibold text-white truncate">{title}</h3>
+      {showAllTo && (
+        <Link
+          to={showAllTo}
+          className="flex-shrink-0 text-sm font-semibold text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded"
+        >
+          Show all
+        </Link>
+      )}
+    </div>
+  )
+}
 
 /** A titled horizontally scrolling row of cards. Callers skip it when the list is empty. */
 function Shelf({ title, children }: { title: string; children: ReactNode }) {
@@ -138,7 +155,10 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
 
             {/* Top songs: always rendered, so the page keeps its shape even for an artist with none. */}
             <section>
-              <h3 className="text-xl font-semibold text-white mb-4">Top songs</h3>
+              <SectionTitle
+                title="Top songs"
+                showAllTo={artist?.topSongsPlaylistId && songs.length > 0 ? `/playlist/${encodeURIComponent(artist.topSongsPlaylistId)}` : undefined}
+              />
               {loading && (
                 <ol aria-label="Loading songs" className="space-y-2">
                   {Array.from({ length: COLLAPSED_SONGS }, (_, i) => (

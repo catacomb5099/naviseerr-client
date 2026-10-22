@@ -149,8 +149,11 @@ export interface ArtistDetail {
   description: string | null
   /** YouTube's own wording without the noun, e.g. "498K"; null when unknown. */
   subscribers: string | null
-  /** `albumId` is always "" here: the server names the song's album but has no id for it. */
+  /** Up to 10. `albumId` is always "" here: the server names the song's album but has no id for it. */
   topSongs: Track[]
+  /** YouTube's own "Top songs" playlist for the artist (bare id, opens at /playlist/:id, about 150 songs);
+   *  null or absent from an older server or for an artist with no songs shelf, and then there is no "Show all". */
+  topSongsPlaylistId?: string | null
   albums: Album[]
   singles: Album[]
   /** YouTube Music's own featured playlists linked to the artist, minus those titled after the artist or a
