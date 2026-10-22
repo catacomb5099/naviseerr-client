@@ -1,4 +1,5 @@
 /** Self-check for your own playlists' helpers; pulled in by check-download-state.ts. */
+import { centreSquare, coverProblem } from '../src/lib/coverImage'
 import { addedCopy, coverOf, dropIndex, mosaicOf, moveItem, playlistMeta, titleClash } from '../src/lib/playlists'
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -42,5 +43,15 @@ assert(dropIndex(10, mids, 2) === 0, 'above everything is the top')
 assert(dropIndex(70, mids, 0) === 1, 'dragging the first just past the second swaps them')
 assert(dropIndex(50, mids, 0) === 0, 'not yet past the second stays first')
 assert(dropIndex(500, mids, 1) === 3, 'below everything is the bottom')
+
+// The picture rules: what can be picked, and the centre square drawn at no more than 1200 px.
+assert(coverProblem({ type: 'image/heic', size: 1000 }) === 'Pick a JPEG, PNG or WebP picture.', 'not a picture we take')
+assert(coverProblem({ type: 'image/png', size: 21 * 1024 * 1024 }) === 'Pick a picture under 20 MB.', 'too big to pick')
+assert(coverProblem({ type: 'image/jpeg', size: 1000 }, 299, 800) !== null, 'too small on one side')
+assert(coverProblem({ type: 'image/webp', size: 1000 }, 300, 300) === null, 'exactly the minimum is fine')
+const wide = centreSquare(4000, 3000)
+assert(wide.sx === 500 && wide.sy === 0 && wide.side === 3000 && wide.out === 1200, 'a wide photo: middle square, scaled down')
+const small = centreSquare(500, 640)
+assert(small.sx === 0 && small.sy === 70 && small.out === 500, 'a small tall picture is cut, not enlarged')
 
 console.log('check-playlists: ok')
