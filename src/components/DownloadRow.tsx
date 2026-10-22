@@ -69,6 +69,9 @@ function songStatus(song: DownloadSongView): { glyph: ReactNode; word: string; c
   }
 }
 
+// A finished row steps back so the ones still needing a retry or a pick stand out; the green Done says why.
+const titleColor = (stage: DownloadStage) => stage === 'SUCCEEDED' ? 'text-zinc-400' : 'text-white'
+
 interface SongRowProps {
   song: DownloadSongView
   downloadId: string
@@ -93,7 +96,7 @@ function SongRow({ song, downloadId, onCancel, onRetry, onManualImport, inFlight
         <div className="w-8 h-8 rounded-sm bg-zinc-800 flex-none" />
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-base sm:text-sm text-white truncate">{song.title ?? 'Untitled'}</p>
+        <p className={`text-base sm:text-sm ${titleColor(song.stage)} truncate`}>{song.title ?? 'Untitled'}</p>
         <p className="text-sm sm:text-xs text-zinc-400 truncate">
           <ArtistNames names={song.artists} ids={song.artistIds ?? []} />
           {/* Who the file comes from, once a file was chosen: how a manual pick shows on the row. */}
@@ -259,7 +262,7 @@ export function DownloadRow({ item, pollIntervalMs, onCancel, onRetry, onDownloa
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-medium leading-6 truncate">
+          <h3 className={`${titleColor(item.stage)} font-medium leading-6 truncate`}>
             <TypeBadge type={item.downloadType} compact className="mr-2 align-middle" />
             {item.title}
           </h3>
