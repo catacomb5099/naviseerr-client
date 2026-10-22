@@ -155,6 +155,8 @@ export function statusCopy(
 ): string | null {
   if (status === 'READY') return null
   if (status === 'SEARCHING') {
+    // A reopened pop-up names the running search, the person's own words included (20-10-2026).
+    if (query) return searchingCopy(query)
     return kind === 'SONG'
       ? 'Still searching Soulseek for this song. The list fills in when the search finishes.'
       : 'Still searching Soulseek for this album. The list fills in when the search finishes.'
@@ -206,14 +208,20 @@ export function searchAgainAllowed(status: string, reason: string | null, stage:
 }
 
 /**
- * Whether the pop-up offers the "Search Soulseek for" box (19-10-2026): not while the server's own search still runs
- * (its result would overwrite the person's list when it completes), not for a song already downloaded and filed (it
+ * Whether the pop-up shows the "Search Soulseek for" box (19-10-2026): not for a song already downloaded and filed (it
  * cannot be re-picked), and not for an album with no search on record (there is no row to hold the folders). Any other
- * state, a full list included: the point is to search when Naviseerr's wording found the wrong things too.
+ * state, a full list included: the point is to search when Naviseerr's wording found the wrong things too. While a search
+ * runs (SEARCHING: Naviseerr's or the person's own) the box shows with that search's words, disabled ({@link searchBusy}).
  */
-export function manualSearchAllowed(status: string, reason: string | null, stage: DownloadStage): boolean {
-  if (status === 'SEARCHING' || stage === 'SUCCEEDED') return false
+export function manualSearchAllowed(reason: string | null, stage: DownloadStage): boolean {
+  if (stage === 'SUCCEEDED') return false
   return reason !== 'NO_ALBUM_SEARCH'
+}
+
+/** The box's button says "Searching…" and does nothing while this pop-up's own call is out or the server says a
+ *  search runs (one at a time per song: a second would race the first for the list, 20-10-2026). */
+export function searchBusy(localText: string | null, status: string | undefined): boolean {
+  return localText !== null || status === 'SEARCHING'
 }
 
 /** The one line while a person's own search runs; the time span is what the 27-09-2026 trial measured. */
