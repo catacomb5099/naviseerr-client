@@ -5,10 +5,11 @@ import { AlbumCandidatesResponse, DownloadStage, SongCandidatesResponse } from '
 
 /** What the "choose a file" dialog was opened for: one song (a single-song download row knows no
  *  taskId - the page's rows are download-level - so it comes null and the hook looks it up), or a whole
- *  album (`stage` is the album row's, to know whether a pick replaces live transfers). */
+ *  album (`stage` is the album row's, to know whether a pick replaces live transfers). `artist` is the row's first
+ *  artist for the header, null while the server has none yet. */
 export type ManualImportTarget =
-  | { kind: 'SONG'; downloadId: string; taskId: string | null; title: string }
-  | { kind: 'ALBUM'; downloadId: string; title: string; stage: DownloadStage }
+  | { kind: 'SONG'; downloadId: string; taskId: string | null; title: string; artist: string | null }
+  | { kind: 'ALBUM'; downloadId: string; title: string; artist: string | null; stage: DownloadStage }
 
 export type CandidatesLoad =
   | { status: 'loading' }

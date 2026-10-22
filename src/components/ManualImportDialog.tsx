@@ -246,10 +246,11 @@ function SoulseekSearch({ initial, searching, error, onSearch }: {
   )
 }
 
-/** The header every view shares: title, what Soulseek was asked for, slskd's own id and time for that search
- *  when it took one, the filter toggle and the X. */
-function DialogHeader({ title, query, search, searchOpen, onToggleSearch, filter, onFilter, onClose }: {
-  title: string; query: string | null | undefined; search: string | null; searchOpen: boolean; onToggleSearch: () => void
+/** The header every view shares: the job as a small label over the song's (or album's) title and first artist, as
+ *  Spotify's song page puts "Song" over the title; then what Soulseek was asked for, slskd's own id and time for that
+ *  search when it took one, the filter toggle and the X. */
+function DialogHeader({ label, title, artist, query, search, searchOpen, onToggleSearch, filter, onFilter, onClose }: {
+  label: string; title: string; artist: string | null; query: string | null | undefined; search: string | null; searchOpen: boolean; onToggleSearch: () => void
   filter: string; onFilter: (text: string) => void; onClose: () => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -257,7 +258,9 @@ function DialogHeader({ title, query, search, searchOpen, onToggleSearch, filter
   return (
     <div className="flex items-start justify-between gap-3 flex-wrap">
       <div className="min-w-0 flex-1">
-        <h2 className="text-xl font-bold truncate">{title}</h2>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</p>
+        <h2 className="text-2xl font-bold line-clamp-2 break-words">{title}</h2>
+        {artist && <p className="text-sm text-zinc-300 truncate">{artist}</p>}
         <p className="text-sm text-zinc-400 truncate">
           {query ? <>Soulseek was asked for: <span className="text-zinc-300">“{query}”</span></> : ' '}
         </p>
@@ -415,7 +418,9 @@ function SongCandidates({ target, load, refetch, replace, onClose, onPick, onRet
   return (
     <div className="relative max-h-[85vh] overflow-y-auto overscroll-contain p-5 sm:p-6" aria-busy={load.status === 'loading'}>
       <DialogHeader
-        title={`Choose a file for ${target.title}`}
+        label="Choose a file"
+        title={target.title}
+        artist={target.artist}
         query={data?.query}
         search={searchLine(data?.searchId, data?.searchedAt)}
         searchOpen={searchOpen}
@@ -585,7 +590,9 @@ function AlbumCandidates({ target, load, refetch, replace, onClose, onPick, onRe
   return (
     <div className="relative max-h-[85vh] overflow-y-auto overscroll-contain p-5 sm:p-6" aria-busy={load.status === 'loading'}>
       <DialogHeader
-        title={`Choose a sharer for ${target.title}`}
+        label="Choose a sharer"
+        title={target.title}
+        artist={target.artist}
         query={data?.query}
         search={searchLine(data?.searchId, data?.searchedAt)}
         searchOpen={searchOpen}
@@ -716,7 +723,7 @@ export function ManualImportDialog({ target, onClose, onPick, onRetry }: ManualI
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      aria-label={target.kind === 'ALBUM' ? `Choose a sharer for ${target.title}` : `Choose a file for ${target.title}`}
+      aria-label={`${target.kind === 'ALBUM' ? 'Choose a sharer' : 'Choose a file'} for ${target.title}${target.artist ? ` by ${target.artist}` : ''}`}
       className="w-[min(100vw-2rem,80rem)] bg-zinc-900 border border-zinc-800 rounded-xl p-0 text-white backdrop:bg-black/70"
     >
       {/* Keyed per target so the sort, filter and confirm start clean every time it opens. */}
