@@ -7,6 +7,7 @@ import { MediaServerStep } from '../components/setup/MediaServerStep'
 import { PlaylistsStep } from '../components/setup/PlaylistsStep'
 import { SetupStep } from '../components/setup/SetupStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
+import { QUALITY_FALLBACK } from '../lib/downloadQuality'
 import { stepIndex, stepPath } from '../lib/setup'
 
 /**
@@ -21,7 +22,7 @@ import { stepIndex, stepPath } from '../lib/setup'
 const steps: { title: string; help?: string; body: (next: () => void) => ReactNode; noSkip?: boolean }[] = [
   {
     title: 'What quality do you want your music in?',
-    help: 'Every song, album and playlist is looked for at this quality first; when Soulseek has none at that quality, the next quality up is taken, and lower ones only when nothing higher exists; the song\'s Choose a file pop-up on the Downloads page shows which.',
+    help: `Every download is looked for at this quality first. ${QUALITY_FALLBACK}`,
     body: next => <DownloadQualityStep onDone={next} />,
     // A row saves on press, so Next with the default marked IS the skip (as the playlists switch); a Skip link under a row just pressed would read as undoing it, and would not.
     noSkip: true,

@@ -14,6 +14,10 @@ export const QUALITY_TIERS: { quality: DownloadQuality; label: string; bitrate: 
   { quality: 'LOSSLESS', label: 'Lossless', bitrate: 'FLAC and other lossless files' },
 ]
 
+/** What happens when a song isn't there at the chosen quality: higher first, then lower (the server's
+ *  DownloadQuality.distance). One sentence shared by the setup and Settings so they cannot drift apart. */
+export const QUALITY_FALLBACK = "If a song isn't available in it, naviseerr gets the next best: a higher quality if there is one, otherwise a lower one."
+
 /** The done screen's line: the tier by its word, and whether it is the default nobody chose. A word
  *  this client does not know (a newer server) is shown as it came. */
 export function qualitySummary(s: DownloadQualitySettings): string {
