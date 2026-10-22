@@ -8,6 +8,7 @@ React-based music search and download client with Spotify-inspired UI.
 - Filter results by category (All, Songs, Albums, Artists, Playlists)
 - Open an album or playlist and download one song or all of them; a playlist's header also says how many times it was viewed on YouTube Music, in YouTube's own words, when YouTube Music shows a count for it
 - Open an artist to see their top songs, albums, singles, the playlists they are featured on, and similar artists
+- On a computer with a mouse or trackpad, each sideways row of an artist's page (Albums, Singles, Featured on, Similar artists) has ‹ › buttons beside its title that move it one screen at a time, greyed at either end and absent when everything fits (YouTube Music's desktop rows); phones and tablets swipe as before
 - An artist's Top songs shows five, "See more" shows ten (Spotify's Popular list), and "Show all" beside the title opens YouTube Music's own "Top songs" playlist for that artist (about 150 songs, each with its play count, titled "<artist>: Top songs") on the normal playlist page, where it can be downloaded like any playlist (what YouTube Music's own Show all opens)
 - Artist names under songs and albums, on album pages and on the Downloads page open the artist's page; playlist authors stay plain text
 - Press "i" on any song to see its details and credits before downloading

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getArtist } from '../api/endpoints'
@@ -14,6 +14,7 @@ import { SongCard } from '../components/SongCard'
 import { AlbumCard } from '../components/AlbumCard'
 import { ArtistCard } from '../components/ArtistCard'
 import { CAROUSEL_CONTAINER } from '../components/cardLayout'
+import { SectionTitle, Shelf } from '../components/Shelf'
 
 interface ArtistPageProps {
   /** Same plumbing as HomePage's song rows: App requests the download and records its metadata. */
@@ -32,33 +33,6 @@ const COLLAPSED_SONGS = 5
 
 const PULSE = 'bg-zinc-800/60 animate-pulse motion-reduce:animate-none'
 const BUTTON = 'rounded-full border border-zinc-700 px-4 h-9 text-sm text-white hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500'
-
-/** A section's title with an optional "Show all" link on its right (YouTube Music, Apple Music). */
-function SectionTitle({ title, showAllTo }: { title: string; showAllTo?: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 mb-4">
-      <h3 className="text-xl font-semibold text-white truncate">{title}</h3>
-      {showAllTo && (
-        <Link
-          to={showAllTo}
-          className="flex-shrink-0 text-sm font-semibold text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded"
-        >
-          Show all
-        </Link>
-      )}
-    </div>
-  )
-}
-
-/** A titled horizontally scrolling row of cards. Callers skip it when the list is empty. */
-function Shelf({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section>
-      <h3 className="text-xl font-semibold text-white mb-4">{title}</h3>
-      <div className={CAROUSEL_CONTAINER}>{children}</div>
-    </section>
-  )
-}
 
 /** An artist as its own page. Everything comes from the URL and one fetch, so a deep link, a
  *  refresh, or a hop from one artist to a similar one all work the same way: skeleton until the
