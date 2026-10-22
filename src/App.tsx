@@ -6,6 +6,8 @@ import { CollectionPage } from './pages/CollectionPage'
 import { ArtistPage } from './pages/ArtistPage'
 import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { LibraryPage } from './pages/LibraryPage'
+import { PlaylistPage } from './pages/PlaylistPage'
 import { SetupPage } from './pages/SetupPage'
 import { LoginPage } from './pages/LoginPage'
 import { ConnectivityBar } from './components/ConnectivityBar'
@@ -168,6 +170,8 @@ function App() {
         <Route path="/artist/:id" element={<ArtistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/suggested/:category" element={<SuggestedPlaylistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/settings" element={<SettingsPage onNavigateHome={() => navigate('/')} />} />
+        <Route path="/library" element={<LibraryPage onNavigateHome={() => navigate('/')} />} />
+        <Route path="/library/:id" element={<PlaylistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

@@ -7,7 +7,7 @@ import {
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
   SoulseekAccount, SetupStatus, MediaServerChange, MediaServerKind, MediaServersSettings, SuggestedPlaylistsSettings,
-  SlskdSettings, DownloadQuality, DownloadQualitySettings,
+  SlskdSettings, DownloadQuality, DownloadQualitySettings, PlaylistSummary, PlaylistDetail,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -15,6 +15,8 @@ import {
   getMockSuggestedPlaylists, getMockSuggestedPlaylist, requestMockSuggestedRefresh, getMockSuggestedRefresh,
   cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates, pickMockSongCandidate,
   getMockAlbumCandidates, pickMockAlbumFolder, searchMockSongCandidates, searchMockAlbumFolders,
+  getMockPlaylists, getMockPlaylist, createMockPlaylist, updateMockPlaylist, removeMockPlaylistSong, copyMockPlaylist,
+  deleteMockPlaylist,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -147,6 +149,72 @@ export async function getRadio(id: string, opts?: Freshness): Promise<Collection
   return asRadio(await apiClient<RadioView>(`/radios/${encodeURIComponent(id)}`, { ...opts, cacheMs: BROWSE_CACHE_MS }))
 }
 
+// --- Your playlists (20-10-2026) ------------------------------------------------------------------
+// Never cached: every one of these changes with each edit.
+
+/**
+ * Your own playlists, last edited first
+ * GET /playlists
+ */
+export async function getPlaylists(signal?: AbortSignal): Promise<PlaylistSummary[]> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockPlaylists())
+  return (await apiClient<PlaylistSummary[]>('/playlists', { signal })) ?? []
+}
+
+/**
+ * One of your playlists with its songs in your order
+ * GET /playlists/{id}  (404 unknown)
+ */
+export async function getPlaylist(id: string, signal?: AbortSignal): Promise<PlaylistDetail> {
+  if (USE_MOCK_DATA) return Promise.resolve(getMockPlaylist(id))
+  return apiClient<PlaylistDetail>(`/playlists/${encodeURIComponent(id)}`, { signal })
+}
+
+/**
+ * A new, empty draft. A blank title gets the server's "My playlist #N".
+ * POST /playlists {title?}  (201 with the playlist)
+ */
+export async function createPlaylist(title?: string): Promise<PlaylistSummary> {
+  if (USE_MOCK_DATA) return Promise.resolve(createMockPlaylist(title))
+  return apiClient<PlaylistSummary>('/playlists', { method: 'POST', body: JSON.stringify({ title: title ?? '' }) })
+}
+
+/**
+ * Rename or describe a draft
+ * PATCH /playlists/{id} {title?, description?}  (400 past the limits; 409 once created)
+ */
+export async function updatePlaylist(id: string, change: { title?: string; description?: string }): Promise<void> {
+  if (USE_MOCK_DATA) return Promise.resolve(updateMockPlaylist(id, change))
+  await apiClient<unknown>(`/playlists/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(change) })
+}
+
+/**
+ * Take one song out of a draft
+ * DELETE /playlists/{id}/songs/{videoId}  (409 once created)
+ */
+export async function removeFromPlaylist(id: string, videoId: string): Promise<void> {
+  if (USE_MOCK_DATA) return Promise.resolve(removeMockPlaylistSong(id, videoId))
+  await apiClient<unknown>(`/playlists/${encodeURIComponent(id)}/songs/${encodeURIComponent(videoId)}`, { method: 'DELETE' })
+}
+
+/**
+ * "Duplicate": a new draft "Copy of <title>" with the same songs, description and picture
+ * POST /playlists/{id}/copy  (201 with the new playlist)
+ */
+export async function copyPlaylist(id: string): Promise<PlaylistSummary> {
+  if (USE_MOCK_DATA) return Promise.resolve(copyMockPlaylist(id))
+  return apiClient<PlaylistSummary>(`/playlists/${encodeURIComponent(id)}/copy`, { method: 'POST' })
+}
+
+/**
+ * Delete a draft. A created playlist stays: it is in your music app and your downloads.
+ * DELETE /playlists/{id}  (409 once created)
+ */
+export async function deletePlaylist(id: string): Promise<void> {
+  if (USE_MOCK_DATA) return Promise.resolve(deleteMockPlaylist(id))
+  await apiClient<unknown>(`/playlists/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
 /**
  * An artist's page: header, top songs, albums, singles, playlists, similar artists
  * GET /artists/{channelId}  (404 for an id the adapter does not know)
@@ -245,9 +313,10 @@ export async function downloadSong(videoId: string, opts?: DownloadRequestOption
 
 /**
  * Download every track of an album or playlist, or every song of a suggested playlist's edition
- * POST /download/collection/{id}?type=ALBUM|PLAYLIST|CURATED[&force=true]
+ * POST /download/collection/{id}?type=ALBUM|PLAYLIST|CURATED|RADIO|CUSTOM[&force=true]
  *
  * For CURATED, `id` is the curator's category key, the same one GET /suggested-playlists/{category} takes.
+ * For CUSTOM it is your playlist's id, and this is "Create": the server freezes the draft first (400 when empty).
  */
 export async function downloadCollection(
   id: string, type: Exclude<DownloadType, 'SONG'>, opts?: DownloadRequestOptions,

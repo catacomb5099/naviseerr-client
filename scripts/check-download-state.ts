@@ -17,6 +17,7 @@ import './check-soulseek'
 import './check-setup'
 import './check-quality'
 import './check-media-servers'
+import './check-playlists'
 import { ActiveDownloadView } from '../src/api/types'
 import { DownloadCardState, alreadyCopy, failureCopy, initialMinimized, isCancelled, isTerminal, itemDownload, itemDownloadLabel, mergeCard, replaceCard, sortCards } from '../src/lib/downloadPanel'
 import { DownloadMeta, collectionPath, evictToCap, pageItems, parseTypeFilter } from '../src/lib/downloadLibrary'
@@ -216,6 +217,7 @@ assert(collectionPath({ downloadType: 'ALBUM', youtubeId: 'MPREb_1' }) === '/alb
 assert(collectionPath({ downloadType: 'PLAYLIST', youtubeId: 'PL1' }) === '/playlist/PL1', 'a playlist opens /playlist')
 assert(collectionPath({ downloadType: 'CURATED', youtubeId: '80s indie/pop' }) === '/suggested/80s%20indie%2Fpop',
   'a suggested playlist opens /suggested by its encoded category key')
+assert(collectionPath({ downloadType: 'CUSTOM', youtubeId: 'p1' }) === '/library/p1', 'your own playlist opens /library')
 assert(collectionPath({ downloadType: 'SONG', youtubeId: 'v1' }) === null, 'a song has no page to open')
 // The Downloads page's `?type=`: the three pills round-trip, everything else reads as All.
 assert(parseTypeFilter('SONG') === 'SONG' && parseTypeFilter('ALBUM') === 'ALBUM' && parseTypeFilter('PLAYLIST') === 'PLAYLIST',
