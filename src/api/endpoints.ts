@@ -8,6 +8,7 @@ import {
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
   SoulseekAccount, SetupStatus, MediaServerChange, MediaServerKind, MediaServersSettings, SuggestedPlaylistsSettings,
   SlskdSettings, DownloadQuality, DownloadQualitySettings, PlaylistSummary, PlaylistDetail, PlaylistAddResult,
+  SearchLearningSettings, SearchReports,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -678,6 +679,23 @@ export function getSuggestedPlaylistsSettings(signal?: AbortSignal): Promise<Sug
  */
 export function putSuggestedPlaylistsSettings(on: boolean): Promise<SuggestedPlaylistsSettings> {
   return apiClient<SuggestedPlaylistsSettings>('/settings/suggested-playlists', { method: 'PUT', body: JSON.stringify({ on }) })
+}
+
+// --- Help improve search (20-10-2026) --------------------------------------------------------------
+
+/** Is "Help improve search" on, where would it send, and how far has it got? GET /settings/search-learning  (404 on an older server) */
+export function getSearchLearningSettings(signal?: AbortSignal): Promise<SearchLearningSettings> {
+  return apiClient<SearchLearningSettings>('/settings/search-learning', { signal })
+}
+
+/** Flip the switch. PUT /settings/search-learning {on}  (400 {message} when the install sets no address) */
+export function putSearchLearningSettings(on: boolean): Promise<SearchLearningSettings> {
+  return apiClient<SearchLearningSettings>('/settings/search-learning', { method: 'PUT', body: JSON.stringify({ on }) })
+}
+
+/** The newest reports of your successful searches, as they are sent. GET /search-learning/reports?limit= */
+export function getSearchReports(limit: number): Promise<SearchReports> {
+  return apiClient<SearchReports>(`/search-learning/reports?limit=${limit}`)
 }
 
 // --- Your own Soulseek client (slskd) (19-10-2026) ------------------------------------------------

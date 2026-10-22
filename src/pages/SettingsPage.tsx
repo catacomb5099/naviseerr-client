@@ -5,13 +5,14 @@ import { AuthentikStep } from '../components/setup/AuthentikStep'
 import { DownloadQualityStep } from '../components/setup/DownloadQualityStep'
 import { MediaServerStep } from '../components/setup/MediaServerStep'
 import { PlaylistsStep } from '../components/setup/PlaylistsStep'
+import { SearchLearningStep } from '../components/setup/SearchLearningStep'
 import { SoulseekStep } from '../components/setup/SoulseekStep'
 import { QUALITY_FALLBACK } from '../lib/downloadQuality'
 
 /**
  * Settings: one section per thing a person may change about their install, in the first-run setup's
  * order and built from its step components (without `onDone`, each section saves itself): the download
- * quality, Soulseek, the music app, the weekly playlists and the login (19-10-2026). Reached from the gear on every page, the amber "Not connected to
+ * quality, Soulseek, the music app, the weekly playlists and the login (19-10-2026), then "Help improve search" (20-10-2026, Settings only). Reached from the gear on every page, the amber "Not connected to
  * Soulseek" strip's Fix link, and directly at /settings#<section>.
  */
 export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void }) {
@@ -53,6 +54,14 @@ export function SettingsPage({ onNavigateHome }: { onNavigateHome: () => void })
           minutes.
         </p>
         <PlaylistsStep />
+      </section>
+      <section id="search-learning" aria-labelledby="search-learning-heading" className="mt-10 max-w-2xl space-y-3">
+        <h3 id="search-learning-heading" className="text-lg font-semibold">Help improve search</h3>
+        <p className="text-sm text-zinc-400">
+          Shares which search found each song you download, so the search rules can be tuned on real results. Off unless
+          you switch it on, and only songs that finish after that are shared.
+        </p>
+        <SearchLearningStep />
       </section>
       <section id="login" aria-labelledby="login-heading" className="mt-10 max-w-2xl space-y-3">
         <h3 id="login-heading" className="text-lg font-semibold">Login</h3>
