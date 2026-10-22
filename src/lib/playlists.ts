@@ -37,3 +37,16 @@ export function titleClash(title: string, id: string, playlists: Pick<PlaylistSu
   const key = title.trim().toLowerCase()
   return key !== '' && playlists.some(p => p.id !== id && p.title.trim().toLowerCase() === key)
 }
+
+/** What the app says after an add: "Added 9 songs to Road trip · 3 were already in it", "Added Down to Road
+ *  trip", "Down is already in Road trip". `song` is the song's name when one song was added, else null. */
+export function addedCopy(result: { added: number; alreadyIn: number }, song: string | null, playlist: string): string {
+  const { added, alreadyIn } = result
+  if (added === 0) {
+    if (song) return `${song} is already in ${playlist}`
+    return alreadyIn === 1 ? `That song is already in ${playlist}` : `All ${alreadyIn} songs are already in ${playlist}`
+  }
+  const what = song ?? `${added} ${added === 1 ? 'song' : 'songs'}`
+  const already = alreadyIn === 0 ? '' : ` · ${alreadyIn} ${alreadyIn === 1 ? 'was' : 'were'} already in it`
+  return `Added ${what} to ${playlist}${already}`
+}

@@ -6,6 +6,7 @@ import { Track } from '../api/types'
 import { Check, Download, Info, Loader2 } from 'lucide-react'
 import { PlayOnYouTubeMusic } from './PlayOnYouTubeMusic'
 import { ArtistNames } from './ArtistNames'
+import { AddToPlaylistButton } from './AddToPlaylistButton'
 import { useItemDownload } from '../hooks/useItemDownload'
 
 interface SongCardProps {
@@ -62,6 +63,8 @@ export function SongCard({ track, artistNames, onDownload, onInfo }: SongCardPro
         )}
 
         <PlayOnYouTubeMusic videoId={track.id} title={track.name} artists={artistNames} />
+
+        <AddToPlaylistButton target={{ type: 'SONG', id: track.id, title: track.name }} />
 
         <Button
           onClick={() => onInfo(track.id, track.plays)}

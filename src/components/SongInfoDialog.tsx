@@ -12,6 +12,7 @@ import { REQUEST_FAILED_COPY, RequestState } from '../pages/CollectionPage'
 import { formatDuration, formatViews, providerMessage } from '../lib/utils'
 import { PlayOnYouTubeMusic } from './PlayOnYouTubeMusic'
 import { StartRadioButton } from './StartRadioButton'
+import { AddToPlaylistButton } from './AddToPlaylistButton'
 
 interface SongInfoDialogProps {
   /** The YouTube videoId to show, or null while closed. */
@@ -237,6 +238,8 @@ export function SongInfoDialog({ videoId, rowPlays, onClose, onDownload }: SongI
               </div>
               {/* Keyed by song: a message about one song's radio must not stay up for the next. */}
               <StartRadioButton key={videoId} seedId={videoId} />
+              {/* On a phone this is the way to add a song: the rows have no room for the button. */}
+              {info && <AddToPlaylistButton header target={{ type: 'SONG', id: info.id, title: info.name }} />}
             </div>
           </>
         )}

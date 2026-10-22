@@ -17,6 +17,7 @@ import { SuggestedPlaylistCover } from '../components/SuggestedPlaylistCover'
 import { SuggestedRefreshPanel } from '../components/SuggestedRefreshPanel'
 import { PlayOnYouTubeMusic } from '../components/PlayOnYouTubeMusic'
 import { ArtistNames } from '../components/ArtistNames'
+import { AddToPlaylistButton } from '../components/AddToPlaylistButton'
 import { REQUEST_FAILED_COPY, RequestState } from './CollectionPage'
 
 interface SuggestedPlaylistPageProps {
@@ -166,6 +167,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                   A new edition replaces this one every week. Download the songs you like before it goes.
                 </p>
                 <div className="mt-auto pt-2 flex flex-col items-start gap-1.5">
+                  <div className="flex flex-wrap items-start gap-2">
                   <button
                     type="button"
                     onClick={() => { if (allLabel) navigate('/downloads'); else if (!allInert) void downloadAll() }}
@@ -178,6 +180,10 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                     {allLabel === null && allState === 'pending' && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
                     {allLabel ?? (allState === 'pending' ? 'Requesting…' : 'Download all')}
                   </button>
+                  {playlist.tracks.length > 0 && (
+                    <AddToPlaylistButton header target={{ type: 'CURATED', id: playlist.category, title: playlist.title, songs: playlist.tracks.map(t => ({ id: t.id, name: t.name })) }} />
+                  )}
+                  </div>
                   {allState === 'failed' && <p className="text-xs text-red-400">{REQUEST_FAILED_COPY}</p>}
                 </div>
               </>
@@ -261,6 +267,7 @@ export function SuggestedPlaylistPage({ onDownload, onInfo }: SuggestedPlaylistP
                       {track.reason && <span className="sr-only">: {track.reason}</span>}
                     </span>
                     <PlayOnYouTubeMusic videoId={track.id} title={track.name} artists={track.artists} />
+                    <AddToPlaylistButton target={{ type: 'SONG', id: track.id, title: track.name }} />
                     <button type="button" onClick={() => onInfo(track.id, plays)} aria-label={`Details for ${track.name}`} className={ICON_BUTTON}>
                       <Info className="w-4 h-4" aria-hidden="true" />
                     </button>

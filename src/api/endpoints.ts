@@ -7,7 +7,7 @@ import {
   CollectionDetail, CollectionType, ArtistDetail, SongInfo, SuggestedPlaylist, SuggestedPlaylistsResponse,
   CuratorRun, StatusResponse, SongCandidatesResponse, AlbumCandidatesResponse, LoginSettings, SessionResponse,
   SoulseekAccount, SetupStatus, MediaServerChange, MediaServerKind, MediaServersSettings, SuggestedPlaylistsSettings,
-  SlskdSettings, DownloadQuality, DownloadQualitySettings, PlaylistSummary, PlaylistDetail,
+  SlskdSettings, DownloadQuality, DownloadQualitySettings, PlaylistSummary, PlaylistDetail, PlaylistAddResult,
 } from './types'
 import {
   getMockSearchResults, getMockDownload, getMockActiveDownloads, getMockDownloadsByIds,
@@ -16,7 +16,7 @@ import {
   cancelMockDownload, retryMockDownload, getMockSongViews, getMockSongCandidates, pickMockSongCandidate,
   getMockAlbumCandidates, pickMockAlbumFolder, searchMockSongCandidates, searchMockAlbumFolders,
   getMockPlaylists, getMockPlaylist, createMockPlaylist, updateMockPlaylist, removeMockPlaylistSong, copyMockPlaylist,
-  deleteMockPlaylist,
+  deleteMockPlaylist, addMockToPlaylist,
 } from './mockData'
 
 // Toggle between mock and real API
@@ -195,6 +195,19 @@ export async function updatePlaylist(id: string, change: { title?: string; descr
 export async function removeFromPlaylist(id: string, videoId: string): Promise<void> {
   if (USE_MOCK_DATA) return Promise.resolve(removeMockPlaylistSong(id, videoId))
   await apiClient<unknown>(`/playlists/${encodeURIComponent(id)}/songs/${encodeURIComponent(videoId)}`, { method: 'DELETE' })
+}
+
+/**
+ * Add a song, or a whole album, playlist, suggested playlist, radio or another of your playlists (only
+ * `songIds` of it when given) to the end of a draft, skipping songs already in it. The server reads the
+ * songs itself, so only ids travel.
+ * POST /playlists/{id}/songs {type, id, songIds?}  (409 once created; 400 past 5,000 songs; 502 YouTube down)
+ */
+export async function addToPlaylist(
+  id: string, source: { type: DownloadType; id: string; songIds?: string[] },
+): Promise<PlaylistAddResult> {
+  if (USE_MOCK_DATA) return Promise.resolve(addMockToPlaylist(id, source))
+  return apiClient<PlaylistAddResult>(`/playlists/${encodeURIComponent(id)}/songs`, { method: 'POST', body: JSON.stringify(source) })
 }
 
 /**

@@ -1,5 +1,5 @@
 /** Self-check for your own playlists' helpers; pulled in by check-download-state.ts. */
-import { coverOf, mosaicOf, playlistMeta, titleClash } from '../src/lib/playlists'
+import { addedCopy, coverOf, mosaicOf, playlistMeta, titleClash } from '../src/lib/playlists'
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`check failed: ${message}`)
@@ -25,5 +25,12 @@ const mine = [{ id: 'a', title: 'Road trip' }, { id: 'b', title: 'Gym' }]
 assert(titleClash(' road TRIP ', 'b', mine), 'same name in another case clashes')
 assert(!titleClash('Road trip', 'a', mine), 'a playlist does not clash with itself')
 assert(!titleClash('  ', 'c', mine), 'a blank name clashes with nothing')
+
+// What an add says: counts, the one-song wording, and the nothing-new case.
+assert(addedCopy({ added: 9, alreadyIn: 3 }, null, 'Road trip') === 'Added 9 songs to Road trip · 3 were already in it', 'some were in')
+assert(addedCopy({ added: 1, alreadyIn: 0 }, 'Down', 'Road trip') === 'Added Down to Road trip', 'one song by name')
+assert(addedCopy({ added: 0, alreadyIn: 1 }, 'Down', 'Road trip') === 'Down is already in Road trip', 'the song was there')
+assert(addedCopy({ added: 0, alreadyIn: 4 }, null, 'Gym') === 'All 4 songs are already in Gym', 'the whole album was there')
+assert(addedCopy({ added: 2, alreadyIn: 1 }, null, 'Gym') === 'Added 2 songs to Gym · 1 was already in it', 'one was in')
 
 console.log('check-playlists: ok')
