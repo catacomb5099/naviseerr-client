@@ -4,6 +4,7 @@ import { HomePage } from './pages/HomePage'
 import { DownloadsPage } from './pages/DownloadsPage'
 import { CollectionPage } from './pages/CollectionPage'
 import { ArtistPage } from './pages/ArtistPage'
+import { ArtistShelfPage } from './pages/ArtistShelfPage'
 import { SuggestedPlaylistPage } from './pages/SuggestedPlaylistPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { LibraryPage } from './pages/LibraryPage'
@@ -181,6 +182,8 @@ function App() {
         <Route path="/playlist/:id" element={<CollectionPage type="PLAYLIST" onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/radio/:id" element={<CollectionPage type="RADIO" onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/artist/:id" element={<ArtistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
+        <Route path="/artist/:id/albums" element={<ArtistShelfPage shelf="albums" />} />
+        <Route path="/artist/:id/singles" element={<ArtistShelfPage shelf="singles" />} />
         <Route path="/suggested/:category" element={<SuggestedPlaylistPage onDownload={handleDownload} onInfo={openSongInfo} />} />
         <Route path="/settings" element={<SettingsPage onNavigateHome={() => navigate('/')} />} />
         <Route path="/library" element={<LibraryPage onNavigateHome={() => navigate('/')} />} />

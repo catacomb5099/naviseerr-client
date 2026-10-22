@@ -24,3 +24,7 @@ export const CAROUSEL_CONTAINER = 'flex gap-4 overflow-x-auto pb-4'
  * `grid-cols-1` for literal doubling on phones too.
  */
 export const GRID_CONTAINER = 'grid grid-cols-2 lg:grid-cols-3 gap-6'
+
+/** Many cards at carousel-like size ("Show all" pages of an artist's rows): 5-6 columns on desktop, as on
+ *  YouTube Music's and Spotify's grid pages. GRID_CONTAINER's 2-3 large tiles suit a search pill, not 92 singles. */
+export const DENSE_GRID_CONTAINER = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'

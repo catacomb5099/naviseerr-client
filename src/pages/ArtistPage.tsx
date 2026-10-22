@@ -1,11 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { getArtist } from '../api/endpoints'
-import { useRetry } from '../hooks/useRetry'
-import { ApiError } from '../api/client'
-import { providerMessage } from '../lib/utils'
-import { ArtistDetail, DownloadType } from '../api/types'
+import { useArtist } from '../hooks/useArtist'
+import { DownloadType } from '../api/types'
 import { DownloadMetaInput } from '../lib/downloadLibrary'
 import { RequestOutcome } from '../lib/downloadPanel'
 import { AppHeader } from '../components/AppHeader'
@@ -23,11 +20,6 @@ interface ArtistPageProps {
   onInfo: (videoId: string, plays?: string | null) => void
 }
 
-type Load =
-  | { status: 'error'; detail: string | null }
-  | { status: 'notFound' }
-  | { status: 'ready'; artist: ArtistDetail }
-
 /** Top songs shows this many rows until "See more"; the server sends up to 10. */
 const COLLAPSED_SONGS = 5
 
@@ -44,28 +36,11 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
   // refresh. Anything else was reached from inside the app, so the browser's back is the right way
   // out and keeps whatever the user came from.
   const cameFromApp = useLocation().key !== 'default'
-  // Keyed by what was fetched: a result for another artist (or an earlier attempt) is simply not
-  // ours yet, which is what "loading" means. No state reset needed when the key changes.
-  const [fetched, setFetched] = useState<(Load & { key: string }) | null>(null)
-  const [attempt, retry] = useRetry(id)
+  const [load, retry] = useArtist(id)
   // Which artist's Top songs is expanded - so hopping to a similar artist starts collapsed again
   // without an effect to reset it.
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const key = `${id}:${attempt}`
-  useEffect(() => {
-    let cancelled = false
-    getArtist(id, { fresh: attempt > 0 })
-      .then(artist => { if (!cancelled) setFetched({ key, status: 'ready', artist }) })
-      .catch(err => {
-        if (cancelled) return
-        const notFound = err instanceof ApiError && err.status === 404
-        setFetched(notFound ? { key, status: 'notFound' } : { key, status: 'error', detail: providerMessage(err) })
-      })
-    return () => { cancelled = true }
-  }, [id, key, attempt])
-
-  const load: Load | { status: 'loading' } = fetched?.key === key ? fetched : { status: 'loading' }
   const artist = load.status === 'ready' ? load.artist : null
   const loading = load.status === 'loading'
 
@@ -206,12 +181,12 @@ export function ArtistPage({ onDownload, onInfo }: ArtistPageProps) {
 
             {/* Empty shelves are left out, the way Spotify and Apple Music do. */}
             {artist && artist.albums.length > 0 && (
-              <Shelf title="Albums">
+              <Shelf title="Albums" showAllTo={`/artist/${encodeURIComponent(id)}/albums`}>
                 {artist.albums.map(album => <AlbumCard key={album.id} item={album} kind="ALBUM" />)}
               </Shelf>
             )}
             {artist && artist.singles.length > 0 && (
-              <Shelf title="Singles">
+              <Shelf title="Singles" showAllTo={`/artist/${encodeURIComponent(id)}/singles`}>
                 {artist.singles.map(single => <AlbumCard key={single.id} item={single} kind="ALBUM" />)}
               </Shelf>
             )}
